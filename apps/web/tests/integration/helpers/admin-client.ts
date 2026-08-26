@@ -17,7 +17,17 @@ export function createAdminClient() {
   // is unsafe (it accepts "localhost.attacker.example").
   assertLocalSupabaseUrl(url);
   return createClient<Database>(url, secretKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
+    // Non-browser test client: no storage to persist to, nothing to
+    // auto-refresh a live session for, and no URL to ever contain a
+    // session fragment. `detectSessionInUrl` defaults to true in
+    // supabase-js (a browser-oriented default); disabling it here is not
+    // a behavior change for this client — a Node test process is never
+    // navigated to a URL a session could appear in — only a narrowing of
+    // what supabase-js sets up internally, part of this session's audit
+    // of every non-browser client's auth config (never applied to
+    // lib/supabase/client.ts / server.ts, the real app's clients, which
+    // are untouched).
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
 }
 
@@ -49,6 +59,16 @@ export function createUserClient() {
   }
   assertLocalSupabaseUrl(url);
   return createClient<Database>(url, publishableKey, {
-    auth: { autoRefreshToken: false, persistSession: true },
+    // Non-browser test client. `persistSession` only governs writing the
+    // session to an external store so a DIFFERENT/later client instance
+    // can restore it — the CURRENT instance keeps its session in memory
+    // regardless of this flag, which is all every test here ever relies
+    // on (each test signs in explicitly on its own client instance; none
+    // depend on a session surviving into a new instance via storage).
+    // `false` is both more correct for a client with no real storage
+    // backing in Node and, per this session's audit, removes one more
+    // category of resource supabase-js might otherwise set up trying to
+    // persist to a storage adapter that doesn't meaningfully exist here.
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
 }

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createConfirmedTestUser, createUserClient } from "../integration/helpers/admin-client";
+import { E2E_BASE_URL_PATTERN } from "./e2e-target.mjs";
 
 test("a user with 2+ memberships sees a deterministic selection list, not an arbitrary redirect", async ({ page }) => {
   const email = `multi-biz-${Date.now()}@example.test`;
@@ -17,7 +18,10 @@ test("a user with 2+ memberships sees a deterministic selection list, not an arb
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Log in" }).click();
 
-  await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:3100\/$/);
+  // The origin is derived from E2E_BASE_URL (tests/e2e/e2e-target.mjs),
+  // not hardcoded — this assertion must hold under any E2E_PORT, not just
+  // the default 3100 (see e2e-target.mjs for why the port is overridable).
+  await expect(page).toHaveURL(new RegExp(`^${E2E_BASE_URL_PATTERN}/$`));
   // getByText would also match the Next.js route-announcer's live-region
   // copy of the heading text; scope to the actual heading role instead.
   await expect(page.getByRole("heading", { name: "Choose a business" })).toBeVisible();
