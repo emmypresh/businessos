@@ -20,6 +20,13 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Testing
+
+- `pnpm test` — unit tests (Zod schemas, DAL logic, proxy matcher). No external services required.
+- `pnpm test:integration` — integration tests against a local Supabase stack. Run `supabase start` first and copy `.env.test.local.example` to `.env.test.local` (fill in from `supabase status`). After any `config.toml` change (auth settings, email templates), run `supabase stop && supabase start` — not just `supabase db reset` — or the Auth container keeps serving its old config.
+- `pnpm test:e2e` — Playwright end-to-end tests. Requires `supabase start` and `.env.test.local` as above; starts its own `next dev` server via Playwright's `webServer` config.
+- `pnpm typecheck` — `tsc --noEmit`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -12,10 +12,20 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
 
 # next.js
 /.next/
 /out/
+# `next dev`/`next build` regenerate these as exact duplicates of the
+# root AGENTS.md/CLAUDE.md (which stay the single authoritative copy —
+# see the note at the top of the root AGENTS.md). Not tracked here so
+# they don't reappear as noise on every dev-server run; delete them at
+# any time, they cost nothing to regenerate.
+/AGENTS.md
+/CLAUDE.md
 
 # production
 /build
@@ -32,6 +42,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the checked-in templates: these carry no secrets and must ship
+# to every clone (a bare `.env*` above previously hid them from git
+# entirely, silently defeating both this template's own purpose).
+!.env.example
+!.env.test.local.example
 
 # vercel
 .vercel
