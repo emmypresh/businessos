@@ -109,6 +109,172 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_balances: {
+        Row: {
+          business_id: string
+          id: string
+          inventory_location_id: string
+          product_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          inventory_location_id: string
+          product_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          inventory_location_id?: string
+          product_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_balances_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_balances_inventory_location_id_business_id_fkey"
+            columns: ["inventory_location_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "inventory_balances_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      inventory_ledger: {
+        Row: {
+          balance_after: number
+          business_id: string
+          created_at: string
+          created_by: string
+          id: string
+          idempotency_key: string
+          inventory_location_id: string
+          movement_type: string
+          note: string | null
+          product_id: string
+          quantity_delta: number
+          reason: string
+          reference_id: string | null
+          reference_type: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          balance_after: number
+          business_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          idempotency_key: string
+          inventory_location_id: string
+          movement_type: string
+          note?: string | null
+          product_id: string
+          quantity_delta: number
+          reason: string
+          reference_id?: string | null
+          reference_type?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          balance_after?: number
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          idempotency_key?: string
+          inventory_location_id?: string
+          movement_type?: string
+          note?: string | null
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_ledger_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_ledger_inventory_location_id_business_id_fkey"
+            columns: ["inventory_location_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "inventory_ledger_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      inventory_locations: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_default: boolean
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_default?: boolean
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_locations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string
@@ -129,6 +295,77 @@ export type Database = {
           key?: string
         }
         Relationships: []
+      }
+      products: {
+        Row: {
+          barcode: string | null
+          business_id: string
+          category: string | null
+          cost_price: number
+          created_at: string
+          created_by: string
+          creation_key: string
+          currency_code: string
+          description: string | null
+          id: string
+          low_stock_threshold: number | null
+          name: string
+          selling_price: number
+          sku: string | null
+          status: string
+          track_inventory: boolean
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          business_id: string
+          category?: string | null
+          cost_price?: number
+          created_at?: string
+          created_by: string
+          creation_key: string
+          currency_code?: string
+          description?: string | null
+          id?: string
+          low_stock_threshold?: number | null
+          name: string
+          selling_price?: number
+          sku?: string | null
+          status?: string
+          track_inventory?: boolean
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          business_id?: string
+          category?: string | null
+          cost_price?: number
+          created_at?: string
+          created_by?: string
+          creation_key?: string
+          currency_code?: string
+          description?: string | null
+          id?: string
+          low_stock_threshold?: number | null
+          name?: string
+          selling_price?: number
+          sku?: string | null
+          status?: string
+          track_inventory?: boolean
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -205,6 +442,53 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_product: {
+        Args: {
+          p_barcode?: string
+          p_business_id: string
+          p_category?: string
+          p_cost_price?: number
+          p_creation_key: string
+          p_currency_code?: string
+          p_description?: string
+          p_low_stock_threshold?: number
+          p_name: string
+          p_opening_location_id?: string
+          p_opening_quantity?: number
+          p_selling_price?: number
+          p_sku?: string
+          p_track_inventory?: boolean
+          p_unit?: string
+        }
+        Returns: {
+          barcode: string | null
+          business_id: string
+          category: string | null
+          cost_price: number
+          created_at: string
+          created_by: string
+          creation_key: string
+          currency_code: string
+          description: string | null
+          id: string
+          low_stock_threshold: number | null
+          name: string
+          selling_price: number
+          sku: string | null
+          status: string
+          track_inventory: boolean
+          unit: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
+      get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       has_permission: {
         Args: { p_business_id: string; p_permission_key: string }
         Returns: boolean
@@ -212,6 +496,44 @@ export type Database = {
       issue_recovery_grant: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: string
+      }
+      record_inventory_movement: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_inventory_location_id: string
+          p_movement_type: string
+          p_note?: string
+          p_product_id: string
+          p_quantity: number
+          p_reason?: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_unit_cost?: number
+        }
+        Returns: {
+          balance_after: number
+          business_id: string
+          created_at: string
+          created_by: string
+          id: string
+          idempotency_key: string
+          inventory_location_id: string
+          movement_type: string
+          note: string | null
+          product_id: string
+          quantity_delta: number
+          reason: string
+          reference_id: string | null
+          reference_type: string | null
+          unit_cost: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inventory_ledger"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
