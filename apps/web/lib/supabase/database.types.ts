@@ -109,6 +109,56 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address: string | null
+          business_id: string
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_balances: {
         Row: {
           business_id: string
@@ -418,6 +468,176 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_items: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          line_total: number
+          product_id: string
+          product_name_snapshot: string
+          quantity: number
+          sale_id: string
+          sku_snapshot: string | null
+          unit_cost_snapshot: number | null
+          unit_price: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          line_total: number
+          product_id: string
+          product_name_snapshot: string
+          quantity: number
+          sale_id: string
+          sku_snapshot?: string | null
+          unit_cost_snapshot?: number | null
+          unit_price: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          line_total?: number
+          product_id?: string
+          product_name_snapshot?: string
+          quantity?: number
+          sale_id?: string
+          sku_snapshot?: string | null
+          unit_cost_snapshot?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_business_id_fkey"
+            columns: ["sale_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          amount_paid: number
+          business_id: string
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          creation_key: string
+          currency_code: string
+          customer_address_snapshot: string | null
+          customer_email_snapshot: string | null
+          customer_id: string | null
+          customer_name_snapshot: string | null
+          customer_phone_snapshot: string | null
+          discount: number
+          id: string
+          inventory_location_id: string
+          inventory_location_name_snapshot: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string
+          sale_number: string
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          business_id: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          creation_key: string
+          currency_code?: string
+          customer_address_snapshot?: string | null
+          customer_email_snapshot?: string | null
+          customer_id?: string | null
+          customer_name_snapshot?: string | null
+          customer_phone_snapshot?: string | null
+          discount?: number
+          id?: string
+          inventory_location_id: string
+          inventory_location_name_snapshot: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          sale_number: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          business_id?: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          creation_key?: string
+          currency_code?: string
+          customer_address_snapshot?: string | null
+          customer_email_snapshot?: string | null
+          customer_id?: string | null
+          customer_name_snapshot?: string | null
+          customer_phone_snapshot?: string | null
+          discount?: number
+          id?: string
+          inventory_location_id?: string
+          inventory_location_name_snapshot?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          sale_number?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_customer_id_business_id_fkey"
+            columns: ["customer_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "sales_inventory_location_id_business_id_fkey"
+            columns: ["inventory_location_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -441,6 +661,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_customer: {
+        Args: {
+          p_address?: string
+          p_business_id: string
+          p_creation_key: string
+          p_email?: string
+          p_name: string
+          p_notes?: string
+          p_phone?: string
+        }
+        Returns: string
       }
       create_product: {
         Args: {
@@ -486,6 +718,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_sale: {
+        Args: {
+          p_amount_paid?: number
+          p_business_id: string
+          p_creation_key: string
+          p_customer_id?: string
+          p_discount?: number
+          p_items: Json
+          p_notes?: string
+          p_payment_method?: string
+          p_payment_status?: string
+        }
+        Returns: string
       }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
