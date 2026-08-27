@@ -71,3 +71,44 @@ export async function createMemberWithRole(businessId: string, prefix: string, r
 export function randomUuid() {
   return crypto.randomUUID();
 }
+
+// Every seeded role (SALES, ACCOUNTANT, ...) happens to bundle several
+// Phase 1D permissions together, so no seeded role can prove two
+// permissions are checked independently rather than one implying the
+// other. This inserts a genuinely deliberate, one-off role directly into
+// the same reference tables the approved migration seeds (public.roles /
+// public.role_permissions) — fixture setup only, exactly like
+// addMemberWithRole already does for business_members, never an
+// assertion of application behavior and never a schema change. The role
+// name is unique per call so parallel/repeated test runs never collide.
+export async function createRoleWithPermissions(permissionKeys: string[]) {
+  const roleName = unique("test-role");
+  const sql = createTestDbClient();
+  try {
+    const [role] = await sql<{ id: string }[]>`
+      insert into public.roles (name, description)
+      values (${roleName}, 'Test-fixture role: deliberately constructed nonstandard permission set, never a real product role.')
+      returning id
+    `;
+    if (permissionKeys.length > 0) {
+      await sql`
+        insert into public.role_permissions (role_id, permission_id)
+        select ${role.id}, p.id
+        from public.permissions p
+        where p.key = any(${permissionKeys})
+      `;
+    }
+    return roleName;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function createMemberWithCustomPermissions(
+  businessId: string,
+  prefix: string,
+  permissionKeys: string[]
+) {
+  const roleName = await createRoleWithPermissions(permissionKeys);
+  return createMemberWithRole(businessId, prefix, roleName);
+}

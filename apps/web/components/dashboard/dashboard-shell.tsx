@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, Package, Boxes, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Package, Boxes, LogOut, UserRound, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
 import { getPermissions } from "@/lib/business/dal";
@@ -24,6 +24,17 @@ export async function DashboardShell({
   const permissions = await getPermissions(businessId);
   const canViewProducts = permissions.has(PERMISSION.PRODUCTS_VIEW);
   const canViewInventory = permissions.has(PERMISSION.INVENTORY_VIEW);
+  const canViewCustomers = permissions.has(PERMISSION.CUSTOMERS_VIEW);
+  const canViewSales = permissions.has(PERMISSION.SALES_VIEW);
+  const canCreateSales = permissions.has(PERMISSION.SALES_CREATE);
+  // Never assumed from a role name, and never assumed from another
+  // permission (customers.manage does NOT imply sales.create,
+  // sales.create does NOT imply customers.manage, sales.view does NOT
+  // imply customers.view — even though the current seeded role matrix
+  // happens to grant them together for every role that has any of them).
+  // A caller with sales.create but not sales.view links straight to
+  // "New sale" instead of an inaccessible list page.
+  const salesHref = canViewSales ? `/${businessId}/sales` : `/${businessId}/sales/new`;
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
@@ -51,6 +62,18 @@ export async function DashboardShell({
             <Link href={`/${businessId}/inventory`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
               <Boxes className="size-4" />
               Inventory
+            </Link>
+          ) : null}
+          {canViewCustomers ? (
+            <Link href={`/${businessId}/customers`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+              <UserRound className="size-4" />
+              Customers
+            </Link>
+          ) : null}
+          {canViewSales || canCreateSales ? (
+            <Link href={salesHref} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+              <Receipt className="size-4" />
+              Sales
             </Link>
           ) : null}
         </nav>

@@ -45,6 +45,16 @@ export const PERMISSION = {
   INVENTORY_VIEW: "inventory.view",
   INVENTORY_ADJUST: "inventory.adjust",
   INVENTORY_VIEW_COST: "inventory.view_cost",
+  // Phase 1D. Verified against the exact seeded keys in
+  // supabase/migrations/20260826090600_customers_sales_permissions.sql.
+  // There is deliberately no CUSTOMERS_MANAGE ⇒ SALES_CREATE (or any
+  // other) implication assumed anywhere in application code — each
+  // permission is checked independently, even where the current seeded
+  // role matrix happens to grant them together.
+  CUSTOMERS_VIEW: "customers.view",
+  CUSTOMERS_MANAGE: "customers.manage",
+  SALES_VIEW: "sales.view",
+  SALES_CREATE: "sales.create",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];
