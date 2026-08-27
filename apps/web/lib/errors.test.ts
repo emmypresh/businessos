@@ -73,6 +73,91 @@ describe("mapDatabaseError", () => {
     expect(mapDatabaseError(null).message).toBe("Something went wrong. Please try again.");
     expect(mapDatabaseError(undefined).message).toBe("Something went wrong. Please try again.");
   });
+
+  describe("Phase 1E codes (expenses + reports)", () => {
+    it("maps EXPENSE_IDEMPOTENCY_KEY_REUSED distinctly from the generic IDEMPOTENCY_KEY_REUSED", () => {
+      expect(mapDatabaseError({ message: "EXPENSE_IDEMPOTENCY_KEY_REUSED" }).message).toContain(
+        "expense may already have been recorded"
+      );
+    });
+
+    it("maps INVALID_EXPENSE_AMOUNT/EXPENSE_AMOUNT_OUT_OF_RANGE with the amount field", () => {
+      expect(mapDatabaseError({ message: "INVALID_EXPENSE_AMOUNT" }).field).toBe("amount");
+      expect(mapDatabaseError({ message: "EXPENSE_AMOUNT_OUT_OF_RANGE" }).field).toBe("amount");
+    });
+
+    it("maps EXPENSE_CATEGORY_NOT_FOUND generically (non-disclosure) with the categoryId field", () => {
+      const mapped = mapDatabaseError({ message: "EXPENSE_CATEGORY_NOT_FOUND" });
+      expect(mapped.message).toBe("This category is not available.");
+      expect(mapped.field).toBe("categoryId");
+    });
+
+    it("maps EXPENSE_CATEGORY_ARCHIVED distinctly from EXPENSE_CATEGORY_NOT_FOUND", () => {
+      const archived = mapDatabaseError({ message: "EXPENSE_CATEGORY_ARCHIVED" });
+      const notFound = mapDatabaseError({ message: "EXPENSE_CATEGORY_NOT_FOUND" });
+      expect(archived.message).not.toBe(notFound.message);
+    });
+
+    it("maps EXPENSE_NOT_FOUND generically (non-disclosure — same treatment as PRODUCT_NOT_FOUND)", () => {
+      expect(mapDatabaseError({ message: "EXPENSE_NOT_FOUND" }).message).toBe(
+        "This expense is not available."
+      );
+    });
+
+    it("maps EXPENSE_ALREADY_VOIDED", () => {
+      expect(mapDatabaseError({ message: "EXPENSE_ALREADY_VOIDED" }).message).toBe(
+        "This expense has already been voided."
+      );
+    });
+
+    it("maps void_expense's own INVALID_VOID_REASON (no EXPENSE_ prefix — exact committed migration code) with the reason field", () => {
+      const mapped = mapDatabaseError({ message: "INVALID_VOID_REASON" });
+      expect(mapped.field).toBe("reason");
+    });
+
+    it("maps the expense_categories unique-name-index violation to a friendly, field-scoped message", () => {
+      const mapped = mapDatabaseError({
+        message:
+          'duplicate key value violates unique constraint "expense_categories_name_unique_idx"',
+        code: "23505",
+      });
+      expect(mapped.message).toBe("A category with this name already exists.");
+      expect(mapped.field).toBe("name");
+      expect(mapped.message).not.toContain("expense_categories_name_unique_idx");
+    });
+
+    it("maps INVALID_REPORT_RANGE and REPORT_AMOUNT_OUT_OF_RANGE to stable, safe messages", () => {
+      expect(mapDatabaseError({ message: "INVALID_REPORT_RANGE" }).message).toBe(
+        "The selected date range is invalid."
+      );
+      expect(mapDatabaseError({ message: "REPORT_AMOUNT_OUT_OF_RANGE" }).message).toBe(
+        "One of the amounts in this report is too large."
+      );
+    });
+
+    it("no Phase 1E mapping ever contains the word profit or margin", () => {
+      const codes = [
+        "EXPENSE_IDEMPOTENCY_KEY_REUSED",
+        "INVALID_EXPENSE_AMOUNT",
+        "EXPENSE_AMOUNT_OUT_OF_RANGE",
+        "INVALID_EXPENSE_PAYMENT_METHOD",
+        "INVALID_EXPENSE_DATE",
+        "INVALID_EXPENSE_PAYEE",
+        "INVALID_EXPENSE_REFERENCE",
+        "INVALID_EXPENSE_NOTES",
+        "EXPENSE_CATEGORY_ARCHIVED",
+        "EXPENSE_CATEGORY_NOT_FOUND",
+        "EXPENSE_ALREADY_VOIDED",
+        "EXPENSE_NOT_FOUND",
+        "INVALID_VOID_REASON",
+        "INVALID_REPORT_RANGE",
+        "REPORT_AMOUNT_OUT_OF_RANGE",
+      ];
+      for (const code of codes) {
+        expect(mapDatabaseError({ message: code }).message.toLowerCase()).not.toMatch(/profit|margin/);
+      }
+    });
+  });
 });
 
 describe("toActionState", () => {

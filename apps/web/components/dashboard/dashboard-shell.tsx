@@ -1,5 +1,16 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, Package, Boxes, LogOut, UserRound, Receipt } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Boxes,
+  LogOut,
+  UserRound,
+  Receipt,
+  Wallet,
+  ListTree,
+  LineChart,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
 import { getPermissions } from "@/lib/business/dal";
@@ -35,6 +46,18 @@ export async function DashboardShell({
   // A caller with sales.create but not sales.view links straight to
   // "New sale" instead of an inaccessible list page.
   const salesHref = canViewSales ? `/${businessId}/sales` : `/${businessId}/sales/new`;
+
+  // Phase 1E. expenses.manage does NOT imply expenses.view (and the
+  // reverse doesn't hold either) — a manage-only caller links straight to
+  // "New expense" instead of the list page, which independently requires
+  // expenses.view and would 404 them. Mirrors the sales nav link's own
+  // reasoning exactly. The category-management route is reachable on
+  // EITHER permission (matches expense_categories' own SELECT policy), so
+  // it is shown whenever either one is held.
+  const canViewExpenses = permissions.has(PERMISSION.EXPENSES_VIEW);
+  const canManageExpenses = permissions.has(PERMISSION.EXPENSES_MANAGE);
+  const expensesHref = canViewExpenses ? `/${businessId}/expenses` : `/${businessId}/expenses/new`;
+  const canViewReports = permissions.has(PERMISSION.REPORTS_VIEW);
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
@@ -74,6 +97,27 @@ export async function DashboardShell({
             <Link href={salesHref} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
               <Receipt className="size-4" />
               Sales
+            </Link>
+          ) : null}
+          {canViewExpenses || canManageExpenses ? (
+            <Link href={expensesHref} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+              <Wallet className="size-4" />
+              Expenses
+            </Link>
+          ) : null}
+          {canViewExpenses || canManageExpenses ? (
+            <Link
+              href={`/${businessId}/expenses/categories`}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 pl-8 text-muted-foreground hover:bg-accent"
+            >
+              <ListTree className="size-4" />
+              Categories
+            </Link>
+          ) : null}
+          {canViewReports ? (
+            <Link href={`/${businessId}/reports`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+              <LineChart className="size-4" />
+              Reports
             </Link>
           ) : null}
         </nav>

@@ -55,6 +55,17 @@ export const PERMISSION = {
   CUSTOMERS_MANAGE: "customers.manage",
   SALES_VIEW: "sales.view",
   SALES_CREATE: "sales.create",
+  // Phase 1E. Verified against the exact seeded keys in
+  // supabase/migrations/20260827080500_expenses_reports_permissions.sql.
+  // expenses.manage does NOT imply expenses.view (a manage-only caller
+  // may still read expense_categories, since that table's own SELECT
+  // policy is granted on expenses.view OR expenses.manage, but NOT
+  // public.expenses itself — see that migration's header comment), and
+  // reports.view is independent of both expenses.view and sales.view —
+  // never inferred from either.
+  EXPENSES_VIEW: "expenses.view",
+  EXPENSES_MANAGE: "expenses.manage",
+  REPORTS_VIEW: "reports.view",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

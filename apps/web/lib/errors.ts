@@ -88,6 +88,19 @@ export function mapDatabaseError(
       message: "This sale may already have been recorded with different details. Check the sales list before retrying.",
     };
   }
+  // Codex adversarial review catch: this MUST be checked before the bare
+  // "IDEMPOTENCY_KEY_REUSED" fallback immediately below — that generic
+  // check would otherwise match first (its substring is contained in
+  // this code too) and silently swallow every EXPENSE_IDEMPOTENCY_KEY_REUSED
+  // error into the wrong ("adjustment") message. This was previously
+  // dead code, ordered after that fallback; a unit test now pins the
+  // ordering (lib/errors.test.ts).
+  if (message.includes("EXPENSE_IDEMPOTENCY_KEY_REUSED")) {
+    return {
+      message:
+        "This expense may already have been recorded with different details. Check the expense list before retrying.",
+    };
+  }
   if (message.includes("IDEMPOTENCY_KEY_REUSED")) {
     return {
       message:
@@ -191,6 +204,74 @@ export function mapDatabaseError(
       field: "amountPaid",
     };
   }
+
+  // Phase 1E — expenses + financial reporting. Codes verified against the
+  // exact `raise exception` strings in
+  // supabase/migrations/20260827080300_create_expense_creation_requests_and_rpc.sql,
+  // supabase/migrations/20260827080400_void_expense_rpc.sql, and
+  // supabase/migrations/20260827080600_get_financial_summary_rpc.sql — not
+  // guessed. void_expense's reason error is INVALID_VOID_REASON (no
+  // "EXPENSE_" prefix), exactly as committed; nothing here invents a
+  // differently-named code for it. EXPENSE_IDEMPOTENCY_KEY_REUSED is
+  // handled earlier, alongside the other *_IDEMPOTENCY_KEY_REUSED checks
+  // (ordering matters — see that block's own comment).
+  if (message.includes("INVALID_EXPENSE_AMOUNT")) {
+    return { message: "Enter an amount with up to 2 decimal places, greater than zero.", field: "amount" };
+  }
+  if (message.includes("EXPENSE_AMOUNT_OUT_OF_RANGE")) {
+    return { message: "This amount is too large.", field: "amount" };
+  }
+  if (message.includes("INVALID_EXPENSE_PAYMENT_METHOD")) {
+    return { message: "Choose a valid payment method.", field: "paymentMethod" };
+  }
+  if (message.includes("INVALID_EXPENSE_DATE")) {
+    return { message: "Enter a valid date — it cannot be in the future.", field: "incurredAt" };
+  }
+  if (message.includes("INVALID_EXPENSE_PAYEE")) {
+    return { message: "Payee is too long.", field: "payee" };
+  }
+  if (message.includes("INVALID_EXPENSE_REFERENCE")) {
+    return { message: "Reference is too long.", field: "reference" };
+  }
+  if (message.includes("INVALID_EXPENSE_NOTES")) {
+    return { message: "Notes are too long.", field: "notes" };
+  }
+  if (message.includes("EXPENSE_CATEGORY_ARCHIVED")) {
+    return {
+      message: "This category is archived and can no longer be used for new expenses.",
+      field: "categoryId",
+    };
+  }
+  if (message.includes("EXPENSE_CATEGORY_NOT_FOUND")) {
+    // Same non-disclosure reasoning as PRODUCT_NOT_FOUND: a forged/
+    // foreign category_id and a genuinely nonexistent one are
+    // indistinguishable to the caller.
+    return { message: "This category is not available.", field: "categoryId" };
+  }
+  if (message.includes("EXPENSE_ALREADY_VOIDED")) {
+    return { message: "This expense has already been voided." };
+  }
+  if (message.includes("EXPENSE_NOT_FOUND")) {
+    // Same non-disclosure reasoning: nonexistent and foreign-tenant
+    // expense ids surface identically.
+    return { message: "This expense is not available." };
+  }
+  if (message.includes("INVALID_VOID_REASON")) {
+    return { message: "Enter a reason for voiding this expense.", field: "reason" };
+  }
+  if (message.includes("expense_categories_name_unique_idx")) {
+    // Business-scoped, case/whitespace-normalized unique index — spans
+    // both ACTIVE and ARCHIVED (archiving never frees a name for reuse),
+    // matching that index's own comment in create_expense_categories.sql.
+    return { message: "A category with this name already exists.", field: "name" };
+  }
+  if (message.includes("INVALID_REPORT_RANGE")) {
+    return { message: "The selected date range is invalid.", field: "dateTo" };
+  }
+  if (message.includes("REPORT_AMOUNT_OUT_OF_RANGE")) {
+    return { message: "One of the amounts in this report is too large." };
+  }
+
   if (error.code === "42501" || message.includes("insufficient_privilege")) {
     return PERMISSION_DENIED_ERROR;
   }
