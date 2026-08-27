@@ -159,6 +159,125 @@ export type Database = {
           },
         ]
       }
+      expense_categories: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          business_id: string
+          category_id: string
+          category_name_snapshot: string
+          created_at: string
+          created_by: string
+          creation_key: string
+          currency_code: string
+          expense_number: string
+          id: string
+          incurred_at: string
+          notes: string | null
+          payee: string | null
+          payment_method: string
+          reference: string | null
+          status: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          category_id: string
+          category_name_snapshot: string
+          created_at?: string
+          created_by: string
+          creation_key: string
+          currency_code?: string
+          expense_number: string
+          id?: string
+          incurred_at: string
+          notes?: string | null
+          payee?: string | null
+          payment_method: string
+          reference?: string | null
+          status?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          category_id?: string
+          category_name_snapshot?: string
+          created_at?: string
+          created_by?: string
+          creation_key?: string
+          currency_code?: string
+          expense_number?: string
+          id?: string
+          incurred_at?: string
+          notes?: string | null
+          payee?: string | null
+          payment_method?: string
+          reference?: string | null
+          status?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_category_id_business_id_fkey"
+            columns: ["category_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       inventory_balances: {
         Row: {
           business_id: string
@@ -674,6 +793,20 @@ export type Database = {
         }
         Returns: string
       }
+      create_expense: {
+        Args: {
+          p_amount: number
+          p_business_id: string
+          p_category_id: string
+          p_creation_key: string
+          p_incurred_at: string
+          p_notes?: string
+          p_payee?: string
+          p_payment_method: string
+          p_reference?: string
+        }
+        Returns: string
+      }
       create_product: {
         Args: {
           p_barcode?: string
@@ -733,6 +866,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_financial_summary: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       has_permission: {
@@ -780,6 +917,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      void_expense: {
+        Args: { p_business_id: string; p_expense_id: string; p_reason: string }
+        Returns: string
       }
     }
     Enums: {
