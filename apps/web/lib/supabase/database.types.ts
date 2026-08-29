@@ -1134,6 +1134,14 @@ export type Database = {
         Args: { p_business_id: string; p_from: string; p_to: string }
         Returns: Json
       }
+      get_invitation_branch_options: {
+        Args: { p_business_id: string }
+        Returns: {
+          code: string
+          id: string
+          name: string
+        }[]
+      }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       has_branch_access: {

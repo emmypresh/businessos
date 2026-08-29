@@ -101,6 +101,23 @@ export function mapDatabaseError(
         "This expense may already have been recorded with different details. Check the expense list before retrying.",
     };
   }
+  // Phase 1F — same "superstring before the generic fallback" rule as
+  // EXPENSE_IDEMPOTENCY_KEY_REUSED immediately above (this file's own
+  // unit test caught this being placed AFTER the fallback the first time
+  // it was written, reproducing the exact dead-code bug that comment
+  // documents — moved here to fix it).
+  if (message.includes("BRANCH_IDEMPOTENCY_KEY_REUSED")) {
+    return {
+      message:
+        "This branch may already have been created with different details. Check the branch list before retrying.",
+    };
+  }
+  if (message.includes("INVITATION_IDEMPOTENCY_KEY_REUSED")) {
+    return {
+      message:
+        "This invitation may already have been sent with different details. Check the invitation list before retrying.",
+    };
+  }
   if (message.includes("IDEMPOTENCY_KEY_REUSED")) {
     return {
       message:
@@ -270,6 +287,112 @@ export function mapDatabaseError(
   }
   if (message.includes("REPORT_AMOUNT_OUT_OF_RANGE")) {
     return { message: "One of the amounts in this report is too large." };
+  }
+
+  // Phase 1F — branches + staff. Codes verified against the exact `raise
+  // exception` strings in
+  // supabase/migrations/20260828080000_create_business_branches.sql,
+  // supabase/migrations/20260828080300_business_branch_rpcs.sql,
+  // supabase/migrations/20260828080500_member_management_rpcs.sql, and
+  // supabase/migrations/20260828080700_business_invitation_rpcs.sql — not
+  // guessed. BRANCH_IDEMPOTENCY_KEY_REUSED/INVITATION_IDEMPOTENCY_KEY_REUSED
+  // are handled earlier, alongside the other *_IDEMPOTENCY_KEY_REUSED
+  // checks (ordering matters there — see that block's own comment).
+  // DEFAULT_BRANCH_CANNOT_BE_DEACTIVATED is checked before the bare
+  // BRANCH_NOT_ACTIVE/BRANCH_NOT_FOUND fallbacks it never actually
+  // overlaps with, purely to keep the branch-error block together.
+  if (message.includes("INVALID_BRANCH_NAME")) {
+    return { message: "Enter a branch name (2–100 characters).", field: "name" };
+  }
+  if (message.includes("INVALID_BRANCH_CODE")) {
+    return { message: "Enter a valid code (up to 20 characters, no spaces).", field: "code" };
+  }
+  if (message.includes("INVALID_BRANCH_ADDRESS")) {
+    return { message: "Address is too long.", field: "addressLine1" };
+  }
+  if (message.includes("INVALID_BRANCH_COUNTRY_CODE")) {
+    return { message: "Enter a valid 2-letter country code.", field: "countryCode" };
+  }
+  if (message.includes("INVALID_BRANCH_PHONE")) {
+    return { message: "Enter a valid phone number.", field: "phone" };
+  }
+  if (message.includes("BRANCH_NAME_ALREADY_EXISTS")) {
+    return { message: "A branch with this name already exists.", field: "name" };
+  }
+  if (message.includes("BRANCH_CODE_ALREADY_EXISTS")) {
+    return { message: "A branch with this code already exists.", field: "code" };
+  }
+  if (message.includes("DEFAULT_BRANCH_CANNOT_BE_DEACTIVATED")) {
+    return { message: "This is the default branch. Set another active branch as default first." };
+  }
+  if (message.includes("BRANCH_NOT_ACTIVE")) {
+    return { message: "That branch is not currently active." };
+  }
+  if (message.includes("BRANCH_NOT_FOUND")) {
+    // Same non-disclosure reasoning as PRODUCT_NOT_FOUND: a forged/
+    // foreign branch id and a genuinely nonexistent one are
+    // indistinguishable to the caller.
+    return { message: "This branch is not available." };
+  }
+  if (message.includes("INVALID_BRANCH_ASSIGNMENT")) {
+    return { message: "Select at least one branch and choose exactly one as primary." };
+  }
+  if (message.includes("CANNOT_MANAGE_SELF")) {
+    return { message: "You can't perform this action on your own account." };
+  }
+  if (message.includes("CANNOT_MANAGE_OWNER")) {
+    return { message: "You don't have permission to manage an owner's account." };
+  }
+  if (message.includes("CANNOT_ASSIGN_OWNER_ROLE")) {
+    return { message: "Only an owner can assign the owner role.", field: "role" };
+  }
+  if (message.includes("LAST_OWNER_REQUIRED")) {
+    return { message: "A business must always have at least one active owner." };
+  }
+  if (message.includes("MEMBER_NOT_FOUND")) {
+    return { message: "This staff member is not available." };
+  }
+  // Codex adversarial review, application-layer round 2, Low 5: verified
+  // against the exact `raise exception` strings in
+  // supabase/migrations/20260828080500_member_management_rpcs.sql
+  // (suspend_member's own MEMBER_ALREADY_SUSPENDED,
+  // reactivate_member's own MEMBER_NOT_SUSPENDED) — previously unmapped,
+  // so both fell through to the generic fallback message instead of a
+  // specific, accurate one.
+  if (message.includes("MEMBER_ALREADY_SUSPENDED")) {
+    return { message: "This staff member is already suspended." };
+  }
+  if (message.includes("MEMBER_NOT_SUSPENDED")) {
+    return { message: "This staff member is already active." };
+  }
+  if (message.includes("INVALID_ROLE")) {
+    return { message: "Choose a valid role.", field: "role" };
+  }
+  if (message.includes("INVALID_INVITATION_EMAIL")) {
+    return { message: "Enter a valid email address.", field: "email" };
+  }
+  if (message.includes("INVITATION_ALREADY_PENDING")) {
+    return { message: "There's already a pending invitation for this email.", field: "email" };
+  }
+  if (message.includes("INVITATION_ALREADY_ACCEPTED")) {
+    return { message: "This invitation has already been accepted." };
+  }
+  if (message.includes("INVITATION_REVOKED")) {
+    return { message: "This invitation has been revoked." };
+  }
+  if (message.includes("INVITATION_EXPIRED")) {
+    return { message: "This invitation has expired." };
+  }
+  if (message.includes("ALREADY_BUSINESS_MEMBER")) {
+    return { message: "You're already a member of this business." };
+  }
+  if (message.includes("INVITATION_NOT_FOUND")) {
+    // Deliberately the SAME generic message for "nonexistent" and "not
+    // addressed to you" — matching accept_business_invitation's own
+    // non-disclosure contract exactly (see that RPC's own header
+    // comment): the wrong-email/nonexistent cases must remain
+    // indistinguishable at every layer, including this one.
+    return { message: "This invitation link isn't valid. It may have expired or already been used." };
   }
 
   if (error.code === "42501" || message.includes("insufficient_privilege")) {

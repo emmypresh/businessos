@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   LayoutDashboard,
   Users,
@@ -10,11 +9,15 @@ import {
   Wallet,
   ListTree,
   LineChart,
+  Building2,
+  IdCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
 import { getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
+import { SidebarNav, type NavSection } from "@/components/dashboard/sidebar-nav";
+import { MobileNav } from "@/components/dashboard/mobile-nav";
 import type { MembershipRow } from "@/lib/business/dal";
 
 export async function DashboardShell({
@@ -31,7 +34,7 @@ export async function DashboardShell({
   // route this links to independently re-verifies the same permission
   // server-side (requirePermissionOrNotFound), and every mutation
   // independently re-verifies its own (see lib/products/actions.ts,
-  // lib/inventory/actions.ts).
+  // lib/inventory/actions.ts, lib/branches/actions.ts, lib/staff/actions.ts).
   const permissions = await getPermissions(businessId);
   const canViewProducts = permissions.has(PERMISSION.PRODUCTS_VIEW);
   const canViewInventory = permissions.has(PERMISSION.INVENTORY_VIEW);
@@ -59,76 +62,108 @@ export async function DashboardShell({
   const expensesHref = canViewExpenses ? `/${businessId}/expenses` : `/${businessId}/expenses/new`;
   const canViewReports = permissions.has(PERMISSION.REPORTS_VIEW);
 
+  // Phase 1F. branches.manage does NOT imply branches.view — a manage-only
+  // caller links straight to "New branch" instead of the list, which
+  // independently requires branches.view and would 404 them. staff.invite
+  // does NOT imply staff.view either — an invite-only caller links
+  // straight to the invite form, never the staff list (which would 404
+  // them, and which would also — separately — leak the invitation tab to
+  // someone who never asked to see the roster). staff.view alone does
+  // NOT surface an invite entry point; only staff.invite does.
+  const canViewBranches = permissions.has(PERMISSION.BRANCHES_VIEW);
+  const canManageBranches = permissions.has(PERMISSION.BRANCHES_MANAGE);
+  const branchesHref = canViewBranches ? `/${businessId}/branches` : `/${businessId}/branches/new`;
+  const canViewStaff = permissions.has(PERMISSION.STAFF_VIEW);
+  const canInviteStaff = permissions.has(PERMISSION.STAFF_INVITE);
+  // Codex adversarial review, application-layer round 2: an invite-only
+  // caller (staff.invite, no staff.view) now lands on the independent
+  // /staff/invitations route — reachable on staff.invite alone, and a
+  // genuinely useful destination (it lists what they've already sent,
+  // with its own link through to /staff/invite) — rather than being
+  // dropped straight into a blank create form with no way back to see
+  // what they've done.
+  const staffHref = canViewStaff ? `/${businessId}/staff` : `/${businessId}/staff/invitations`;
+
+  // Icons are rendered into ELEMENTS here (`<Package />`, not the bare
+  // `Package` component reference) — see sidebar-nav.tsx's own NavItem
+  // comment for why: this array crosses a Server -> Client Component
+  // boundary (SidebarNav/MobileNav), and only already-rendered elements
+  // (never raw component/function references) can cross that boundary.
+  const sections: NavSection[] = [
+    { items: [{ href: `/${businessId}`, label: "Overview", icon: <LayoutDashboard />, exact: true }] },
+    {
+      label: "Operations",
+      items: [
+        ...(canViewSales || canCreateSales ? [{ href: salesHref, label: "Sales", icon: <Receipt /> }] : []),
+        ...(canViewCustomers ? [{ href: `/${businessId}/customers`, label: "Customers", icon: <UserRound /> }] : []),
+        ...(canViewProducts ? [{ href: `/${businessId}/products`, label: "Products", icon: <Package /> }] : []),
+        ...(canViewInventory ? [{ href: `/${businessId}/inventory`, label: "Inventory", icon: <Boxes /> }] : []),
+      ],
+    },
+    {
+      label: "Finance",
+      items: [
+        ...(canViewExpenses || canManageExpenses
+          ? [
+              { href: expensesHref, label: "Expenses", icon: <Wallet /> },
+              { href: `/${businessId}/expenses/categories`, label: "Categories", icon: <ListTree />, nested: true },
+            ]
+          : []),
+        ...(canViewReports ? [{ href: `/${businessId}/reports`, label: "Reports", icon: <LineChart /> }] : []),
+      ],
+    },
+    {
+      label: "Organization",
+      items: [
+        { href: `/${businessId}/members`, label: "Members", icon: <Users /> },
+        ...(canViewBranches || canManageBranches ? [{ href: branchesHref, label: "Branches", icon: <Building2 /> }] : []),
+        ...(canViewStaff || canInviteStaff ? [{ href: staffHref, label: "Staff", icon: <IdCard /> }] : []),
+      ],
+    },
+  ].filter((section) => section.items.length > 0);
+
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
-      <aside className="flex w-full shrink-0 flex-col border-b bg-card p-4 md:w-56 md:border-b-0 md:border-r">
-        <div>
+      {/* Mobile top bar — sidebar becomes a drawer below md, triggered from
+          here. Kept deliberately minimal: business name + menu trigger, no
+          branch selector (Phase 1F branches do not yet scope any other
+          module's data — see the [businessId]/layout.tsx comment — so no
+          UI here should imply otherwise). The role label is deliberately
+          NOT repeated here — Tailwind's `md:hidden` only hides this bar
+          visually at desktop width, it stays in the DOM regardless of
+          viewport, so duplicating the exact same "OWNER"/role text the
+          desktop <aside> below already renders would make every existing
+          test's role-label assertion ambiguous (two DOM matches) even
+          though only one is ever visible at a time. The drawer opened via
+          MobileNav's trigger still shows the full business context
+          (SheetTitle), so nothing is actually lost on mobile. */}
+      <div className="flex items-center justify-between border-b bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
+        <p className="min-w-0 truncate font-semibold tracking-tight">{business?.name}</p>
+        <MobileNav sections={sections} businessName={business?.name ?? "BusinessOS"} />
+      </div>
+
+      <aside className="hidden w-64 shrink-0 flex-col overflow-y-auto bg-sidebar p-4 text-sidebar-foreground md:flex">
+        <div className="px-1">
           <p className="truncate font-semibold tracking-tight">{business?.name}</p>
-          <p className="text-xs text-muted-foreground">{membership.roles?.name ?? "Member"}</p>
+          <p className="text-xs text-sidebar-foreground/60">{membership.roles?.name ?? "Member"}</p>
         </div>
-        <nav className="mt-6 flex flex-col gap-1 text-sm">
-          <Link href={`/${businessId}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-            <LayoutDashboard className="size-4" />
-            Dashboard
-          </Link>
-          <Link href={`/${businessId}/members`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-            <Users className="size-4" />
-            Members
-          </Link>
-          {canViewProducts ? (
-            <Link href={`/${businessId}/products`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-              <Package className="size-4" />
-              Products
-            </Link>
-          ) : null}
-          {canViewInventory ? (
-            <Link href={`/${businessId}/inventory`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-              <Boxes className="size-4" />
-              Inventory
-            </Link>
-          ) : null}
-          {canViewCustomers ? (
-            <Link href={`/${businessId}/customers`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-              <UserRound className="size-4" />
-              Customers
-            </Link>
-          ) : null}
-          {canViewSales || canCreateSales ? (
-            <Link href={salesHref} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-              <Receipt className="size-4" />
-              Sales
-            </Link>
-          ) : null}
-          {canViewExpenses || canManageExpenses ? (
-            <Link href={expensesHref} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-              <Wallet className="size-4" />
-              Expenses
-            </Link>
-          ) : null}
-          {canViewExpenses || canManageExpenses ? (
-            <Link
-              href={`/${businessId}/expenses/categories`}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 pl-8 text-muted-foreground hover:bg-accent"
-            >
-              <ListTree className="size-4" />
-              Categories
-            </Link>
-          ) : null}
-          {canViewReports ? (
-            <Link href={`/${businessId}/reports`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-              <LineChart className="size-4" />
-              Reports
-            </Link>
-          ) : null}
-        </nav>
+        <div className="mt-6">
+          <SidebarNav sections={sections} />
+        </div>
         <form action={logOut} className="mt-auto pt-8">
-          <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2">
+          <Button
+            type="submit"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2.5 text-sidebar-foreground/85 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+          >
             <LogOut className="size-4" />
             Log out
           </Button>
         </form>
       </aside>
-      <main className="flex-1 overflow-x-auto p-8">{children}</main>
+
+      <main className="flex-1 overflow-x-auto p-6 md:p-8">{children}</main>
     </div>
   );
 }

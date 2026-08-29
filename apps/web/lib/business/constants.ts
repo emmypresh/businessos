@@ -66,6 +66,18 @@ export const PERMISSION = {
   EXPENSES_VIEW: "expenses.view",
   EXPENSES_MANAGE: "expenses.manage",
   REPORTS_VIEW: "reports.view",
+  // Phase 1F. Verified against the exact seeded keys in
+  // supabase/migrations/20260828080400_branches_staff_permissions.sql.
+  // branches.manage does NOT imply branches.view, staff.invite does NOT
+  // imply staff.view, and staff.manage does NOT imply staff.view either —
+  // each is checked independently everywhere in lib/branches/ and
+  // lib/staff/, exactly like every other Phase 1C–1E permission pair
+  // above.
+  BRANCHES_VIEW: "branches.view",
+  BRANCHES_MANAGE: "branches.manage",
+  STAFF_VIEW: "staff.view",
+  STAFF_MANAGE: "staff.manage",
+  STAFF_INVITE: "staff.invite",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

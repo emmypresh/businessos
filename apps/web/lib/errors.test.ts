@@ -160,6 +160,97 @@ describe("mapDatabaseError", () => {
   });
 });
 
+describe("Phase 1F — branches + staff error mapping", () => {
+  it("maps every ordering-sensitive idempotency code to its OWN message, not the generic fallback (mirrors the Phase 1E EXPENSE_IDEMPOTENCY_KEY_REUSED ordering bug regression test)", () => {
+    expect(mapDatabaseError({ message: "BRANCH_IDEMPOTENCY_KEY_REUSED" }).message).toContain("branch");
+    expect(mapDatabaseError({ message: "INVITATION_IDEMPOTENCY_KEY_REUSED" }).message).toContain("invitation");
+  });
+
+  it("maps DEFAULT_BRANCH_CANNOT_BE_DEACTIVATED to actionable guidance, not a raw constraint message", () => {
+    const mapped = mapDatabaseError({ message: "DEFAULT_BRANCH_CANNOT_BE_DEACTIVATED" });
+    expect(mapped.message).toMatch(/set another active branch as default/i);
+  });
+
+  it("maps every hierarchy/self-management code to a safe, distinct message", () => {
+    expect(mapDatabaseError({ message: "CANNOT_MANAGE_SELF" }).message).toMatch(/own account/i);
+    expect(mapDatabaseError({ message: "CANNOT_MANAGE_OWNER" }).message).toMatch(/owner/i);
+    expect(mapDatabaseError({ message: "CANNOT_ASSIGN_OWNER_ROLE" }).message).toMatch(/owner/i);
+    expect(mapDatabaseError({ message: "LAST_OWNER_REQUIRED" }).message).toMatch(/active owner/i);
+  });
+
+  // Codex adversarial review, application-layer round 2, Low 5: these two
+  // codes previously had no dedicated mapping at all and fell through to
+  // the generic fallback — verified against
+  // supabase/migrations/20260828080500_member_management_rpcs.sql's own
+  // exact `raise exception` strings.
+  it("maps MEMBER_ALREADY_SUSPENDED and MEMBER_NOT_SUSPENDED to distinct, accurate messages — never the generic fallback", () => {
+    expect(mapDatabaseError({ message: "MEMBER_ALREADY_SUSPENDED" })).toEqual({
+      message: "This staff member is already suspended.",
+    });
+    expect(mapDatabaseError({ message: "MEMBER_NOT_SUSPENDED" })).toEqual({
+      message: "This staff member is already active.",
+    });
+  });
+
+  it("MEMBER_NOT_FOUND and MEMBER_NOT_SUSPENDED do not collide with each other's mapping despite sharing the MEMBER_NOT_ prefix", () => {
+    expect(mapDatabaseError({ message: "MEMBER_NOT_FOUND" }).message).toMatch(/not available/i);
+    expect(mapDatabaseError({ message: "MEMBER_NOT_SUSPENDED" }).message).toMatch(/already active/i);
+  });
+
+  it("maps INVALID_BRANCH_ASSIGNMENT to the same plain-language invariant description regardless of which specific violation triggered it", () => {
+    const mapped = mapDatabaseError({ message: "INVALID_BRANCH_ASSIGNMENT" });
+    expect(mapped.message).toMatch(/at least one branch/i);
+    expect(mapped.message).toMatch(/exactly one/i);
+  });
+
+  it("maps BRANCH_NOT_FOUND to a message that never distinguishes nonexistent from foreign-tenant (non-disclosure)", () => {
+    const mapped = mapDatabaseError({ message: "BRANCH_NOT_FOUND" });
+    expect(mapped.message).not.toMatch(/foreign|tenant|exist/i);
+  });
+
+  it("maps INVITATION_NOT_FOUND to a message that never distinguishes nonexistent from wrong-email (mirrors accept_business_invitation's own non-disclosure contract)", () => {
+    const mapped = mapDatabaseError({ message: "INVITATION_NOT_FOUND" });
+    expect(mapped.message).not.toMatch(/email|exist|wrong/i);
+  });
+
+  it("never leaks a raw private role name, schema name, or SQL keyword for any Phase 1F code", () => {
+    const codes = [
+      "BRANCH_IDEMPOTENCY_KEY_REUSED",
+      "INVITATION_IDEMPOTENCY_KEY_REUSED",
+      "INVALID_BRANCH_NAME",
+      "INVALID_BRANCH_CODE",
+      "INVALID_BRANCH_ADDRESS",
+      "INVALID_BRANCH_COUNTRY_CODE",
+      "INVALID_BRANCH_PHONE",
+      "BRANCH_NAME_ALREADY_EXISTS",
+      "BRANCH_CODE_ALREADY_EXISTS",
+      "DEFAULT_BRANCH_CANNOT_BE_DEACTIVATED",
+      "BRANCH_NOT_ACTIVE",
+      "BRANCH_NOT_FOUND",
+      "INVALID_BRANCH_ASSIGNMENT",
+      "CANNOT_MANAGE_SELF",
+      "CANNOT_MANAGE_OWNER",
+      "CANNOT_ASSIGN_OWNER_ROLE",
+      "LAST_OWNER_REQUIRED",
+      "MEMBER_NOT_FOUND",
+      "MEMBER_ALREADY_SUSPENDED",
+      "MEMBER_NOT_SUSPENDED",
+      "INVALID_ROLE",
+      "INVALID_INVITATION_EMAIL",
+      "INVITATION_ALREADY_PENDING",
+      "INVITATION_ALREADY_ACCEPTED",
+      "INVITATION_REVOKED",
+      "INVITATION_EXPIRED",
+      "ALREADY_BUSINESS_MEMBER",
+      "INVITATION_NOT_FOUND",
+    ];
+    for (const code of codes) {
+      const message = mapDatabaseError({ message: code }).message.toLowerCase();
+      expect(message, code).not.toMatch(/private_|private\.|public\.|postgres|constraint|sqlstate/);
+    }
+  });
+});
+
 describe("toActionState", () => {
   it("a field-scoped mapping produces ONLY fieldErrors — no top-level error, so the message never renders twice", () => {
     const state = toActionState({ message: "This SKU is already in use.", field: "sku" });
