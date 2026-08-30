@@ -145,9 +145,21 @@ describe("create_sale idempotency and replay ordering", () => {
     const { createTestDbClient } = await import("./helpers/db-client");
     const sql = createTestDbClient();
     try {
+      const [{ id: defaultBranchId }] = await sql<{ id: string }[]>`
+        select id from public.business_branches where business_id = ${businessId} and is_default = true
+      `;
       await sql`update public.inventory_locations set is_default = false where business_id = ${businessId}`;
-      await sql`insert into public.inventory_locations (business_id, name, is_default, status, created_by)
-        values (${businessId}, 'Second Store', true, 'active', ${userId})`;
+      // branch_id is now NOT NULL (Phase 1G) — attached to the same
+      // default branch as an additional, non-branch-canonical location;
+      // note that create_sale no longer reads business-wide is_default at
+      // all (Phase 1G resolves stock per BRANCH, via is_branch_default —
+      // see branch_aware_sales.sql's own header comment), so this swap no
+      // longer affects location resolution for a NEW call either — this
+      // test's real remaining point is that a REPLAY of an
+      // already-completed sale returns the stored result unconditionally,
+      // which still holds true regardless.
+      await sql`insert into public.inventory_locations (business_id, branch_id, name, is_branch_default, is_default, status, created_by)
+        values (${businessId}, ${defaultBranchId}, 'Second Store', false, true, 'active', ${userId})`;
     } finally {
       await sql.end();
     }

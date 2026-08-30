@@ -300,6 +300,19 @@ describe("createExpense action boundary", () => {
     currentClient = owner.client;
     const categoryId = await getDefaultCategoryId(owner.client, owner.businessId);
     const key = randomUuid();
+    // incurred_at is part of create_expense's own canonical idempotency
+    // payload (create_expense_creation_requests_and_rpc.sql) — computed
+    // ONCE, outside the closure below, so both concurrent submissions
+    // carry the byte-identical timestamp. Calling `new Date().toISOString()`
+    // separately inside each fd() call raced the two requests against a
+    // real (if narrow) millisecond boundary: two submissions landing on
+    // different milliseconds are — correctly — two DIFFERENT canonical
+    // requests, not a double-submit of the SAME one, so that version of
+    // this fixture could occasionally (and increasingly, as this RPC's own
+    // body has grown) produce a genuine EXPENSE_IDEMPOTENCY_KEY_REUSED
+    // instead of exercising the double-submit path this test exists to
+    // prove.
+    const incurredAt = new Date().toISOString();
     const fd = () =>
       formData({
         businessId: owner.businessId,
@@ -307,7 +320,7 @@ describe("createExpense action boundary", () => {
         categoryId,
         amount: "500",
         paymentMethod: "CASH",
-        incurredAt: new Date().toISOString(),
+        incurredAt,
       });
 
     const results = await Promise.all([

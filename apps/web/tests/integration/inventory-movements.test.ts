@@ -147,9 +147,17 @@ describe("public.record_inventory_movement", () => {
     const sql = createTestDbClient();
     let secondLocationId: string;
     try {
+      // Phase 1G made branch_id NOT NULL — attached to the business's own
+      // default branch (which the OWNER caller below already has real
+      // access to via ensure_member_branch_access.sql), so this test's own
+      // ARCHIVED-location rejection is what's actually exercised, never a
+      // branch-access rejection instead.
+      const [{ id: defaultBranchId }] = await sql<{ id: string }[]>`
+        select id from public.business_branches where business_id = ${businessId} and is_default = true
+      `;
       const [row] = await sql`
-        insert into public.inventory_locations (business_id, name, is_default, status, created_by)
-        values (${businessId}, 'Warehouse', false, 'archived', ${userId})
+        insert into public.inventory_locations (business_id, branch_id, name, is_branch_default, is_default, status, created_by)
+        values (${businessId}, ${defaultBranchId}, 'Warehouse', false, false, 'archived', ${userId})
         returning id
       `;
       secondLocationId = row.id;

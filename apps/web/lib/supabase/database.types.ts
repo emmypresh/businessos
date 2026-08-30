@@ -426,6 +426,8 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          branch_id: string | null
+          branch_name_snapshot: string | null
           business_id: string
           category_id: string
           category_name_snapshot: string
@@ -447,6 +449,8 @@ export type Database = {
         }
         Insert: {
           amount: number
+          branch_id?: string | null
+          branch_name_snapshot?: string | null
           business_id: string
           category_id: string
           category_name_snapshot: string
@@ -468,6 +472,8 @@ export type Database = {
         }
         Update: {
           amount?: number
+          branch_id?: string | null
+          branch_name_snapshot?: string | null
           business_id?: string
           category_id?: string
           category_name_snapshot?: string
@@ -488,6 +494,13 @@ export type Database = {
           voided_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_branch_id_business_id_fkey"
+            columns: ["branch_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_branches"
+            referencedColumns: ["id", "business_id"]
+          },
           {
             foreignKeyName: "expenses_business_id_fkey"
             columns: ["business_id"]
@@ -631,36 +644,49 @@ export type Database = {
       }
       inventory_locations: {
         Row: {
+          branch_id: string
           business_id: string
           created_at: string
           created_by: string
           id: string
+          is_branch_default: boolean
           is_default: boolean
           name: string
           status: string
           updated_at: string
         }
         Insert: {
+          branch_id: string
           business_id: string
           created_at?: string
           created_by: string
           id?: string
+          is_branch_default?: boolean
           is_default?: boolean
           name: string
           status?: string
           updated_at?: string
         }
         Update: {
+          branch_id?: string
           business_id?: string
           created_at?: string
           created_by?: string
           id?: string
+          is_branch_default?: boolean
           is_default?: boolean
           name?: string
           status?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_locations_branch_id_business_id_fkey"
+            columns: ["branch_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_branches"
+            referencedColumns: ["id", "business_id"]
+          },
           {
             foreignKeyName: "inventory_locations_business_id_fkey"
             columns: ["business_id"]
@@ -880,6 +906,8 @@ export type Database = {
       sales: {
         Row: {
           amount_paid: number
+          branch_id: string
+          branch_name_snapshot: string
           business_id: string
           cancelled_at: string | null
           completed_at: string | null
@@ -907,6 +935,8 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number
+          branch_id: string
+          branch_name_snapshot: string
           business_id: string
           cancelled_at?: string | null
           completed_at?: string | null
@@ -934,6 +964,8 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
+          branch_id?: string
+          branch_name_snapshot?: string
           business_id?: string
           cancelled_at?: string | null
           completed_at?: string | null
@@ -960,6 +992,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_branch_id_business_id_fkey"
+            columns: ["branch_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_branches"
+            referencedColumns: ["id", "business_id"]
+          },
           {
             foreignKeyName: "sales_business_id_fkey"
             columns: ["business_id"]
@@ -1056,6 +1095,7 @@ export type Database = {
       create_expense: {
         Args: {
           p_amount: number
+          p_branch_id?: string
           p_business_id: string
           p_category_id: string
           p_creation_key: string
@@ -1115,6 +1155,7 @@ export type Database = {
       create_sale: {
         Args: {
           p_amount_paid?: number
+          p_branch_id?: string
           p_business_id: string
           p_creation_key: string
           p_customer_id?: string
@@ -1131,7 +1172,12 @@ export type Database = {
         Returns: string
       }
       get_financial_summary: {
-        Args: { p_business_id: string; p_from: string; p_to: string }
+        Args: {
+          p_branch_id?: string
+          p_business_id: string
+          p_from: string
+          p_to: string
+        }
         Returns: Json
       }
       get_invitation_branch_options: {

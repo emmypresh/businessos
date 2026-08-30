@@ -265,8 +265,13 @@ describe("private writer roles: narrow, non-login, no privilege escalation", () 
   // moment any role's actual grants drift from what its own RPCs
   // document needing.
   const EXACT_TABLES_BY_ROLE: Record<string, string[]> = {
-    // 20260828080300_business_branch_rpcs.sql
-    private_branch_writer: ["business_branches", "business_branch_creation_requests"],
+    // 20260828080300_business_branch_rpcs.sql, extended by Phase 1G's
+    // 20260829080000_branch_aware_inventory_locations.sql (Codex
+    // adversarial review Phase 1G round 2, Medium 3): set_default_business_branch
+    // now also syncs the legacy inventory_locations.is_default flag, which
+    // legitimately requires this role to read/write a narrow set of
+    // inventory_locations columns too.
+    private_branch_writer: ["business_branches", "business_branch_creation_requests", "inventory_locations"],
     // 20260828080500_member_management_rpcs.sql
     private_staff_writer: ["business_members", "roles", "business_branches", "business_member_branches"],
     // 20260828080700_business_invitation_rpcs.sql (create_business_invitation / revoke_business_invitation)
@@ -345,6 +350,16 @@ describe("private writer roles: narrow, non-login, no privilege escalation", () 
       ...branches("private", "business_branch_creation_requests", {
         business_id: ["SELECT", "INSERT"], creation_key: ["SELECT", "INSERT"],
         canonical_payload: ["SELECT", "INSERT"], branch_id: ["SELECT", "UPDATE"],
+      }),
+      // Phase 1G, 20260829080000_branch_aware_inventory_locations.sql,
+      // Medium 3: exactly the columns set_default_business_branch's own
+      // is_default-sync logic reads (id/business_id/branch_id/is_branch_default
+      // as WHERE-clause predicates and the resolved-location lookup) plus
+      // UPDATE on is_default alone — branch_id and is_branch_default are
+      // deliberately SELECT-only, never UPDATE, for this role.
+      ...branches("public", "inventory_locations", {
+        id: ["SELECT"], business_id: ["SELECT"], branch_id: ["SELECT"],
+        is_branch_default: ["SELECT"], is_default: ["SELECT", "UPDATE"],
       }),
     ],
     // 20260828080500_member_management_rpcs.sql

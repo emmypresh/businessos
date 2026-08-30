@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { createConfirmedTestUser, createUserClient, deleteTestUser } from "./helpers/admin-client";
 import { createOwnerAndBusiness, createMemberWithCustomPermissions, randomUuid } from "./helpers/inventory";
-import { inviteMember, acceptInvitation as acceptInvitationViaRpc, expireInvitation, getDefaultBranchId, randomEmail } from "./helpers/staff";
+import { inviteMember, acceptInvitation as acceptInvitationViaRpc, expireInvitation, getDefaultBranchId, createBranch, randomEmail } from "./helpers/staff";
+import { createTestDbClient } from "./helpers/db-client";
 
 // Same hybrid technique as tests/integration/branch-application.test.ts /
 // tests/integration/expense-action-auth.test.ts.
@@ -325,10 +326,27 @@ describe("changeMemberRole / replaceMemberBranches / suspendMember / reactivateM
 });
 
 describe("staff DAL", () => {
-  it("listStaffMembers includes a member with ZERO branch assignments (the pre-Phase-1F owner row) — never silently dropped by the branch embed", async () => {
+  it("listStaffMembers includes a member with ZERO branch assignments — never silently dropped by the branch embed", async () => {
     const owner = await createOwnerAndBusiness("sapp-dal-zero-branches");
     cleanupUserIds.push(owner.userId);
     currentClient = owner.client;
+
+    // Phase 1G's ensure_member_branch_access.sql now gives the
+    // auto-created OWNER a real default-branch assignment (closing a
+    // previously load-bearing gap — see that migration's own header
+    // comment) — this test's actual point is the DAL's LEFT JOIN embed
+    // itself, so a zero-assignment state is reconstructed directly, the
+    // same way this suite already does for every other state no RPC can
+    // produce.
+    const sql = createTestDbClient();
+    try {
+      const [{ id: ownerMemberId }] = await sql<{ id: string }[]>`
+        select id from public.business_members where business_id = ${owner.businessId} and user_id = ${owner.userId}
+      `;
+      await sql`delete from public.business_member_branches where member_id = ${ownerMemberId}`;
+    } finally {
+      await sql.end();
+    }
 
     const rows = await listStaffMembers(owner.businessId);
     const ownerRow = rows.find((r) => r.user_id === owner.userId);
@@ -349,15 +367,22 @@ describe("staff DAL", () => {
     expect(rows.some((r) => r.id === manager.memberId)).toBe(true);
   });
 
-  it("listStaffMembers branchId filter excludes a member with zero assignments", async () => {
+  it("listStaffMembers branchId filter excludes a member with zero assignments to that branch", async () => {
     const owner = await createOwnerAndBusiness("sapp-dal-branch-filter");
     cleanupUserIds.push(owner.userId);
     currentClient = owner.client;
-    const branchId = await getDefaultBranchId(owner.client, owner.businessId);
+    // Phase 1G's ensure_member_branch_access migration now gives the
+    // auto-created OWNER a real assignment to the business's DEFAULT
+    // branch (previously — Phase 1F — this was zero, a gap Phase 1G's own
+    // has_branch_access-gated write paths made load-bearing; see that
+    // migration's own header comment). This test's own distinguishing
+    // behavior — "a member with zero assignment to the FILTERED branch is
+    // excluded" — still holds, just proven against a SECOND branch the
+    // owner has no assignment to, rather than the default one they now
+    // legitimately do.
+    const secondBranchId = await createBranch(owner.client, owner.businessId, { name: "Filter Test Branch" });
 
-    const rows = await listStaffMembers(owner.businessId, { branchId });
-    // The owner's own pre-Phase-1F membership has zero assignments — it
-    // must NOT appear when filtering by a specific branch.
+    const rows = await listStaffMembers(owner.businessId, { branchId: secondBranchId });
     expect(rows.some((r) => r.user_id === owner.userId)).toBe(false);
   });
 

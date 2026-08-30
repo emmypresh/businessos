@@ -525,9 +525,15 @@ describe("self-targeting blocked (replace_member_branches)", () => {
       .single();
 
     // 1) Establish a known assignment set — direct SQL, since no RPC can
-    // ever write to the OWNER's own business_member_branches row.
+    // ever write to the OWNER's own business_member_branches row. The
+    // OWNER already has a real assignment to the business's default
+    // branch (Phase 1G's ensure_member_branch_access.sql), so that row is
+    // replaced wholesale here first — otherwise this INSERT would collide
+    // with it on the "at most one primary per member" partial unique
+    // index, since both would claim is_primary = true.
     const sql = createTestDbClient();
     try {
+      await sql`delete from public.business_member_branches where member_id = ${ownerMember!.id}`;
       await sql`
         insert into public.business_member_branches (business_id, member_id, branch_id, is_primary, assigned_by)
         values (${owner.businessId}, ${ownerMember!.id}, ${knownBranch}, true, ${owner.userId})

@@ -366,13 +366,23 @@ describe("public.create_product idempotency", () => {
         const locationA = await getDefaultLocationId(client, businessId);
 
         // A second location must be created via a raw SQL fixture — no
-        // location-management RPC exists in Phase 1C.
+        // location-management RPC exists in Phase 1C. Phase 1G made
+        // branch_id NOT NULL (every location belongs to exactly one
+        // branch) — this second, additional location is attached to the
+        // SAME default branch as the first (a branch may hold more than
+        // one location; only ONE may ever be is_branch_default), which is
+        // unrelated to what this test is actually proving (idempotency
+        // under a concurrent opening-location race), so it is deliberately
+        // NOT the branch-canonical one.
         const sql = createTestDbClient();
         let secondLocationId: string;
         try {
+          const [{ id: defaultBranchId }] = await sql<{ id: string }[]>`
+            select id from public.business_branches where business_id = ${businessId} and is_default = true
+          `;
           const [row] = await sql`
-            insert into public.inventory_locations (business_id, name, is_default, status, created_by)
-            values (${businessId}, 'Warehouse', false, 'active', ${userId})
+            insert into public.inventory_locations (business_id, branch_id, name, is_branch_default, is_default, status, created_by)
+            values (${businessId}, ${defaultBranchId}, 'Warehouse', false, false, 'active', ${userId})
             returning id
           `;
           secondLocationId = row.id;

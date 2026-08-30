@@ -50,10 +50,18 @@ describe("inventory_locations", () => {
         await sql`alter table public.inventory_locations enable trigger inventory_locations_protect_last_active`;
       }
 
+      // Phase 1G made branch_id NOT NULL (every location belongs to
+      // exactly one branch) — this replays Phase 1C's own original
+      // backfill INTENT (idempotent, exactly-one-location-per-business)
+      // adapted to that requirement, mapping to the business's own
+      // default branch exactly like branch_aware_inventory_locations.sql's
+      // own real backfill does, rather than the frozen migration's now-
+      // incompatible literal SQL text.
       const backfill = () => sql`
-        insert into public.inventory_locations (business_id, name, is_default, status, created_by)
-        select b.id, 'Main Store', true, 'active', b.created_by
+        insert into public.inventory_locations (business_id, branch_id, name, is_branch_default, is_default, status, created_by)
+        select b.id, bb.id, 'Main Store', true, true, 'active', b.created_by
         from public.businesses b
+        join public.business_branches bb on bb.business_id = b.id and bb.is_default = true
         where not exists (
           select 1 from public.inventory_locations l where l.business_id = b.id
         )

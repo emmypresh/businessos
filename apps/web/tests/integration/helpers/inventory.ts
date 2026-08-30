@@ -48,10 +48,30 @@ export async function addMemberWithRole(
 ) {
   const sql = createTestDbClient();
   try {
-    await sql`
+    const [member] = await sql<{ id: string }[]>`
       insert into public.business_members (business_id, user_id, role_id, status)
       select ${businessId}, ${userId}, roles.id, ${status}
       from public.roles where roles.name = ${roleName}
+      returning id
+    `;
+    // Phase 1G: a REAL staff member (onboarded via accept_business_invitation,
+    // the only other way a business_members row is ever created) always
+    // ends up with a real branch assignment — the invited branch(es), copied
+    // atomically at acceptance. This raw-SQL fixture bypasses that whole
+    // flow, so without this it would otherwise simulate a member with ZERO
+    // branch assignments — a state no real invited member is ever actually
+    // in (only the pre-Phase-1G-vintage, one-off auto-created OWNER row
+    // used to be in that state, and even that gap is now closed by
+    // ensure_member_branch_access.sql). Defaults to the business's own
+    // default branch, as primary, exactly mirroring that migration's own
+    // backfill — any test that needs a DIFFERENT branch set calls
+    // replace_member_branches itself afterward (a wholesale replace, so
+    // this default is simply overwritten, never additive).
+    await sql`
+      insert into public.business_member_branches (business_id, member_id, branch_id, is_primary, assigned_by)
+      select ${businessId}, ${member.id}, bb.id, true, ${userId}
+      from public.business_branches bb
+      where bb.business_id = ${businessId} and bb.is_default = true
     `;
   } finally {
     await sql.end();

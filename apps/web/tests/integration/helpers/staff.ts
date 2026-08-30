@@ -34,6 +34,70 @@ export async function createBranch(
   return data as string;
 }
 
+/**
+ * Phase 1G: a branch's own canonical/default inventory location — created
+ * automatically by private.create_default_branch_inventory_location for
+ * every branch, including the auto-created "Main Branch". Looked up via a
+ * PRIVILEGED direct-SQL connection, matching inviteMember's own precedent
+ * exactly: fixture setup only, never an assertion, and safe for a caller
+ * who may not hold inventory.view (inventory_locations' own SELECT policy
+ * requires plain membership, not a specific permission — but staying
+ * consistent with this file's established pattern here regardless).
+ */
+export async function getBranchLocationId(businessId: string, branchId: string) {
+  const sql = createTestDbClient();
+  try {
+    const rows = await sql<{ id: string }[]>`
+      select id from public.inventory_locations
+      where business_id = ${businessId} and branch_id = ${branchId} and is_branch_default = true
+    `;
+    if (!rows[0]) throw new Error(`no canonical location for branch ${branchId}`);
+    return rows[0].id;
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Phase 1G: grants an existing member operational access to a specific set
+ * of branches via the real replace_member_branches RPC (staff.manage
+ * required of the caller) — never a raw table write, matching this
+ * project's own "exercise the real RPC, not a shortcut" convention for
+ * anything that isn't pure fixture plumbing.
+ */
+export async function assignMemberToBranch(
+  ownerClient: Client,
+  businessId: string,
+  memberId: string,
+  branchIds: string[],
+  primaryBranchId?: string
+) {
+  const { error } = await ownerClient.rpc("replace_member_branches", {
+    p_business_id: businessId,
+    p_member_id: memberId,
+    p_branch_ids: branchIds,
+    p_primary_branch_id: primaryBranchId ?? branchIds[0],
+  });
+  if (error) throw new Error(`replace_member_branches failed: ${error.message}`);
+}
+
+/** Looks up a member's own business_members.id row by user_id — needed to
+ * call assignMemberToBranch/replace_member_branches, which take a
+ * member_id, not a user_id. */
+export async function getMemberId(businessId: string, userId: string) {
+  const sql = createTestDbClient();
+  try {
+    const rows = await sql<{ id: string }[]>`
+      select id from public.business_members
+      where business_id = ${businessId} and user_id = ${userId}
+    `;
+    if (!rows[0]) throw new Error(`no business_members row for user ${userId}`);
+    return rows[0].id;
+  } finally {
+    await sql.end();
+  }
+}
+
 export function invitationPayload(
   businessId: string,
   email: string,
