@@ -21,7 +21,17 @@ max_rows = 1000
 # without explicit GRANTs. When unset, new entities are NOT auto-exposed, matching the new cloud
 # default. Set to `true` to keep the legacy behaviour of auto-exposing new entities; this is
 # deprecated and the field is removed on 2026-10-30 once the always-revoked behaviour is permanent.
-# auto_expose_new_tables = true
+#
+# Explicitly pinned to `false` (Codex adversarial review Phase 1G round 2,
+# ACL environment micro-review): BusinessOS's entire schema follows a
+# fail-closed, explicit-GRANT-only model (see e.g. create_roles_permissions.sql's
+# own header comment) — leaving this UNSET relies on whatever the
+# installed Supabase CLI's own current default happens to be, which this
+# project has already observed drift across CLI versions (2.115.0 vs
+# 2.116.0). Pinning it explicitly means a future CLI upgrade can never
+# silently change this project's own security posture for newly created
+# tables/functions.
+auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
