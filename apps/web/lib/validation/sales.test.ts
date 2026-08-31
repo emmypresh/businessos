@@ -31,6 +31,7 @@ describe("SaleItemSchema quantity precision (mirrors the database's exact rule)"
 describe("CreateSaleSchema", () => {
   const base = {
     creationKey: crypto.randomUUID(),
+    branchId: crypto.randomUUID(),
     items: [{ productId: productId(), quantity: "1" }],
     paymentStatus: "UNPAID" as const,
   };
@@ -38,6 +39,24 @@ describe("CreateSaleSchema", () => {
   it("accepts a minimal valid walk-in UNPAID sale", () => {
     const result = CreateSaleSchema.safeParse(base);
     expect(result.success).toBe(true);
+  });
+
+  // Phase 1G, Codex adversarial review application-layer round 2, Blocker
+  // 5: branchId is deliberately OPTIONAL at this validation boundary — a
+  // legacy caller of createSale that never sends it at all must still
+  // reach create_sale's own approved omitted-branch fallback (resolve via
+  // the caller's active primary branch), never be rejected here before
+  // the RPC runs.
+  it("accepts an omitted branchId — the legacy calling shape remains valid at this layer", () => {
+    const { branchId, ...withoutBranchId } = base;
+    void branchId;
+    const result = CreateSaleSchema.safeParse(withoutBranchId);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a non-uuid branchId when one is provided", () => {
+    const result = CreateSaleSchema.safeParse({ ...base, branchId: "not-a-uuid" });
+    expect(result.success).toBe(false);
   });
 
   it("rejects an empty items array", () => {

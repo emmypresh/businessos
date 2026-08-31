@@ -8,7 +8,7 @@ import { getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { StockAdjustmentSchema } from "@/lib/validation/inventory";
 import { directionToMovementType } from "./constants";
-import { getDefaultInventoryLocation, getMovementCostIfAllowed } from "./dal";
+import { getBranchCanonicalLocation, getDefaultInventoryLocation, getMovementCostIfAllowed } from "./dal";
 import { mapDatabaseError, toActionState } from "@/lib/errors";
 import type { ActionState } from "@/lib/auth/actions";
 
@@ -37,6 +37,7 @@ export async function adjustStock(
   const parsed = StockAdjustmentSchema.safeParse({
     idempotencyKey: formData.get("idempotencyKey"),
     productId: formData.get("productId"),
+    branchId: formData.get("branchId") || undefined,
     direction: formData.get("direction"),
     quantity: formData.get("quantity"),
     reason: formData.get("reason"),
@@ -46,10 +47,29 @@ export async function adjustStock(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  // Location is never client-submitted — Phase 1C's single implicit
-  // default location is resolved server-side, exactly like
-  // createProduct's opening-stock path.
-  const location = await getDefaultInventoryLocation(businessId);
+  // Phase 1G: when the caller explicitly selected a branch (the NEW UI's
+  // own path), it's resolved to its real, current canonical location
+  // HERE, server-side — mirroring createProduct's identical opening-stock
+  // resolution exactly. When no branch was selected (a legacy caller of
+  // this action, predating this UI — Codex adversarial review,
+  // application-layer round 2, Blocker 5), this reproduces this action's
+  // own pre-Phase-1G calling shape EXACTLY: the business-wide legacy
+  // default location (not a branch-resolved one) is what's sent, which is
+  // precisely the shape record_inventory_movement's own approved
+  // Medium 2C compatibility alias exists to handle — it silently
+  // redirects to the caller's own primary-branch canonical location when
+  // they lack access to that legacy default, exactly as it always has.
+  // Either way, record_inventory_movement independently re-verifies the
+  // caller has operational access to whichever branch the resolved
+  // location actually belongs to (private.has_branch_access) — this
+  // resolution step is a UX/correctness convenience, never the security
+  // boundary itself.
+  const location = parsed.data.branchId
+    ? await getBranchCanonicalLocation(businessId, parsed.data.branchId)
+    : await getDefaultInventoryLocation(businessId);
+  if (!location) {
+    return { fieldErrors: { branchId: ["This branch is not available."] } };
+  }
   const movementType = directionToMovementType(parsed.data.direction);
 
   const supabase = await createClient();

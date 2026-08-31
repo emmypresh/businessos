@@ -15,8 +15,14 @@ import {
   REPORT_RANGE_PRESET_LABEL,
   REPORT_RANGE_UTC_HELPER_TEXT,
 } from "@/lib/reports/constants";
+import { BRANCH_STATUS } from "@/lib/branches/constants";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 
-export function DateRangePicker() {
+export function DateRangePicker({
+  branches = [],
+}: {
+  branches?: { id: string; name: string; status: string }[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -38,6 +44,38 @@ export function DateRangePicker() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {branches.length > 0 ? (
+          <Select
+            value={searchParams.get("branch") ?? "company-wide"}
+            onValueChange={(value) => pushParams({ branch: value === "company-wide" ? null : value })}
+          >
+            {/* w-full sm:w-56: never w-fit's unbounded intrinsic sizing —
+                see components/products/product-form.tsx's identical
+                comment. Codex adversarial review, application-layer
+                round 2, Blocker 6. */}
+            <SelectTrigger className="w-full min-w-0 sm:w-56" aria-label="Branch">
+              <SelectValue placeholder="Branch">
+                {(value: string) =>
+                  resolveBranchSelectLabel(value, branches, {
+                    sentinels: { "company-wide": "Company-wide" },
+                    placeholder: "Branch",
+                  })
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="company-wide">Company-wide</SelectItem>
+              {branches.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                  <span className="truncate">
+                    {branch.name}
+                    {branch.status === BRANCH_STATUS.INACTIVE ? " (inactive)" : ""}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
         <Select value={preset} onValueChange={(value) => pushParams({ preset: value })}>
           <SelectTrigger className="sm:w-48">
             <SelectValue placeholder="Date range" />

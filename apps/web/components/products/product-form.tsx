@@ -7,7 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SubmitButton } from "@/components/auth/submit-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ProductRow } from "@/lib/products/dal";
+import type { OperationalBranchOption } from "@/lib/branches/dal";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
+import { NoActiveBranchState } from "@/components/branches/no-active-branch-state";
 
 type Mode = "create" | "edit";
 
@@ -16,11 +26,18 @@ export function ProductForm({
   businessId,
   product,
   canSeeCost,
+  branches = [],
+  primaryBranchId = null,
 }: {
   mode: Mode;
   businessId: string;
   product?: ProductRow;
   canSeeCost: boolean;
+  // Create mode only — an opening-stock branch selector has no meaning
+  // when editing an already-existing product (opening stock is a
+  // one-time, creation-only concept; see create_product's own comment).
+  branches?: OperationalBranchOption[];
+  primaryBranchId?: string | null;
 }) {
   const action = mode === "create" ? createProduct : updateProduct;
   const [state, formAction] = useActionState(action, undefined);
@@ -35,6 +52,17 @@ export function ProductForm({
   const [creationKey] = useState(() => crypto.randomUUID());
 
   const [trackInventory, setTrackInventory] = useState(product?.track_inventory ?? true);
+  // Phase 1G: opening stock is branch-aware — the branch selector only
+  // ever appears once a POSITIVE quantity is entered (a zero/empty opening
+  // quantity requires no branch/location at all, matching create_product's
+  // own "opening only bundles a movement when p_opening_quantity > 0"
+  // behavior exactly — see lib/products/actions.ts). Kept as a live-typed
+  // string, mirroring every other numeric form field in this app.
+  const [openingQuantity, setOpeningQuantity] = useState("");
+  const [branchId, setBranchId] = useState(
+    primaryBranchId ?? (branches.length === 1 ? branches[0].id : "")
+  );
+  const needsBranch = trackInventory && Number(openingQuantity) > 0;
 
   return (
     <form action={formAction} data-testid="product-form" className="flex flex-col gap-6 max-w-2xl">
@@ -183,7 +211,65 @@ export function ProductForm({
                   step="0.001"
                   min="0"
                   placeholder="0"
+                  value={openingQuantity}
+                  onChange={(e) => setOpeningQuantity(e.target.value)}
                 />
+              </div>
+            ) : null}
+
+            {needsBranch && branches.length === 0 ? (
+              <div className="sm:col-span-2">
+                <NoActiveBranchState action="adding opening stock" />
+              </div>
+            ) : null}
+
+            {needsBranch && branches.length > 0 ? (
+              // min-w-0: without it, a grid item's default min-width:auto
+              // refuses to shrink below its content's intrinsic width — a
+              // 100-character branch name inside the Select below would
+              // otherwise force this whole grid track (and the form)
+              // wider than the viewport. Codex adversarial review,
+              // application-layer round 2, Blocker 6.
+              <div className="flex min-w-0 flex-col gap-2">
+                <Label htmlFor="branch">Branch</Label>
+                <input type="hidden" name="branchId" value={branchId} />
+                <Select value={branchId} onValueChange={(v) => setBranchId(v ?? "")}>
+                  {/* w-full overrides the trigger's own default w-fit —
+                      combined with the parent's min-w-0 above, this is
+                      what actually lets a long selected value truncate
+                      (via the trigger's own line-clamp-1) instead of
+                      forcing the trigger, and the page, wider. */}
+                  <SelectTrigger
+                    id="branch"
+                    className="w-full min-w-0"
+                    aria-invalid={!!state?.fieldErrors?.branchId}
+                    aria-describedby={
+                      state?.fieldErrors?.branchId ? "branch-helper branch-error" : "branch-helper"
+                    }
+                  >
+                    <SelectValue placeholder="Choose a branch">
+                      {(value: string) => resolveBranchSelectLabel(value, branches, { placeholder: "Choose a branch" })}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                        <span className="truncate">
+                          {branch.name}
+                          {branch.isPrimary ? " (Primary)" : ""}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p id="branch-helper" className="text-xs text-muted-foreground">
+                  Opening stock is added to this branch&apos;s own inventory location.
+                </p>
+                {state?.fieldErrors?.branchId ? (
+                  <p id="branch-error" role="alert" className="text-sm text-destructive">
+                    {state.fieldErrors.branchId[0]}
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </>
@@ -196,7 +282,9 @@ export function ProductForm({
         </Alert>
       ) : null}
 
-      <SubmitButton>{mode === "create" ? "Create product" : "Save changes"}</SubmitButton>
+      <SubmitButton disabled={needsBranch && !branchId}>
+        {mode === "create" ? "Create product" : "Save changes"}
+      </SubmitButton>
     </form>
   );
 }

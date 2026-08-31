@@ -10,8 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BRANCH_STATUS } from "@/lib/branches/constants";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 
-export function SaleFilters() {
+// Codex adversarial review, application-layer round 2, Blocker 4:
+// sales.view is business-wide, so this filter's options are EVERY branch
+// of the business (including inactive, for historical filtering) — never
+// just the caller's own operational assignment. "All branches" is the
+// accurate label for the unfiltered default; "All my branches" would be
+// false when the underlying data already spans branches the caller
+// doesn't personally operate at.
+export function SaleFilters({
+  branches = [],
+}: {
+  branches?: { id: string; name: string; status: string }[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -69,6 +82,38 @@ export function SaleFilters() {
         onChange={(e) => pushParams({ dateTo: e.target.value || null })}
         className="sm:w-40"
       />
+      {branches.length > 0 ? (
+        <Select
+          value={searchParams.get("branch") ?? "all"}
+          onValueChange={(value) => pushParams({ branch: value === "all" ? null : value })}
+        >
+          {/* w-full sm:w-48: never w-fit's unbounded intrinsic sizing —
+              see components/products/product-form.tsx's identical
+              comment. Codex adversarial review, application-layer round
+              2, Blocker 6. */}
+          <SelectTrigger className="w-full min-w-0 sm:w-48" aria-label="Branch">
+            <SelectValue placeholder="Branch">
+              {(value: string) =>
+                resolveBranchSelectLabel(value, branches, {
+                  sentinels: { all: "All branches" },
+                  placeholder: "Branch",
+                })
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All branches</SelectItem>
+            {branches.map((branch) => (
+              <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                <span className="truncate">
+                  {branch.name}
+                  {branch.status === BRANCH_STATUS.INACTIVE ? " (inactive)" : ""}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
     </div>
   );
 }

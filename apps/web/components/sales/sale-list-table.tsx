@@ -27,6 +27,7 @@ export function SaleListTable({
         <TableRow>
           <TableHead>Sale</TableHead>
           {showCustomerColumn ? <TableHead>Customer</TableHead> : null}
+          <TableHead>Branch</TableHead>
           <TableHead>Total</TableHead>
           <TableHead>Payment</TableHead>
           <TableHead>Date</TableHead>
@@ -43,6 +44,10 @@ export function SaleListTable({
             {showCustomerColumn ? (
               <TableCell>{sale.customer_name_snapshot ?? "Walk-in"}</TableCell>
             ) : null}
+            {/* branch_name_snapshot — never a live join, never a second
+                query per row (no N+1): the historical label already lives
+                on the sale itself. */}
+            <TableCell className="text-muted-foreground">{sale.branch_name_snapshot}</TableCell>
             <TableCell>
               {sale.currency_code} {sale.total.toFixed(2)}
             </TableCell>

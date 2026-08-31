@@ -230,8 +230,29 @@ test.describe("expenses", () => {
     expect(secondCreationKey).not.toBe(firstCreationKey);
   });
 
-  test("a view-only user (expenses.view, no expenses.manage) can browse but cannot record or void", async ({ page }) => {
+  test("a view-only user (expenses.view, no expenses.manage) can browse, use the branch filter, and view an expense, but cannot record or void", async ({ page }) => {
     const owner = await createOwnerAndBusiness("e2e-exp-view-only");
+    // A real, pre-existing expense the view-only user will later open
+    // directly — the "cannot void" half of this test was previously
+    // asserted only indirectly (via the absent "New expense" link); this
+    // is what lets it check the Void control itself is genuinely absent
+    // on a real expense detail page, not merely inferred from the list
+    // page's own create-link visibility.
+    const { data: category } = await owner.client
+      .from("expense_categories")
+      .select("id")
+      .eq("business_id", owner.businessId)
+      .eq("name", "Rent")
+      .single();
+    const { data: expenseId } = await owner.client.rpc("create_expense", {
+      p_business_id: owner.businessId,
+      p_creation_key: crypto.randomUUID(),
+      p_category_id: category!.id,
+      p_amount: 1200,
+      p_payment_method: "CASH",
+      p_incurred_at: new Date().toISOString(),
+    });
+
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const email = `e2e-exp-view-only-${suffix}@example.test`;
     const user = await createConfirmedTestUser(email, PASSWORD);
@@ -246,10 +267,28 @@ test.describe("expenses", () => {
     await page.goto(`/${owner.businessId}/expenses`);
     await expect(page.getByRole("heading", { name: "Expenses" })).toBeVisible();
     await expect(page.getByRole("link", { name: "New expense" })).toHaveCount(0);
+    // Branch filter metadata resolves for this expenses.view-only caller
+    // too (get_business_branch_options' own "expenses" scope is
+    // authorized on expenses.view OR expenses.manage — see
+    // 20260830080000_branch_option_rpc.sql) — the control renders with a
+    // real, human-readable default, never crashing the whole page the
+    // way an unhandled insufficient_privilege from that RPC once did.
+    const branchFilter = page.getByRole("combobox", { name: "Branch" });
+    await expect(branchFilter).toBeVisible();
+    await expect(branchFilter).toContainText("All branches");
 
     // /new independently requires expenses.manage — inaccessible here.
     await page.goto(`/${owner.businessId}/expenses/new`);
     await expect(page.getByText("Not found")).toBeVisible();
+
+    // The real, pre-existing expense is viewable (expenses.view is
+    // exactly what backs the detail page)...
+    await page.goto(`/${owner.businessId}/expenses/${expenseId}`);
+    await expect(page.getByRole("heading", { name: /^EXP-\d{6}$/ })).toBeVisible();
+    // ...but its Void control is genuinely absent — never merely
+    // disabled, and never reachable by a direct server-action call this
+    // caller could still trigger client-side.
+    await expect(page.getByRole("button", { name: "Void expense" })).toHaveCount(0);
   });
 
   test("a caller with neither expenses.view nor expenses.manage is denied entirely", async ({ page }) => {

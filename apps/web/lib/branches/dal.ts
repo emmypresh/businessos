@@ -161,3 +161,162 @@ export const listActiveBranchesForPicker = cache(
     return rows.map((r) => ({ id: r.id, name: r.name, code: r.code }));
   }
 );
+
+// Phase 1G remediation round 2 — RPC-backed branch-option contract --------
+//
+// Every branch-aware picker in this app now resolves its options through
+// ONE database RPC, public.get_business_branch_options, scoped by an
+// explicit finite PURPOSE string (never a raw permission name — see the
+// RPC's own header comment in
+// supabase/migrations/20260830080000_branch_option_rpc.sql). This
+// replaces the previous approach of reading business_branches through an
+// embedded business_member_branches join, which (Codex adversarial
+// review, application-layer round 2, Blocker 1) silently depended on the
+// caller ALSO holding branches.view — an unrelated permission — purely
+// because PostgREST enforces each embedded table's own RLS independently.
+// The RPC is SECURITY DEFINER and authorizes each scope on the exact
+// permission that already gates the real operation it backs, so a
+// sales.create-only (or expenses.manage-only, reports.view-only, ...)
+// caller with no branches.view now resolves real branch names, not an
+// empty/degraded result — there is no longer any "unresolved assignment"
+// state to represent at this layer.
+//
+// Five scopes, five thin wrappers below — never one shared "give me
+// branches" helper spread across every surface with an ad hoc permission
+// argument: each wrapper name says which real workflow it backs, and each
+// is fixed to its own scope string, never accepting one from the caller
+// (a browser can never choose which scope this hits).
+type BranchOptionScope = "operations" | "expenses" | "reports" | "sales_filter" | "inventory_filter";
+
+type RawBranchOptionRow = {
+  id: string;
+  name: string;
+  code: string | null;
+  status: string;
+  is_default: boolean;
+  is_primary: boolean;
+};
+
+async function getBranchOptionRows(businessId: string, scope: BranchOptionScope): Promise<RawBranchOptionRow[]> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("get_business_branch_options", {
+    p_business_id: businessId,
+    p_scope: scope,
+  });
+
+  if (error) {
+    throw new Error(`Failed to load branch options: ${error.message}`);
+  }
+  return data ?? [];
+}
+
+// operations ---------------------------------------------------------------
+//
+// Backs sale creation, product opening stock, and inventory adjustment —
+// the caller's OWN assigned, ACTIVE branches only (never every branch of
+// the business, unlike the four business-wide scopes below). Ordered
+// primary-first, then alphabetically, exactly as the RPC itself returns
+// it.
+export type OperationalBranchOption = {
+  id: string;
+  name: string;
+  code: string | null;
+  isPrimary: boolean;
+  isDefault: boolean;
+};
+
+export type OperationalBranchOptions = {
+  options: OperationalBranchOption[];
+  primaryBranchId: string | null;
+};
+
+export const getOperationalBranchOptions = cache(
+  async (businessId: string): Promise<OperationalBranchOptions> => {
+    const rows = await getBranchOptionRows(businessId, "operations");
+    const options: OperationalBranchOption[] = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      code: r.code,
+      isPrimary: r.is_primary,
+      isDefault: r.is_default,
+    }));
+    const primaryBranchId = options.find((o) => o.isPrimary)?.id ?? null;
+    return { options, primaryBranchId };
+  }
+);
+
+// expenses -------------------------------------------------------------
+//
+// Backs expense-branch attribution. Matches create_expense's own
+// authorization exactly (expenses.manage alone, no has_branch_access) —
+// every ACTIVE branch of the business is a legitimate choice, never
+// narrowed to the caller's own operational assignment. primaryBranchId is
+// still surfaced (the RPC flags the caller's own assigned primary branch,
+// if any, even within this business-wide result) purely because the
+// expense form defaults ITS OWN selection to the caller's primary branch
+// as a convenience, alongside the always-available explicit "Company-wide"
+// choice — never used to restrict which branches are offered.
+export type ExpenseBranchOption = { id: string; name: string };
+
+export type ExpenseBranchOptions = {
+  options: ExpenseBranchOption[];
+  primaryBranchId: string | null;
+};
+
+export const listExpenseBranchOptions = cache(
+  async (businessId: string): Promise<ExpenseBranchOptions> => {
+    const rows = await getBranchOptionRows(businessId, "expenses");
+    const options: ExpenseBranchOption[] = rows.map((r) => ({ id: r.id, name: r.name }));
+    const primaryBranchId = rows.find((r) => r.is_primary)?.id ?? null;
+    return { options, primaryBranchId };
+  }
+);
+
+// reports ----------------------------------------------------------------
+//
+// Backs the financial-report branch filter. Matches get_financial_summary's
+// own authorization exactly (reports.view alone) and, uniquely among the
+// five scopes, includes INACTIVE branches — historical reporting for a
+// since-deactivated branch must remain selectable.
+export type ReportBranchOption = { id: string; name: string; status: string };
+
+export const listReportBranchOptions = cache(
+  async (businessId: string): Promise<ReportBranchOption[]> => {
+    const rows = await getBranchOptionRows(businessId, "reports");
+    return rows.map((r) => ({ id: r.id, name: r.name, status: r.status }));
+  }
+);
+
+// sales_filter -------------------------------------------------------------
+//
+// Backs the sales list's branch filter. sales.view is business-wide with
+// no per-branch restriction, and a historical sale can reference a
+// since-deactivated branch — so, like reports, this includes INACTIVE
+// branches and imposes no operational-assignment restriction.
+export type SalesFilterBranchOption = { id: string; name: string; status: string };
+
+export const listSalesFilterBranchOptions = cache(
+  async (businessId: string): Promise<SalesFilterBranchOption[]> => {
+    const rows = await getBranchOptionRows(businessId, "sales_filter");
+    return rows.map((r) => ({ id: r.id, name: r.name, status: r.status }));
+  }
+);
+
+// inventory_filter -----------------------------------------------------
+//
+// Backs the inventory overview's branch filter. inventory.view is
+// business-wide (never narrowed to operational assignment — see
+// getInventoryOverview's own header comment in lib/inventory/dal.ts).
+// ACTIVE only: unlike reports/sales history, current inventory has no
+// stated need to filter by a branch that can no longer receive stock
+// activity at all.
+export type InventoryFilterBranchOption = { id: string; name: string };
+
+export const listInventoryFilterBranchOptions = cache(
+  async (businessId: string): Promise<InventoryFilterBranchOption[]> => {
+    const rows = await getBranchOptionRows(businessId, "inventory_filter");
+    return rows.map((r) => ({ id: r.id, name: r.name }));
+  }
+);

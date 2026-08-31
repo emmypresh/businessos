@@ -1,6 +1,7 @@
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listActiveExpenseCategoriesForPicker } from "@/lib/expenses/dal";
+import { listExpenseBranchOptions } from "@/lib/branches/dal";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -16,7 +17,13 @@ export default async function NewExpensePage({
 
   // ACTIVE categories only — an archived category can never be selected
   // for a new expense (§5/§29 of the approved plan).
-  const categories = await listActiveExpenseCategoriesForPicker(businessId);
+  const [categories, { options: branches, primaryBranchId }] = await Promise.all([
+    listActiveExpenseCategoriesForPicker(businessId),
+    // Every ACTIVE branch of the business, authorized on expenses.manage
+    // alone — see expense-form.tsx's own comment on why this is
+    // deliberately NOT getOperationalBranchOptions.
+    listExpenseBranchOptions(businessId),
+  ]);
 
   // A caller with expenses.manage but not expenses.view lands back here
   // after a successful create or void (lib/expenses/actions.ts) instead
@@ -45,7 +52,12 @@ export default async function NewExpensePage({
           it a brand-new creationKey (useState(() => crypto.randomUUID())
           runs again on this fresh mount), never reusing the one from the
           expense that was just created. */}
-      <ExpenseForm businessId={businessId} categories={categories.map((c) => ({ id: c.id, name: c.name }))} />
+      <ExpenseForm
+        businessId={businessId}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        branches={branches}
+        primaryBranchId={primaryBranchId}
+      />
     </div>
   );
 }

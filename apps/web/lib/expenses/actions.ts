@@ -223,6 +223,11 @@ export async function createExpense(
     payee: formData.get("payee") || undefined,
     reference: formData.get("reference") || undefined,
     notes: formData.get("notes") || undefined,
+    // Phase 1G: the form's own "Company-wide" sentinel is already
+    // translated to an empty string before this — `|| undefined`
+    // normalizes that (and a genuinely absent field) identically to
+    // "no branch", exactly like every other optional uuid field below.
+    branchId: formData.get("branchId") || undefined,
   });
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
@@ -232,7 +237,10 @@ export async function createExpense(
   // are ever sent — never expense_number, category_name_snapshot,
   // currency_code, status, created_by, or created_at. The database owns
   // every one of those; there is no field here for a forged value to even
-  // populate.
+  // populate. p_branch_id is the caller's own explicit choice — undefined
+  // (never a client-side default) for a genuinely company-wide expense;
+  // create_expense independently re-verifies branch access when one is
+  // given.
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_expense", {
     p_business_id: businessId,
@@ -244,6 +252,7 @@ export async function createExpense(
     p_payee: parsed.data.payee,
     p_reference: parsed.data.reference,
     p_notes: parsed.data.notes,
+    p_branch_id: parsed.data.branchId,
   });
 
   if (error) {

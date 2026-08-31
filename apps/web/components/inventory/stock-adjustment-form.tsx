@@ -15,16 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { OperationalBranchOption } from "@/lib/branches/dal";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 
 export function StockAdjustmentForm({
   businessId,
   products,
-  defaultLocationName,
+  branches,
+  primaryBranchId,
   initialProductId,
 }: {
   businessId: string;
   products: { id: string; name: string; sku: string | null }[];
-  defaultLocationName: string;
+  branches: OperationalBranchOption[];
+  primaryBranchId: string | null;
   initialProductId?: string;
 }) {
   const [state, formAction] = useActionState(adjustStock, undefined);
@@ -37,12 +41,24 @@ export function StockAdjustmentForm({
   // two independent adjustments under one key" hold).
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [productId, setProductId] = useState(initialProductId ?? "");
+  // Phase 1G: the branch IS the location choice for the caller — each
+  // branch has exactly one canonical (is_branch_default) operational
+  // location in the current architecture, so this stays a single Branch
+  // select rather than a separate branch-then-location picker (see
+  // lib/inventory/actions.ts's own comment on where the canonical
+  // location is resolved). Preselected the same way every other
+  // operational form defaults: the caller's own active primary branch, or
+  // the one accessible branch if there's only one.
+  const [branchId, setBranchId] = useState(
+    primaryBranchId ?? (branches.length === 1 ? branches[0].id : "")
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4 max-w-md">
       <input type="hidden" name="businessId" value={businessId} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="branchId" value={branchId} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="product">Product</Label>
@@ -66,12 +82,39 @@ export function StockAdjustmentForm({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label>Location</Label>
-        {/* Static, not a picker — Phase 1C has one implicit default
-            location per business; this becomes a real Select once a
-            multi-location phase exists. */}
-        <p className="text-sm text-muted-foreground">{defaultLocationName}</p>
+      {/* min-w-0: lets this item shrink below a 100-character branch
+          name's intrinsic width instead of forcing the form wider than
+          the viewport. Codex adversarial review, application-layer round
+          2, Blocker 6. */}
+      <div className="flex min-w-0 flex-col gap-2">
+        <Label htmlFor="branch">Branch</Label>
+        <Select value={branchId} onValueChange={(value) => setBranchId(value ?? "")}>
+          <SelectTrigger
+            id="branch"
+            className="w-full min-w-0"
+            aria-invalid={!!state?.fieldErrors?.branchId}
+            aria-describedby={state?.fieldErrors?.branchId ? "adjust-branch-error" : undefined}
+          >
+            <SelectValue placeholder="Choose a branch">
+              {(value: string) => resolveBranchSelectLabel(value, branches, { placeholder: "Choose a branch" })}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {branches.map((branch) => (
+              <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                <span className="truncate">
+                  {branch.name}
+                  {branch.isPrimary ? " (Primary)" : ""}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {state?.fieldErrors?.branchId ? (
+          <p id="adjust-branch-error" role="alert" className="text-sm text-destructive">
+            {state.fieldErrors.branchId[0]}
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -131,7 +174,7 @@ export function StockAdjustmentForm({
         </Alert>
       ) : null}
 
-      <SubmitButton>Record adjustment</SubmitButton>
+      <SubmitButton disabled={!branchId}>Record adjustment</SubmitButton>
     </form>
   );
 }

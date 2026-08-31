@@ -3,6 +3,16 @@ import { z } from "zod";
 export const StockAdjustmentSchema = z.object({
   idempotencyKey: z.uuid(),
   productId: z.uuid(),
+  // Phase 1G: the NEW UI's own branch select (stock-adjustment-form.tsx)
+  // guides the caller to an explicit choice, resolved to that branch's
+  // real, current canonical location server-side — but this schema
+  // itself leaves branchId OPTIONAL at the validation boundary. A legacy
+  // caller of this action that never sends branchId at all (the
+  // pre-Phase-1G calling shape) must still reach
+  // record_inventory_movement's own approved legacy-default-location
+  // compatibility alias (Medium 2C) rather than being rejected here.
+  // Codex adversarial review, application-layer round 2, Blocker 5.
+  branchId: z.uuid({ error: "Choose a valid branch." }).optional(),
   direction: z.enum(["increase", "decrease"], { error: "Choose a direction." }),
   quantity: z
     .coerce

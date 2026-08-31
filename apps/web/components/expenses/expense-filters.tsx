@@ -10,11 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 
 export function ExpenseFilters({
   categories,
+  branches = [],
 }: {
   categories: { id: string; name: string }[];
+  branches?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,6 +35,22 @@ export function ExpenseFilters({
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
     });
+  }
+
+  // One combined control, three mutually exclusive states — "all", a
+  // specific branch id, or "company-wide only" — rather than two
+  // independent filters that could otherwise be set in a contradictory
+  // combination (mirrors lib/expenses/dal.ts's own mutually-exclusive
+  // branchId/companyWideOnly handling).
+  const branchFilterValue = searchParams.get("companyWide") === "1" ? "company-wide" : searchParams.get("branch") ?? "all";
+  function onBranchFilterChange(value: string) {
+    if (value === "all") {
+      pushParams({ branch: null, companyWide: null });
+    } else if (value === "company-wide") {
+      pushParams({ branch: null, companyWide: "1" });
+    } else {
+      pushParams({ branch: value, companyWide: null });
+    }
   }
 
   return (
@@ -103,6 +122,33 @@ export function ExpenseFilters({
         onChange={(e) => pushParams({ dateTo: e.target.value || null })}
         className="sm:w-40"
       />
+      {branches.length > 0 ? (
+        <Select value={branchFilterValue} onValueChange={(value) => onBranchFilterChange(value ?? "all")}>
+          {/* w-full sm:w-44: never w-fit's unbounded intrinsic sizing —
+              see components/products/product-form.tsx's identical
+              comment. Codex adversarial review, application-layer round
+              2, Blocker 6. */}
+          <SelectTrigger className="w-full min-w-0 sm:w-44" aria-label="Branch">
+            <SelectValue placeholder="Branch">
+              {(value: string) =>
+                resolveBranchSelectLabel(value, branches, {
+                  sentinels: { all: "All branches", "company-wide": "Company-wide only" },
+                  placeholder: "Branch",
+                })
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All branches</SelectItem>
+            <SelectItem value="company-wide">Company-wide only</SelectItem>
+            {branches.map((branch) => (
+              <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                <span className="truncate">{branch.name}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
     </div>
   );
 }

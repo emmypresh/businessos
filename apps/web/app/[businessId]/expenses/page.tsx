@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listExpenses, listExpenseCategories } from "@/lib/expenses/dal";
+import { listExpenseBranchOptions } from "@/lib/branches/dal";
 import { parseExpenseListFilters } from "@/lib/validation/expenses";
 import { buttonVariants } from "@/components/ui/button";
 import { ExpenseFilters } from "@/components/expenses/expense-filters";
@@ -24,20 +25,40 @@ export default async function ExpensesPage({
   // silently dropped, never forwarded to the DAL/Postgres as a raw
   // string. See lib/validation/expenses.ts's parseExpenseListFilters for
   // the full reasoning.
-  const { search, categoryId, paymentMethod, status, dateFrom, dateTo } = parseExpenseListFilters(query);
+  const { search, categoryId, paymentMethod, status, branchId, companyWideOnly, dateFrom, dateTo } =
+    parseExpenseListFilters(query);
   const cursor = typeof query.cursor === "string" ? query.cursor : undefined;
 
-  const [{ rows, nextCursor }, categories] = await Promise.all([
-    listExpenses(businessId, { search, categoryId, paymentMethod, status, dateFrom, dateTo, cursor }),
+  const [{ rows, nextCursor }, categories, { options: branches }] = await Promise.all([
+    listExpenses(businessId, {
+      search,
+      categoryId,
+      paymentMethod,
+      status,
+      branchId,
+      companyWideOnly: companyWideOnly === "1",
+      dateFrom,
+      dateTo,
+      cursor,
+    }),
     listExpenseCategories(businessId),
+    // Every active branch of the business — expenses.view is business-wide
+    // (mirrors expenses.manage's own no-has_branch_access design), so this
+    // filter is never narrowed to "my own branches" — see
+    // expense-form.tsx's identical reasoning for the create picker.
+    listExpenseBranchOptions(businessId),
   ]);
 
-  const hasFilters = Boolean(search || categoryId || paymentMethod || status || dateFrom || dateTo);
+  const hasFilters = Boolean(
+    search || categoryId || paymentMethod || status || branchId || companyWideOnly || dateFrom || dateTo
+  );
   const baseParams = new URLSearchParams({
     ...(search ? { search } : {}),
     ...(categoryId ? { categoryId } : {}),
     ...(paymentMethod ? { paymentMethod } : {}),
     ...(status ? { status } : {}),
+    ...(branchId ? { branch: branchId } : {}),
+    ...(companyWideOnly ? { companyWide: companyWideOnly } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
   });
@@ -62,7 +83,10 @@ export default async function ExpensesPage({
         </div>
       </div>
 
-      <ExpenseFilters categories={categories.map((c) => ({ id: c.id, name: c.name }))} />
+      <ExpenseFilters
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        branches={branches.map((b) => ({ id: b.id, name: b.name }))}
+      />
 
       {rows.length === 0 ? (
         <p className="text-muted-foreground">

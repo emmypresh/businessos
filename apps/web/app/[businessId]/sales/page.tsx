@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listSales } from "@/lib/sales/dal";
+import { listSalesFilterBranchOptions } from "@/lib/branches/dal";
+import { SaleFilterSchema } from "@/lib/validation/sales";
 import { buttonVariants } from "@/components/ui/button";
 import { SaleFilters } from "@/components/sales/sale-filters";
 import { SaleListTable } from "@/components/sales/sale-list-table";
@@ -27,20 +29,43 @@ export default async function SalesPage({
   const dateTo = typeof query.dateTo === "string" ? query.dateTo : undefined;
   const cursor = typeof query.cursor === "string" ? query.cursor : undefined;
 
+  // Codex adversarial review, application-layer round 2, Blocker 4:
+  // sales.view is BUSINESS-WIDE (never gated on has_branch_access — see
+  // lib/sales/dal.ts's own comment), and the unfiltered list already shows
+  // every branch's sales — so the filter's own OPTIONS must cover every
+  // branch of the business, never just the caller's own OPERATIONAL
+  // assignment (that concept only applies to CREATING a sale, a
+  // genuinely different authorization model — see
+  // getOperationalBranchOptions' own header comment). Every branch,
+  // including INACTIVE ones, is offered here: a business's sales history
+  // at a since-deactivated branch must remain filterable. A malformed or
+  // unrecognized `?branch=` value is silently dropped (treated as "no
+  // filter"), exactly like every other filter's own safe-fallback
+  // convention (see lib/validation/expenses.ts's parseExpenseListFilters).
+  const allBranches = await listSalesFilterBranchOptions(businessId);
+  const rawBranch = typeof query.branch === "string" ? query.branch : undefined;
+  const branchParsed = SaleFilterSchema.shape.branchId.safeParse(rawBranch);
+  const branchId =
+    branchParsed.success && branchParsed.data && allBranches.some((b) => b.id === branchParsed.data)
+      ? branchParsed.data
+      : undefined;
+
   const { rows, nextCursor } = await listSales(businessId, {
     search,
     paymentStatus,
+    branchId,
     dateFrom,
     dateTo,
     cursor,
   });
 
-  const hasFilters = Boolean(search || paymentStatus || dateFrom || dateTo);
+  const hasFilters = Boolean(search || paymentStatus || branchId || dateFrom || dateTo);
   const baseHref =
     `/${businessId}/sales?` +
     new URLSearchParams({
       ...(search ? { search } : {}),
       ...(paymentStatus ? { paymentStatus } : {}),
+      ...(branchId ? { branch: branchId } : {}),
       ...(dateFrom ? { dateFrom } : {}),
       ...(dateTo ? { dateTo } : {}),
     }).toString();
@@ -56,7 +81,7 @@ export default async function SalesPage({
         ) : null}
       </div>
 
-      <SaleFilters />
+      <SaleFilters branches={allBranches.map((b) => ({ id: b.id, name: b.name, status: b.status }))} />
 
       {rows.length === 0 ? (
         <p className="text-muted-foreground">

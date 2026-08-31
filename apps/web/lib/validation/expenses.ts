@@ -85,6 +85,13 @@ export const CreateExpenseSchema = z.object({
   payee: optionalTrimmed(PAYEE_MAX_LENGTH),
   reference: optionalTrimmed(REFERENCE_MAX_LENGTH),
   notes: optionalTrimmed(NOTES_MAX_LENGTH),
+  // Phase 1G: genuinely optional — a company-wide expense (the DB's own
+  // NULL branch_id case) is a normal, expected choice, never a validation
+  // failure. The action itself normalizes the form's own "Company-wide"
+  // sentinel (an empty string) to `undefined` before this schema ever
+  // sees it, exactly like every other optional uuid field in this app
+  // (customerId, categoryId, ...).
+  branchId: z.uuid().optional(),
 });
 
 export type CreateExpenseInput = z.infer<typeof CreateExpenseSchema>;
@@ -106,6 +113,12 @@ export const ExpenseFilterSchema = z.object({
   categoryId: z.uuid().optional(),
   paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "CARD", "OTHER"]).optional(),
   status: z.enum(["POSTED", "VOIDED"]).optional(),
+  // Phase 1G: `branch` is a specific branch id; `companyWide=1` is the
+  // separate "no branch at all" filter — mutually exclusive by
+  // construction in expense-filters.tsx (never both at once from the UI),
+  // and parseExpenseListFilters below only ever honors one.
+  branchId: z.uuid().optional(),
+  companyWideOnly: z.literal("1").optional(),
   dateFrom: z.iso.date().optional(),
   dateTo: z.iso.date().optional(),
 });
@@ -138,6 +151,8 @@ export function parseExpenseListFilters(query: Record<string, string | string[] 
   const categoryId = ExpenseFilterSchema.shape.categoryId.safeParse(pick("categoryId"));
   const paymentMethod = ExpenseFilterSchema.shape.paymentMethod.safeParse(pick("paymentMethod"));
   const status = ExpenseFilterSchema.shape.status.safeParse(pick("status"));
+  const branchId = ExpenseFilterSchema.shape.branchId.safeParse(pick("branch"));
+  const companyWideOnly = ExpenseFilterSchema.shape.companyWideOnly.safeParse(pick("companyWide"));
   const dateFrom = ExpenseFilterSchema.shape.dateFrom.safeParse(pick("dateFrom"));
   const dateTo = ExpenseFilterSchema.shape.dateTo.safeParse(pick("dateTo"));
 
@@ -153,11 +168,21 @@ export function parseExpenseListFilters(query: Record<string, string | string[] 
     dateFrom.success && dateTo.success && dateFrom.data !== undefined && dateTo.data !== undefined &&
     dateFrom.data > dateTo.data;
 
+  // Mutually exclusive: an explicit branch always wins over
+  // companyWideOnly if a caller somehow sends both malformed query
+  // params at once (never possible from this app's own UI, which only
+  // ever sets one or the other) — never silently combined into something
+  // neither filter alone means.
+  const resolvedBranchId = branchId.success ? branchId.data : undefined;
+  const resolvedCompanyWideOnly = resolvedBranchId ? undefined : companyWideOnly.success ? companyWideOnly.data : undefined;
+
   return {
     search: search.success ? search.data : undefined,
     categoryId: categoryId.success ? categoryId.data : undefined,
     paymentMethod: paymentMethod.success ? paymentMethod.data : undefined,
     status: status.success ? status.data : undefined,
+    branchId: resolvedBranchId,
+    companyWideOnly: resolvedCompanyWideOnly,
     dateFrom: datesInverted ? undefined : dateFrom.success ? dateFrom.data : undefined,
     dateTo: datesInverted ? undefined : dateTo.success ? dateTo.data : undefined,
   };

@@ -53,6 +53,17 @@ export const CreateProductSchema = z
       .default(true),
     lowStockThreshold: quantity.optional(),
     openingQuantity: quantity.optional(),
+    // Phase 1G: genuinely optional, even when opening stock is positive —
+    // the NEW UI's own branch selector (product-form.tsx) guides the
+    // caller to pick one, but this schema never structurally REQUIRES it.
+    // create_product's own approved compatibility contract
+    // (20260829080200_branch_aware_inventory_movements.sql, Medium 2B)
+    // resolves an omitted opening location via the caller's active
+    // primary branch — a legacy caller of this action that bundles
+    // opening stock without ever sending branchId must keep reaching
+    // that exact fallback, not be rejected here before the RPC ever
+    // runs. Codex adversarial review, application-layer round 2, Blocker 5.
+    branchId: z.uuid().optional(),
   })
   .refine((data) => !data.trackInventory || Boolean(data.sku), {
     error: "SKU is required when inventory tracking is enabled.",

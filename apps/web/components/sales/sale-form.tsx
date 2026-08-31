@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
-import { createSale } from "@/lib/sales/actions";
+import { createSale, getSaleProductAvailabilityAction } from "@/lib/sales/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,8 @@ import { ProductPicker } from "@/components/sales/product-picker";
 import { PAYMENT_METHOD_LABEL, type PaymentMethod, type PaymentStatus } from "@/lib/sales/constants";
 import { isPartialPaymentInvalid } from "@/lib/validation/sales";
 import type { SaleProductOption } from "@/lib/sales/dal";
+import type { OperationalBranchOption } from "@/lib/branches/dal";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 
 type LineItem = {
   productId: string;
@@ -41,9 +43,13 @@ const QUANTITY_PATTERN = /^\d+(\.\d{1,3})?$/;
 export function SaleForm({
   businessId,
   customers,
+  branches,
+  primaryBranchId,
 }: {
   businessId: string;
   customers: { id: string; name: string }[];
+  branches: OperationalBranchOption[];
+  primaryBranchId: string | null;
 }) {
   const [state, formAction] = useActionState(createSale, undefined);
 
@@ -57,6 +63,14 @@ export function SaleForm({
   const [creationKey] = useState(() => crypto.randomUUID());
 
   const [items, setItems] = useState<LineItem[]>([]);
+  // Preselected: the caller's own active primary branch, or — when they
+  // have no primary but exactly one accessible branch — that one branch.
+  // With two or more accessible, non-primary branches, this starts empty
+  // so the caller makes an explicit choice rather than silently defaulting
+  // to an arbitrary one.
+  const [branchId, setBranchId] = useState<string>(
+    primaryBranchId ?? (branches.length === 1 ? branches[0].id : "")
+  );
   const [customerId, setCustomerId] = useState<string>("");
   const [discount, setDiscount] = useState("0");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("UNPAID");
@@ -96,6 +110,69 @@ export function SaleForm({
   function updateQuantity(productId: string, quantity: string) {
     setItems((prev) => prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
   }
+
+  // Codex adversarial review, application-layer round 3, Medium 1: a line
+  // already added to the cart captured its availableQuantity at ADD time
+  // and never refreshed it — switching branches left every existing line
+  // showing its old branch's stock, even though ProductPicker's own live
+  // search correctly reflected the new one. This re-fetches every
+  // CURRENT line's availability for the newly selected branch in one
+  // batched request (getSaleProductAvailabilityAction) whenever branchId
+  // changes, and merges the fresh quantities back in — quantities/prices/
+  // other line fields are untouched, the cart itself is never cleared.
+  //
+  // itemsRef (not `items` in the dependency array) intentionally: this
+  // effect must fire ONLY on a branch change, never merely because a line
+  // was added/removed/edited (adding a product already captures its
+  // correct current-branch availability via ProductPicker's own
+  // branch-aware search) — reading the latest cart through a ref avoids
+  // both an infinite effect loop (this effect itself calls setItems) and
+  // a stale closure over an old `items` array.
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    const currentItems = itemsRef.current;
+    if (currentItems.length === 0) return;
+    // Race safety: a `cancelled` flag scoped to THIS effect run, flipped
+    // by its own cleanup — if branchId changes again (A -> B -> C) before
+    // B's response arrives, React runs B's cleanup before starting C's
+    // effect, so B's now-stale response is discarded and never overwrites
+    // C's state. Mirrors ProductPicker's own identical debounce/cancel
+    // pattern — no additional state-management framework needed.
+    let cancelled = false;
+    const productIds = currentItems.map((item) => item.productId);
+    getSaleProductAvailabilityAction(businessId, productIds, branchId).then((rows) => {
+      if (cancelled) return;
+      // Codex adversarial review, application-layer round 3, Low 2: every
+      // product THIS refresh asked about must land in a definitive
+      // post-refresh state — never left at its OLD, pre-refresh figure.
+      // The DAL can genuinely omit a requested product (it becomes
+      // archived/inactive between the line being added and this refresh
+      // running — searchProductsForSale only ever returns ACTIVE
+      // products), and a stale "5 available" surviving that is exactly
+      // as misleading as a stale figure from a stock branch change. A
+      // missing row is treated as zero availability, never as "no
+      // change" — this also means the existing "Exceeds available
+      // stock" warning recalculates automatically on the next render,
+      // with no separate flag needed. `.map` over `prev` (the state at
+      // the moment this response is applied), never a fresh array built
+      // from `rows` — a line the user already removed while this
+      // request was in flight is simply absent from `prev` and can never
+      // be recreated by an in-flight response that still mentions it.
+      setItems((prev) =>
+        prev.map((item) => {
+          const match = rows.find((r) => r.id === item.productId);
+          return { ...item, availableQuantity: match ? match.quantity : 0 };
+        })
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, businessId]);
 
   function removeItem(productId: string) {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
@@ -159,6 +236,46 @@ export function SaleForm({
       <input type="hidden" name="paymentMethod" value={paymentStatus === "UNPAID" ? "" : paymentMethod} />
       <input type="hidden" name="amountPaid" value={paymentStatus === "PARTIALLY_PAID" ? amountPaid : ""} />
       <input type="hidden" name="notes" value={notes} />
+      <input type="hidden" name="branchId" value={branchId} />
+
+      {/* min-w-0: lets this item shrink below a 100-character branch
+          name's intrinsic width instead of forcing the form wider than
+          the viewport. Codex adversarial review, application-layer round
+          2, Blocker 6. */}
+      <div className="flex min-w-0 flex-col gap-2">
+        <Label htmlFor="branch">Branch</Label>
+        <Select value={branchId} onValueChange={(v) => setBranchId(v ?? "")}>
+          {/* w-full overrides SelectTrigger's own default w-fit — this,
+              combined with the parent's min-w-0, is what lets a long
+              selected value truncate (via the trigger's own
+              line-clamp-1) instead of overflowing. */}
+          <SelectTrigger
+            id="branch"
+            className="w-full min-w-0"
+            aria-invalid={!!state?.fieldErrors?.branchId}
+            aria-describedby={state?.fieldErrors?.branchId ? "branch-error" : undefined}
+          >
+            <SelectValue placeholder="Choose a branch">
+              {(value: string) => resolveBranchSelectLabel(value, branches, { placeholder: "Choose a branch" })}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {branches.map((branch) => (
+              <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                <span className="truncate">
+                  {branch.name}
+                  {branch.isPrimary ? " (Primary)" : ""}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {state?.fieldErrors?.branchId ? (
+          <p id="branch-error" role="alert" className="text-sm text-destructive">
+            {state.fieldErrors.branchId[0]}
+          </p>
+        ) : null}
+      </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="customer">Customer (optional)</Label>
@@ -179,7 +296,7 @@ export function SaleForm({
 
       <div className="flex flex-col gap-2">
         <Label>Products</Label>
-        <ProductPicker businessId={businessId} onAdd={addProduct} />
+        <ProductPicker businessId={businessId} branchId={branchId} onAdd={addProduct} />
       </div>
 
       {items.length > 0 ? (
@@ -381,7 +498,7 @@ export function SaleForm({
         </Alert>
       ) : null}
 
-      <SubmitButton disabled={partialPaymentInvalid}>
+      <SubmitButton disabled={partialPaymentInvalid || !branchId}>
         {items.length === 0 || hasInvalidQuantity ? "Complete sale" : `Complete sale · ${currencyCode} ${totalEstimate.toFixed(2)}`}
       </SubmitButton>
     </form>

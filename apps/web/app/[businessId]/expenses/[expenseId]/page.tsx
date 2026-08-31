@@ -60,6 +60,18 @@ export default async function ExpenseDetailPage({
                   this page shows. */}
               <dt className="text-muted-foreground">Category</dt>
               <dd>{expense.category_name_snapshot}</dd>
+              {/* Same snapshot treatment as category above — a branch
+                  rename or later deactivation never changes this. A
+                  genuinely company-wide expense (branch_name_snapshot is
+                  NULL exactly when branch_id is, per that column's own
+                  CHECK constraint) reads as "Company-wide", never a raw
+                  null/blank value — this caller is already authorized to
+                  view this expense under expenses.view/expenses.manage
+                  regardless of their own current branch access, so no
+                  extra branch-access check is needed just to render this
+                  label. */}
+              <dt className="text-muted-foreground">Branch</dt>
+              <dd>{expense.branch_name_snapshot ?? "Company-wide"}</dd>
               <dt className="text-muted-foreground">Payment method</dt>
               <dd>{PAYMENT_METHOD_LABEL[expense.payment_method as PaymentMethod] ?? expense.payment_method}</dd>
               <dt className="text-muted-foreground">Payee</dt>

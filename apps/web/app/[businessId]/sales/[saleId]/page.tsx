@@ -94,9 +94,14 @@ export default async function SaleDetailPage({
               <dd>
                 {sale.currency_code} {sale.amount_paid.toFixed(2)}
               </dd>
-              {/* Sold-from location, from the sale's OWN snapshot — never
-                  the live inventory_locations row. A location rename
-                  later never changes what this page shows. */}
+              {/* Branch and sold-from location, both from the sale's OWN
+                  historical snapshot columns — never a join to the live
+                  business_branches/inventory_locations rows. A branch
+                  rename, or the branch later becoming inactive, never
+                  changes what this page shows (see lib/sales/dal.ts's own
+                  header comment on snapshots). */}
+              <dt className="text-muted-foreground">Branch</dt>
+              <dd>{sale.branch_name_snapshot}</dd>
               <dt className="text-muted-foreground">Sold from</dt>
               <dd>{sale.inventory_location_name_snapshot}</dd>
             </dl>

@@ -8,6 +8,7 @@ import { getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { CreateProductSchema, UpdateProductSchema } from "@/lib/validation/products";
 import { mapDatabaseError, toActionState } from "@/lib/errors";
+import { getBranchCanonicalLocation } from "@/lib/inventory/dal";
 import type { ActionState } from "@/lib/auth/actions";
 
 const PERMISSION_DENIED: ActionState = {
@@ -49,6 +50,7 @@ export async function createProduct(
     trackInventory: formData.get("trackInventory") ?? false,
     lowStockThreshold: formData.get("lowStockThreshold") || undefined,
     openingQuantity: formData.get("openingQuantity") || undefined,
+    branchId: formData.get("branchId") || undefined,
   });
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
@@ -61,6 +63,32 @@ export async function createProduct(
   // parse above already left undefined for such a caller, since the
   // costPrice key was deliberately omitted before parsing).
   const costPrice = canSeeCost ? parsed.data.costPrice : undefined;
+
+  // Phase 1G: opening stock is branch-aware. No opening stock (0/absent)
+  // needs no branch/location at all. When opening stock IS requested AND
+  // the caller explicitly chose a branch (the NEW UI's own path), that
+  // branch (never trusted blindly) is resolved to its real, current
+  // canonical location HERE, server-side — never a client-supplied
+  // location id. A branch that doesn't resolve to a real, ACTIVE
+  // canonical location (foreign, or — structurally near-impossible —
+  // missing one) fails as a controlled, field-scoped error before the RPC
+  // is ever called. When opening stock is requested but NO branch was
+  // selected (a legacy caller of this action, predating this UI —
+  // Codex adversarial review, application-layer round 2, Blocker 5),
+  // p_opening_location_id is left undefined entirely, exactly
+  // reproducing this action's own pre-Phase-1G calling shape — that
+  // omission is what lets create_product's own approved compatibility
+  // contract (Medium 2B: resolve via the caller's active primary branch)
+  // run, rather than this action rejecting the request before the RPC
+  // ever sees it.
+  let openingLocationId: string | undefined;
+  if (parsed.data.openingQuantity && parsed.data.openingQuantity > 0 && parsed.data.branchId) {
+    const location = await getBranchCanonicalLocation(businessId, parsed.data.branchId);
+    if (!location) {
+      return { fieldErrors: { branchId: ["This branch is not available."] } };
+    }
+    openingLocationId = location.id;
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_product", {
@@ -77,8 +105,11 @@ export async function createProduct(
     p_track_inventory: parsed.data.trackInventory,
     p_low_stock_threshold: parsed.data.lowStockThreshold,
     p_opening_quantity: parsed.data.openingQuantity,
-    // p_opening_location_id intentionally omitted — create_product
-    // resolves the business's default location server-side.
+    // Explicitly resolved above from the caller's own selected branch when
+    // opening stock is requested; omitted (create_product's own primary-
+    // branch fallback) only for the "no opening stock at all" case, where
+    // it is never read regardless.
+    p_opening_location_id: openingLocationId,
   });
 
   if (error) {

@@ -45,11 +45,37 @@ export const SaleItemSchema = z.object({
   quantity: saleQuantity,
 });
 
+// Codex adversarial review, application-layer round 3, Low 1:
+// getSaleProductAvailabilityAction (lib/sales/actions.ts) batches a
+// branch-availability re-fetch for every product id currently in the
+// sale form's own cart — a client-controlled array that reaches a raw
+// `.in("id", productIds)` query against a uuid column. Validated here
+// with the SAME z.uuid() this file already uses for every other product/
+// sale id, rather than inventing a second validation approach: a
+// malformed id fails this schema and the whole batch is rejected before
+// ever reaching Postgres (see that action's own comment on why a mixed
+// valid/malformed array is rejected wholesale, not silently filtered).
+// Capped at MAX_SALE_ITEMS — the same bound CreateSaleSchema's own
+// `items` array already enforces — since this array can never
+// legitimately exceed the cart's own maximum line count.
+export const SaleProductIdsSchema = z.array(z.uuid()).max(MAX_SALE_ITEMS);
+
 export type SaleItemInput = z.infer<typeof SaleItemSchema>;
 
 export const CreateSaleSchema = z
   .object({
     creationKey: z.uuid(),
+    // Phase 1G: the NEW UI always sends an explicit choice (SaleForm
+    // requires the visible Branch select before it will submit) — but
+    // this schema itself deliberately treats branchId as OPTIONAL at the
+    // validation boundary, never a hard requirement. create_sale's own
+    // approved compatibility contract (20260829080100_branch_aware_sales.sql)
+    // resolves an OMITTED branch via the caller's active primary branch
+    // assignment — an existing/legacy caller of this action that never
+    // sends branchId at all must keep working through that exact fallback,
+    // not be rejected here before ever reaching the RPC. Codex adversarial
+    // review, application-layer round 2, Blocker 5.
+    branchId: z.uuid({ error: "Choose a valid branch." }).optional(),
     customerId: z.uuid().optional(),
     items: z
       .array(SaleItemSchema)
@@ -99,6 +125,7 @@ export const SaleFilterSchema = z.object({
   search: z.string().trim().max(200).optional(),
   paymentStatus: z.enum(["UNPAID", "PARTIALLY_PAID", "PAID"]).optional(),
   customerId: z.uuid().optional(),
+  branchId: z.uuid().optional(),
   dateFrom: z.iso.date().optional(),
   dateTo: z.iso.date().optional(),
 });

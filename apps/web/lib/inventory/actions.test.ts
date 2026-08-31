@@ -6,11 +6,12 @@ vi.mock("@/lib/auth/dal", () => ({ requireUser }));
 const { getPermissions } = vi.hoisted(() => ({ getPermissions: vi.fn() }));
 vi.mock("@/lib/business/dal", () => ({ getPermissions }));
 
-const { getDefaultInventoryLocation, getMovementCostIfAllowed } = vi.hoisted(() => ({
+const { getBranchCanonicalLocation, getDefaultInventoryLocation, getMovementCostIfAllowed } = vi.hoisted(() => ({
+  getBranchCanonicalLocation: vi.fn(),
   getDefaultInventoryLocation: vi.fn(),
   getMovementCostIfAllowed: vi.fn(),
 }));
-vi.mock("./dal", () => ({ getDefaultInventoryLocation, getMovementCostIfAllowed }));
+vi.mock("./dal", () => ({ getBranchCanonicalLocation, getDefaultInventoryLocation, getMovementCostIfAllowed }));
 
 const { redirect } = vi.hoisted(() => ({
   redirect: vi.fn((url: string) => {
@@ -35,11 +36,13 @@ function formData(entries: Record<string, string>): FormData {
 
 const IDEMPOTENCY_KEY = "22222222-2222-4222-8222-222222222222";
 const PRODUCT_ID = "33333333-3333-4333-8333-333333333333";
+const BRANCH_ID = "44444444-4444-4444-8444-444444444444";
 
 beforeEach(() => {
   requireUser.mockReset().mockResolvedValue({ id: "user-1" });
   getPermissions.mockReset();
-  getDefaultInventoryLocation.mockReset().mockResolvedValue({ id: "loc-1", name: "Main Store" });
+  getBranchCanonicalLocation.mockReset().mockResolvedValue({ id: "loc-1", name: "Main Store" });
+  getDefaultInventoryLocation.mockReset().mockResolvedValue({ id: "legacy-default-loc", name: "Legacy Default" });
   getMovementCostIfAllowed.mockReset();
   rpc.mockReset();
   redirect.mockClear();
@@ -55,6 +58,7 @@ describe("adjustStock — authorization (rule 1)", () => {
         businessId: "biz-1",
         idempotencyKey: IDEMPOTENCY_KEY,
         productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
         direction: "increase",
         quantity: "5",
         reason: "Test",
@@ -78,6 +82,7 @@ describe("adjustStock — direction mapping and server-controlled fields", () =>
           businessId: "biz-1",
           idempotencyKey: IDEMPOTENCY_KEY,
           productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
           direction: "increase",
           quantity: "5",
           reason: "Found stock",
@@ -85,11 +90,12 @@ describe("adjustStock — direction mapping and server-controlled fields", () =>
       )
     ).rejects.toThrow("REDIRECT:");
 
+    expect(getBranchCanonicalLocation).toHaveBeenCalledWith("biz-1", BRANCH_ID);
     expect(rpc).toHaveBeenCalledWith(
       "record_inventory_movement",
       expect.objectContaining({
         p_movement_type: "ADJUSTMENT_IN",
-        p_inventory_location_id: "loc-1", // from getDefaultInventoryLocation, not form data
+        p_inventory_location_id: "loc-1", // resolved server-side from branchId, never client form data
         p_quantity: 5,
       })
     );
@@ -122,6 +128,7 @@ describe("adjustStock — direction mapping and server-controlled fields", () =>
           businessId: "biz-1",
           idempotencyKey: IDEMPOTENCY_KEY,
           productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
           direction: "decrease",
           quantity: "5",
           reason: "Damaged",
@@ -147,6 +154,7 @@ describe("adjustStock — RPC response sanitization (rule 3)", () => {
         businessId: "biz-1",
         idempotencyKey: IDEMPOTENCY_KEY,
         productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
         direction: "decrease",
         quantity: "500",
         reason: "Too much",
@@ -175,6 +183,7 @@ describe("adjustStock — RPC response sanitization (rule 3)", () => {
           businessId: "biz-1",
           idempotencyKey: IDEMPOTENCY_KEY,
           productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
           direction: "increase",
           quantity: "1",
           reason: "Test",
@@ -201,6 +210,7 @@ describe("idempotency-key-reused handling (rule 5) — mapped as a stale/conflic
         businessId: "biz-1",
         idempotencyKey: IDEMPOTENCY_KEY,
         productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
         direction: "increase",
         quantity: "1",
         reason: "Test",
@@ -210,6 +220,82 @@ describe("idempotency-key-reused handling (rule 5) — mapped as a stale/conflic
     expect(result?.error).toContain("may already have been recorded");
     // Exactly one RPC call — the action never auto-resubmits.
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("adjustStock — Phase 1G branch-aware location resolution", () => {
+  it("rejects a branch that does not resolve to a real canonical location, as a field-scoped error, without ever calling the RPC", async () => {
+    getPermissions.mockResolvedValue(new Set(["inventory.adjust"]));
+    getBranchCanonicalLocation.mockResolvedValue(null);
+
+    const result = await adjustStock(
+      undefined,
+      formData({
+        businessId: "biz-1",
+        idempotencyKey: IDEMPOTENCY_KEY,
+        productId: PRODUCT_ID,
+        branchId: BRANCH_ID,
+        direction: "increase",
+        quantity: "1",
+        reason: "Test",
+      })
+    );
+
+    expect(result?.fieldErrors?.branchId).toBeDefined();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed (non-uuid) branchId before ever resolving a location or calling the RPC", async () => {
+    getPermissions.mockResolvedValue(new Set(["inventory.adjust"]));
+
+    const result = await adjustStock(
+      undefined,
+      formData({
+        businessId: "biz-1",
+        idempotencyKey: IDEMPOTENCY_KEY,
+        productId: PRODUCT_ID,
+        branchId: "not-a-uuid",
+        direction: "increase",
+        quantity: "1",
+        reason: "Test",
+      })
+    );
+
+    expect(result?.fieldErrors?.branchId).toBeDefined();
+    expect(getBranchCanonicalLocation).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  // Codex adversarial review, application-layer round 2, Blocker 5: a
+  // genuinely OMITTED branchId (the legacy, pre-Phase-1G calling shape)
+  // must NOT be rejected — it falls back to the legacy business-wide
+  // default location, exactly reproducing this action's own original
+  // behavior, and lets record_inventory_movement's own approved Medium 2C
+  // compatibility alias do the rest.
+  it("omitting branchId entirely falls back to the legacy default location, never getBranchCanonicalLocation", async () => {
+    getPermissions.mockResolvedValue(new Set(["inventory.adjust"]));
+    rpc.mockResolvedValue({ data: { product_id: PRODUCT_ID }, error: null });
+
+    await expect(
+      adjustStock(
+        undefined,
+        formData({
+          businessId: "biz-1",
+          idempotencyKey: IDEMPOTENCY_KEY,
+          productId: PRODUCT_ID,
+          direction: "increase",
+          quantity: "1",
+          reason: "Legacy shape",
+        })
+      )
+    ).rejects.toThrow("REDIRECT:");
+
+    expect(getDefaultInventoryLocation).toHaveBeenCalledWith("biz-1");
+    expect(getBranchCanonicalLocation).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "record_inventory_movement",
+      expect.objectContaining({ p_inventory_location_id: "legacy-default-loc" })
+    );
   });
 });
 

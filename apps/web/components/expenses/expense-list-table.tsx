@@ -20,6 +20,7 @@ export function ExpenseListTable({
         <TableRow>
           <TableHead>Expense</TableHead>
           <TableHead>Category</TableHead>
+          <TableHead>Branch</TableHead>
           <TableHead>Amount</TableHead>
           <TableHead>Payment</TableHead>
           <TableHead>Payee</TableHead>
@@ -39,9 +40,15 @@ export function ExpenseListTable({
               </Link>
             </TableCell>
             {/* Rendered from the expense's OWN historical snapshot — never
-                a join to the live expense_categories row. A later
-                category rename never changes what this row shows. */}
+                a join to the live expense_categories/business_branches
+                row. A later category rename or branch rename/deactivation
+                never changes what this row shows. NULL branch_name_snapshot
+                (a genuinely company-wide expense) reads as "Company-wide",
+                never a raw null/blank cell. */}
             <TableCell>{expense.category_name_snapshot}</TableCell>
+            <TableCell className="text-muted-foreground">
+              {expense.branch_name_snapshot ?? "Company-wide"}
+            </TableCell>
             <TableCell className="font-medium">
               {formatMoney(expense.amount, expense.currency_code)}
             </TableCell>

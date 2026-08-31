@@ -16,9 +16,15 @@ import type { SaleProductOption } from "@/lib/sales/dal";
  */
 export function ProductPicker({
   businessId,
+  branchId,
   onAdd,
 }: {
   businessId: string;
+  // Codex adversarial review, application-layer round 2, Blocker 2:
+  // re-searches whenever the selected branch changes, so displayed
+  // availability always reflects THAT branch's own canonical location —
+  // never a stale, business-wide, or previously-selected-branch figure.
+  branchId: string;
   onAdd: (product: SaleProductOption) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -29,7 +35,7 @@ export function ProductPicker({
     let cancelled = false;
     const timer = setTimeout(() => {
       setLoading(true);
-      searchProductsForSaleAction(businessId, query)
+      searchProductsForSaleAction(businessId, query, branchId)
         .then((rows) => {
           if (!cancelled) setResults(rows);
         })
@@ -41,7 +47,7 @@ export function ProductPicker({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [businessId, query]);
+  }, [businessId, branchId, query]);
 
   return (
     <div className="flex flex-col gap-2">

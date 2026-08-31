@@ -81,14 +81,26 @@ function parseFinancialSummary(value: Json): FinancialSummary {
 // aggregate; this DAL function preserves that by never falling back to a
 // raw sales/expenses query.
 export const getFinancialSummary = cache(
-  async (businessId: string, from: string, to: string): Promise<FinancialSummary> => {
+  async (businessId: string, from: string, to: string, branchId?: string): Promise<FinancialSummary> => {
     await requireUser();
     const supabase = await createClient();
 
+    // Phase 1G: p_branch_id, when given, restricts sales AND expenses to
+    // that exact branch's own attribution — a company-wide (NULL
+    // branch_id) expense is correctly excluded, never arbitrarily
+    // allocated. Authorization stays reports.view ALONE, with no
+    // has_branch_access requirement — a branch filter never widens what
+    // this permission already grants (see
+    // 20260829080400_branch_aware_financial_summary.sql's own header
+    // comment: this is deliberately a broad financial-oversight
+    // permission, not an operational-presence gate), and it works for an
+    // INACTIVE branch's historical report too — inactive only ever means
+    // "no new operational activity", never "erase history".
     const { data, error } = await supabase.rpc("get_financial_summary", {
       p_business_id: businessId,
       p_from: from,
       p_to: to,
+      p_branch_id: branchId,
     });
 
     if (error) {

@@ -46,9 +46,15 @@ function decodeExpenseCursor(value: string | undefined): Cursor | null {
 // own creation_key treatment exactly, and matching expenses' own
 // column-restricted SELECT grant (create_expenses.sql), which excludes it
 // too.
+// Phase 1G: branch_id/branch_name_snapshot are BOTH nullable — a
+// company-wide expense has neither (see 20260829080300_branch_aware_expenses.sql).
+// branch_name_snapshot is what every display use renders (see this file's
+// own header on snapshots — a branch rename/deactivation later never
+// changes it); branch_id is selected only so callers can filter by it.
 const EXPENSE_COLUMNS =
   "id, business_id, expense_number, category_id, category_name_snapshot, " +
   "amount, currency_code, payment_method, payee, reference, notes, " +
+  "branch_id, branch_name_snapshot, " +
   "incurred_at, status, created_by, created_at, voided_at, voided_by, void_reason";
 
 export type ExpenseRow = {
@@ -63,6 +69,8 @@ export type ExpenseRow = {
   payee: string | null;
   reference: string | null;
   notes: string | null;
+  branch_id: string | null;
+  branch_name_snapshot: string | null;
   incurred_at: string;
   status: string;
   created_by: string;
@@ -80,6 +88,8 @@ export const listExpenses = cache(
       categoryId?: string;
       paymentMethod?: PaymentMethod;
       status?: ExpenseStatus;
+      branchId?: string;
+      companyWideOnly?: boolean;
       dateFrom?: string;
       dateTo?: string;
       cursor?: string;
@@ -115,6 +125,18 @@ export const listExpenses = cache(
     }
     if (options.status) {
       query = query.eq("status", options.status);
+    }
+    // Phase 1G: mutually exclusive by construction (the filter UI only
+    // ever offers one or the other — see expense-filters.tsx) — a
+    // specific branch, OR company-wide-only (branch_id IS NULL), never
+    // both. expenses.view is business-wide (mirrors sales.view/
+    // reports.view — never gated on has_branch_access), so this only ever
+    // narrows an already-fully-visible result set, exactly like the sales
+    // list's own branch filter.
+    if (options.branchId) {
+      query = query.eq("branch_id", options.branchId);
+    } else if (options.companyWideOnly) {
+      query = query.is("branch_id", null);
     }
     // Calendar-day boundaries, NOT the raw "YYYY-MM-DD" strings — a
     // visible "To date" field is an inclusive calendar day, so dateTo

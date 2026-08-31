@@ -12,10 +12,17 @@ import type { PaymentStatus } from "./constants";
 // SELECT grant on sale_items excludes it entirely (see the committed
 // migrations), so a select("*") would 42501 the whole query. Phase 1D has
 // no cost/profit UI — cost is never read here, at all.
+// Phase 1G: branch_id/branch_name_snapshot are both selected here (the
+// latter for every historical-display use — see this file's own header
+// comment on snapshots — the former only so callers can filter/group by
+// it without a second query). Both are NOT NULL on this table (every sale
+// belongs to exactly one branch, resolved authoritatively by create_sale
+// — see 20260829080100_branch_aware_sales.sql), so neither is ever
+// undefined on a real row.
 const SALE_COLUMNS =
   "id, business_id, customer_id, " +
   "customer_name_snapshot, customer_phone_snapshot, customer_email_snapshot, customer_address_snapshot, " +
-  "inventory_location_id, inventory_location_name_snapshot, " +
+  "inventory_location_id, inventory_location_name_snapshot, branch_id, branch_name_snapshot, " +
   "sale_number, status, payment_status, payment_method, " +
   "subtotal, discount, total, amount_paid, currency_code, notes, " +
   "created_by, created_at, updated_at, completed_at, cancelled_at";
@@ -34,6 +41,8 @@ export type SaleRow = {
   customer_address_snapshot: string | null;
   inventory_location_id: string;
   inventory_location_name_snapshot: string;
+  branch_id: string;
+  branch_name_snapshot: string;
   sale_number: string;
   status: string;
   payment_status: string;
@@ -71,6 +80,7 @@ export const listSales = cache(
       search?: string;
       paymentStatus?: PaymentStatus;
       customerId?: string;
+      branchId?: string;
       dateFrom?: string;
       dateTo?: string;
       cursor?: string;
@@ -92,6 +102,21 @@ export const listSales = cache(
     }
     if (options.customerId) {
       query = query.eq("customer_id", options.customerId);
+    }
+    if (options.branchId) {
+      // sales.view is business-wide (never gated on has_branch_access —
+      // see branch_aware_sales.sql's own header comment), so this is a
+      // plain equality filter over data the caller can already see in
+      // full; it never widens visibility beyond what sales.view already
+      // grants. The page layer only ever offers every branch the caller's
+      // sales.view already covers as filter choices
+      // (listSalesFilterBranchOptions — business-wide, including inactive
+      // branches, never narrowed to the caller's own operational
+      // assignment), but this DAL itself does not re-validate that — a
+      // filter value outside that set simply narrows the
+      // (already-fully-visible) result set to zero or more rows, never
+      // discloses anything new.
+      query = query.eq("branch_id", options.branchId);
     }
     if (options.dateFrom) {
       query = query.gte("created_at", options.dateFrom);
@@ -200,21 +225,68 @@ export type SaleProductOption = {
   quantity: number;
 };
 
+// Codex adversarial review, application-layer round 2, Blocker 2: this
+// availability figure must reflect stock at the SAME location create_sale
+// itself deducts from for the branch being sold at — its own resolution
+// (20260829080100_branch_aware_sales.sql) is exactly the branch's single
+// canonical (is_branch_default = true) location, never a sum across every
+// location in the business. `locationId` is that already-resolved
+// canonical location id (lib/branches/dal.ts's getBranchCanonicalLocation,
+// resolved by the caller — lib/sales/actions.ts — from the form's own
+// selected branch), never a raw client-supplied id trusted for anything
+// beyond this read-only display figure; create_sale re-derives and
+// re-validates its own location independently regardless of what this
+// number ever showed. Omitting it (no branch selected yet) falls back to
+// summing every balance the product has, purely so the picker has SOME
+// number to show before a branch choice exists — this is display-only in
+// both cases, never sent to the RPC.
 export const searchProductsForSale = cache(
-  async (businessId: string, search?: string): Promise<SaleProductOption[]> => {
+  async (
+    businessId: string,
+    // Codex adversarial review, application-layer round 3, Medium 1:
+    // productIds is a BATCH re-fetch mode — given a fixed set of product
+    // ids (the sale form's own already-added line items) and a branch's
+    // resolved locationId, it returns each product's availability at
+    // THAT branch alone, in one query, never one request per line
+    // ("Avoid N+1 requests" per the review). Mutually exclusive with
+    // `search` in practice (the sale form never combines them — see
+    // getSaleProductAvailabilityAction), but nothing here forbids both
+    // being applied together if a future caller needed to.
+    options: { search?: string; locationId?: string; productIds?: string[] } = {}
+  ): Promise<SaleProductOption[]> => {
     await requireUser();
     const supabase = await createClient();
 
     let query = supabase
       .from("products")
-      .select("id, name, sku, selling_price, currency_code, track_inventory, inventory_balances(quantity)")
+      .select("id, name, sku, selling_price, currency_code, track_inventory, inventory_balances(quantity, inventory_location_id)")
       .eq("business_id", businessId)
       .eq("status", "active")
-      .order("name", { ascending: true })
-      .limit(DEFAULT_PAGE_SIZE);
+      .order("name", { ascending: true });
 
-    if (search) {
-      const value = buildImatchSearchValue(search);
+    // The DEFAULT_PAGE_SIZE cap only makes sense for a free-text search
+    // (an unbounded, browsable result set) — a productIds batch re-fetch
+    // is bounded by the sale's own line-item count instead, which a real
+    // sale can legitimately exceed 25 of; capping it here would silently
+    // drop some lines' availability refresh rather than a search result.
+    if (!options.productIds || options.productIds.length === 0) {
+      query = query.limit(DEFAULT_PAGE_SIZE);
+    }
+
+    if (options.locationId) {
+      // Filters the EMBEDDED inventory_balances rows (a left embed) —
+      // never the top-level products query — so a product with zero
+      // balance at this specific location still appears, correctly
+      // showing 0, rather than being dropped from the picker entirely.
+      query = query.eq("inventory_balances.inventory_location_id", options.locationId);
+    }
+
+    if (options.productIds && options.productIds.length > 0) {
+      query = query.in("id", options.productIds);
+    }
+
+    if (options.search) {
+      const value = buildImatchSearchValue(options.search);
       query = query.or(`name.imatch.${value},sku.imatch.${value}`);
     }
 
@@ -230,7 +302,7 @@ export const searchProductsForSale = cache(
       selling_price: number;
       currency_code: string;
       track_inventory: boolean;
-      inventory_balances: { quantity: number }[];
+      inventory_balances: { quantity: number; inventory_location_id: string }[];
     };
     const rows = (data ?? []) as unknown as Row[];
 

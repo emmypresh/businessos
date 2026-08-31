@@ -251,6 +251,33 @@ describe("Phase 1F — branches + staff error mapping", () => {
   });
 });
 
+describe("Phase 1G — branch-aware operations error mapping", () => {
+  it("maps NO_PRIMARY_BRANCH_ASSIGNED to the exact controlled blocked-state message, field-scoped to branchId", () => {
+    const mapped = mapDatabaseError({ message: "NO_PRIMARY_BRANCH_ASSIGNED" });
+    expect(mapped.message).toMatch(/active branch assigned/i);
+    expect(mapped.field).toBe("branchId");
+  });
+
+  it("maps NO_CANONICAL_LOCATION_FOR_BRANCH to a safe, field-scoped message rather than the generic fallback", () => {
+    const mapped = mapDatabaseError({ message: "NO_CANONICAL_LOCATION_FOR_BRANCH" });
+    expect(mapped.message).toMatch(/inventory location/i);
+    expect(mapped.field).toBe("branchId");
+  });
+
+  it("an inaccessible/inactive/foreign branch (insufficient_privilege from has_branch_access) still maps to the generic permission-denied message, never a raw code", () => {
+    const mapped = mapDatabaseError({ message: "insufficient_privilege", code: "42501" });
+    expect(mapped.message).toMatch(/don't have permission/i);
+  });
+
+  it("never leaks a raw private role name, schema name, or SQL keyword for any Phase 1G code", () => {
+    const codes = ["NO_PRIMARY_BRANCH_ASSIGNED", "NO_CANONICAL_LOCATION_FOR_BRANCH"];
+    for (const code of codes) {
+      const message = mapDatabaseError({ message: code }).message.toLowerCase();
+      expect(message, code).not.toMatch(/private_|private\.|public\.|postgres|constraint|sqlstate/);
+    }
+  });
+});
+
 describe("toActionState", () => {
   it("a field-scoped mapping produces ONLY fieldErrors — no top-level error, so the message never renders twice", () => {
     const state = toActionState({ message: "This SKU is already in use.", field: "sku" });

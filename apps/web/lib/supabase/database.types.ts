@@ -1171,6 +1171,17 @@ export type Database = {
         Args: { p_branch_id: string; p_business_id: string }
         Returns: string
       }
+      get_business_branch_options: {
+        Args: { p_business_id: string; p_scope: string }
+        Returns: {
+          code: string
+          id: string
+          is_default: boolean
+          is_primary: boolean
+          name: string
+          status: string
+        }[]
+      }
       get_financial_summary: {
         Args: {
           p_branch_id?: string

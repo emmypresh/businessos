@@ -15,18 +15,36 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { PAYMENT_METHOD, PAYMENT_METHOD_LABEL, type PaymentMethod } from "@/lib/expenses/constants";
+import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 
 function toLocalDatetimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// Radix Select cannot represent an empty-string item value, so the
+// "Company-wide / no branch" choice needs its own sentinel — translated
+// back to "" (and therefore omitted from the form payload entirely) at the
+// one point it's read, never leaked any further.
+const COMPANY_WIDE = "company-wide";
+
 export function ExpenseForm({
   businessId,
   categories,
+  branches,
+  primaryBranchId,
 }: {
   businessId: string;
   categories: { id: string; name: string }[];
+  // Phase 1G: deliberately EVERY active branch of the business, not just
+  // the caller's own assignment — create_expense's own authorization is
+  // expenses.manage ALONE, with no has_branch_access requirement (see
+  // that migration's own header comment: expense attribution is a
+  // back-office/accounting concern, not an operational-presence one), so
+  // narrowing this picker to "my own branches" would be a UI-invented
+  // restriction the database itself doesn't apply.
+  branches: { id: string; name: string }[];
+  primaryBranchId: string | null;
 }) {
   const [state, formAction] = useActionState(createExpense, undefined);
 
@@ -40,6 +58,12 @@ export function ExpenseForm({
   const [creationKey] = useState(() => crypto.randomUUID());
 
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  // Phase 1G: defaults to the caller's own active primary branch when one
+  // exists (an operational, branch-based default — matching every other
+  // Phase 1G create workflow) while always keeping an explicit,
+  // one-click "Company-wide" option available — never silently forced
+  // into a branch merely because the database permits NULL.
+  const [branchId, setBranchId] = useState(primaryBranchId ?? COMPANY_WIDE);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHOD.CASH);
   const [incurredAtLocal, setIncurredAtLocal] = useState(() => toLocalDatetimeInputValue(new Date()));
 
@@ -72,8 +96,50 @@ export function ExpenseForm({
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="paymentMethod" value={paymentMethod} />
       <input type="hidden" name="incurredAt" value={incurredAtIso} />
+      <input type="hidden" name="branchId" value={branchId === COMPANY_WIDE ? "" : branchId} />
 
       <div className="grid gap-4 sm:grid-cols-2">
+        {/* min-w-0: lets this grid item shrink below a 100-character
+            branch name's intrinsic width instead of forcing the form
+            wider than the viewport. Codex adversarial review,
+            application-layer round 2, Blocker 6. */}
+        <div className="flex min-w-0 flex-col gap-2">
+          <Label htmlFor="branch-select">Branch</Label>
+          <Select value={branchId} onValueChange={(value) => setBranchId(value ?? COMPANY_WIDE)}>
+            <SelectTrigger
+              id="branch-select"
+              className="w-full min-w-0"
+              aria-invalid={!!state?.fieldErrors?.branchId}
+              aria-describedby={state?.fieldErrors?.branchId ? "branch-select-error" : undefined}
+            >
+              <SelectValue placeholder="Choose a branch">
+                {(value: string) =>
+                  resolveBranchSelectLabel(value, branches, {
+                    sentinels: { [COMPANY_WIDE]: "Company-wide" },
+                    placeholder: "Choose a branch",
+                  })
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={COMPANY_WIDE}>Company-wide</SelectItem>
+              {branches.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                  <span className="truncate">
+                    {branch.name}
+                    {branch.id === primaryBranchId ? " (Your primary)" : ""}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {state?.fieldErrors?.branchId ? (
+            <p id="branch-select-error" role="alert" className="text-sm text-destructive">
+              {state.fieldErrors.branchId[0]}
+            </p>
+          ) : null}
+        </div>
+
         <div className="flex flex-col gap-2">
           <Label htmlFor="category-select">Category</Label>
           <Select value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")}>

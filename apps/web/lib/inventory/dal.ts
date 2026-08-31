@@ -38,6 +38,74 @@ export const getDefaultInventoryLocation = cache(
 // Single-product stock lookup for the product detail page's stock-summary
 // card — deliberately its own small query rather than reusing the
 // (paginated, multi-product) getInventoryOverview for one row.
+// Phase 1G — resolves a BRANCH (an organizational concept, business_branches)
+// to its own canonical, branch-default inventory LOCATION (a physical-stock
+// concept, inventory_locations) — the two are deliberately never merged
+// (see 20260829080000_branch_aware_inventory_locations.sql's own "no
+// architecture reopening" comment). Every branch gets exactly one
+// is_branch_default location automatically at creation (a trigger, not
+// caller-controlled), so this should always resolve for any real, ACTIVE
+// branch id — a null return here means the caller passed something that
+// isn't actually a real branch of this business, which the caller (an
+// action) must treat as a validation failure, never silently fall back to
+// a different location. inventory_locations' own SELECT policy has no
+// permission gate at all (any active business member can read it — see
+// create_inventory_locations.sql), so this never needs an extra
+// permission check of its own; the calling action's own permission check
+// (products.manage, inventory.adjust) is what actually gates the
+// mutation this location id feeds into.
+export const getBranchCanonicalLocation = cache(
+  async (businessId: string, branchId: string): Promise<{ id: string; name: string } | null> => {
+    await requireUser();
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("inventory_locations")
+      .select("id, name")
+      .eq("business_id", businessId)
+      .eq("branch_id", branchId)
+      .eq("is_branch_default", true)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to load the branch's inventory location: ${error.message}`);
+    }
+    return data;
+  }
+);
+
+// Codex adversarial review, application-layer round 2, Blocker 3B: a
+// branch's own inventory is every ACTIVE inventory_locations row with
+// that branch_id, not only its single canonical (is_branch_default)
+// one — a branch may legitimately have more than one physical location,
+// and stock recorded at any of them belongs to that branch's own
+// inventory for overview/filtering purposes. This deliberately replaces
+// the previous, canonical-only getCanonicalLocationsForBranches (which
+// silently omitted stock held in a branch's non-canonical locations) —
+// its own callers are updated to this instead. Same
+// no-extra-permission-needed reasoning as getBranchCanonicalLocation
+// above (inventory_locations' SELECT policy has no permission gate,
+// only membership).
+export const getLocationsForBranch = cache(
+  async (businessId: string, branchId: string): Promise<{ id: string; name: string }[]> => {
+    await requireUser();
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("inventory_locations")
+      .select("id, name")
+      .eq("business_id", businessId)
+      .eq("branch_id", branchId)
+      .eq("status", "active");
+
+    if (error) {
+      throw new Error(`Failed to load branch inventory locations: ${error.message}`);
+    }
+    return data ?? [];
+  }
+);
+
 export const getProductStock = cache(
   async (
     businessId: string,
@@ -81,11 +149,29 @@ export type InventoryOverviewRow = {
 export const getInventoryOverview = cache(
   async (
     businessId: string,
-    options: { cursor?: string } = {}
+    // Codex adversarial review, application-layer round 2, Blocker 3:
+    // inventory.view is a BUSINESS-WIDE read permission, exactly like
+    // sales.view/reports.view — it was never gated on branch assignment
+    // before Phase 1G, and branch awareness here is a FILTER/context
+    // enhancement, never a new authorization boundary. `locationIds`
+    // omitted entirely means "every location in the business" (the
+    // unfiltered, pre-Phase-1G default) — the caller (the inventory page)
+    // now always passes either every ACTIVE location's id for the whole
+    // business ("All branches") or every location belonging to ONE
+    // selected branch, never merely "the caller's own accessible
+    // branches" the way sales/inventory CREATE workflows do.
+    //
+    // `scopeLabel` names the CURRENT filter scope ("All branches", or the
+    // selected branch's own name) — used whenever a product's matching
+    // balance rows don't resolve to exactly one location, so a
+    // multi-location (or zero-location) aggregate is never mislabeled
+    // with one arbitrary location's name (Blocker 3C). Required, not
+    // defaulted: every caller must consciously decide what scope it's
+    // requesting.
+    options: { cursor?: string; locationIds?: string[]; scopeLabel: string }
   ): Promise<{ rows: InventoryOverviewRow[]; nextCursor: string | null }> => {
     await requireUser();
     const supabase = await createClient();
-    const defaultLocation = await getDefaultInventoryLocation(businessId);
 
     let query = supabase
       .from("products")
@@ -99,6 +185,14 @@ export const getInventoryOverview = cache(
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(DEFAULT_PAGE_SIZE + 1);
+
+    if (options.locationIds && options.locationIds.length > 0) {
+      // Filters the EMBEDDED inventory_balances rows, not the top-level
+      // products query — a left embed, so a tracked product with zero
+      // balance at every requested location still appears (correctly
+      // rendering 0), rather than being dropped from the page entirely.
+      query = query.in("inventory_balances.inventory_location_id", options.locationIds);
+    }
 
     const cursor = decodeCursor(options.cursor);
     if (cursor) {
@@ -127,12 +221,19 @@ export const getInventoryOverview = cache(
 
     const mapped: InventoryOverviewRow[] = page.map((row) => {
       const balances = row.inventory_balances ?? [];
-      // Phase 1C is effectively single-location; summing across whatever
-      // balance rows exist keeps this correct if a second location is
-      // ever introduced, and a product with zero balance rows (never
-      // moved) correctly renders 0 at the business's default location.
+      // Summing across whatever balance rows the (possibly
+      // location-filtered) query returned — correct for both a
+      // business-wide aggregate and a single-branch (possibly
+      // multi-location) one, and a product with zero matching balance
+      // rows correctly renders 0.
       const quantity = balances.reduce((sum, b) => sum + Number(b.quantity), 0);
-      const locationName = balances[0]?.inventory_locations?.name ?? defaultLocation.name;
+      // Codex adversarial review, application-layer round 2, Blocker 3C:
+      // only ever names ONE real location when there IS exactly one —
+      // zero or two-or-more matching locations both fall back to the
+      // current filter's own scope label ("All branches", or the
+      // selected branch's name), never balances[0]'s name standing in for
+      // a total that actually spans multiple locations.
+      const locationName = balances.length === 1 ? (balances[0].inventory_locations?.name ?? options.scopeLabel) : options.scopeLabel;
       return {
         productId: row.id,
         name: row.name,

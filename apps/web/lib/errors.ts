@@ -337,6 +337,30 @@ export function mapDatabaseError(
   if (message.includes("INVALID_BRANCH_ASSIGNMENT")) {
     return { message: "Select at least one branch and choose exactly one as primary." };
   }
+  // Phase 1G — branch-aware operations. Codes verified against the exact
+  // `raise exception` strings in the six approved Phase 1G migrations
+  // (20260829080000_branch_aware_inventory_locations.sql,
+  // 20260829080100_branch_aware_sales.sql,
+  // 20260829080200_branch_aware_inventory_movements.sql) — not guessed.
+  // NO_PRIMARY_BRANCH_ASSIGNED is raised by create_sale/create_product when
+  // the branch/opening-location is omitted and the caller has no ACTIVE
+  // primary branch assignment at all — the exact "blocked state" the
+  // application surfaces proactively via getOperationalBranchOptions
+  // before ever reaching the RPC, but mapped here too as defense in depth
+  // for any caller that reaches the RPC directly.
+  if (message.includes("NO_PRIMARY_BRANCH_ASSIGNED")) {
+    return {
+      message: "You don't currently have an active branch assigned for this operation. Contact an administrator.",
+      field: "branchId",
+    };
+  }
+  // Structurally near-unreachable (every branch gets a canonical location
+  // automatically — see that migration's own trigger), but mapped rather
+  // than left to fall through to the generic message, matching this file's
+  // own "every documented RPC error gets its own safe message" convention.
+  if (message.includes("NO_CANONICAL_LOCATION_FOR_BRANCH")) {
+    return { message: "This branch doesn't have an inventory location configured yet.", field: "branchId" };
+  }
   if (message.includes("CANNOT_MANAGE_SELF")) {
     return { message: "You can't perform this action on your own account." };
   }

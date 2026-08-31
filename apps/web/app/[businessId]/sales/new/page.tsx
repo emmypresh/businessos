@@ -1,7 +1,9 @@
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listCustomers } from "@/lib/customers/dal";
+import { getOperationalBranchOptions } from "@/lib/branches/dal";
 import { SaleForm } from "@/components/sales/sale-form";
+import { NoActiveBranchState } from "@/components/branches/no-active-branch-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default async function NewSalePage({
@@ -22,6 +24,7 @@ export default async function NewSalePage({
   // catalog is expected to be far larger than a customer list for most
   // SMEs at this scale.
   const { rows } = await listCustomers(businessId, { status: "active" });
+  const { options: branches, primaryBranchId } = await getOperationalBranchOptions(businessId);
 
   // A caller with sales.create but not sales.view lands back here after a
   // successful sale (lib/sales/actions.ts) instead of the sale detail
@@ -39,11 +42,20 @@ export default async function NewSalePage({
           <AlertDescription>Sale recorded successfully.</AlertDescription>
         </Alert>
       ) : null}
-      {/* A fresh page load — the SaleForm below mounts fresh here, giving
-          it a brand-new creationKey (useState(() => crypto.randomUUID())
-          runs again on this fresh mount), never reusing the one from the
-          sale that was just created. */}
-      <SaleForm businessId={businessId} customers={rows.map((c) => ({ id: c.id, name: c.name }))} />
+      {branches.length === 0 ? (
+        <NoActiveBranchState action="recording a sale" />
+      ) : (
+        // A fresh page load — the SaleForm below mounts fresh here, giving
+        // it a brand-new creationKey (useState(() => crypto.randomUUID())
+        // runs again on this fresh mount), never reusing the one from the
+        // sale that was just created.
+        <SaleForm
+          businessId={businessId}
+          customers={rows.map((c) => ({ id: c.id, name: c.name }))}
+          branches={branches}
+          primaryBranchId={primaryBranchId}
+        />
+      )}
     </div>
   );
 }
