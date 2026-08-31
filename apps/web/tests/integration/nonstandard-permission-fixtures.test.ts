@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { deleteTestUser } from "./helpers/admin-client";
 import { createOwnerAndBusiness, createMemberWithCustomPermissions, randomUuid } from "./helpers/inventory";
 import { makeSaleProduct, makeCustomer } from "./helpers/sales";
+import { getDefaultBranchId } from "./helpers/staff";
 import { PERMISSION } from "@/lib/business/constants";
 
 /**
@@ -91,6 +92,10 @@ describe("A. sales.create=true, sales.view=false", () => {
       PERMISSION.SALES_CREATE,
     ]);
     cleanupUserIds.push(member.userId);
+    // createMemberWithCustomPermissions assigns the member to the
+    // business's own default branch — a real, accessible branch for this
+    // sales.create-only caller.
+    const branchId = await getDefaultBranchId(owner.client, owner.businessId);
 
     currentClient = member.client;
     let caught: unknown;
@@ -100,6 +105,7 @@ describe("A. sales.create=true, sales.view=false", () => {
         formData({
           businessId: owner.businessId,
           creationKey: randomUuid(),
+          branchId,
           items: JSON.stringify([{ productId: product.id, quantity: "1" }]),
           paymentStatus: "UNPAID",
         })

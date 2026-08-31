@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { deleteTestUser } from "./helpers/admin-client";
 import { createOwnerAndBusiness, createMemberWithRole, randomUuid } from "./helpers/inventory";
 import { makeSaleProduct, makeCustomer } from "./helpers/sales";
+import { getDefaultBranchId } from "./helpers/staff";
 
 // Hybrid technique — see cost-access-app-layer.test.ts for the full
 // rationale. Server Actions redirect() on success, which throws a
@@ -233,6 +234,7 @@ describe("createSale action boundary", () => {
     const b = await createOwnerAndBusiness("act-sale-forged-product-b");
     cleanupUserIds.push(a.userId, b.userId);
     const foreignProduct = await makeSaleProduct(a.client, a.businessId, { openingQuantity: 5 });
+    const branchId = await getDefaultBranchId(b.client, b.businessId);
 
     currentClient = b.client;
     const result = await createSale(
@@ -240,6 +242,7 @@ describe("createSale action boundary", () => {
       formData({
         businessId: b.businessId,
         creationKey: randomUuid(),
+        branchId,
         items: JSON.stringify([{ productId: foreignProduct.id, quantity: "1" }]),
         paymentStatus: "UNPAID",
       })
@@ -252,6 +255,7 @@ describe("createSale action boundary", () => {
     cleanupUserIds.push(owner.userId);
     currentClient = owner.client;
     const product = await makeSaleProduct(owner.client, owner.businessId, { openingQuantity: 5 });
+    const branchId = await getDefaultBranchId(owner.client, owner.businessId);
 
     const rpcSpy = vi.spyOn(owner.client, "rpc");
     try {
@@ -260,6 +264,7 @@ describe("createSale action boundary", () => {
         formData({
           businessId: owner.businessId,
           creationKey: randomUuid(),
+          branchId,
           items: JSON.stringify([{ productId: product.id, quantity: "1" }]),
           paymentStatus: "UNPAID",
         })
@@ -280,11 +285,13 @@ describe("createSale action boundary", () => {
     cleanupUserIds.push(owner.userId);
     currentClient = owner.client;
     const product = await makeSaleProduct(owner.client, owner.businessId, { openingQuantity: 20 });
+    const branchId = await getDefaultBranchId(owner.client, owner.businessId);
     const key = randomUuid();
     const fd = () =>
       formData({
         businessId: owner.businessId,
         creationKey: key,
+        branchId,
         items: JSON.stringify([{ productId: product.id, quantity: "1" }]),
         paymentStatus: "UNPAID",
       });
@@ -375,6 +382,12 @@ describe("exact permission implication boundaries", () => {
     const product = await makeSaleProduct(owner.client, owner.businessId, { openingQuantity: 5 });
     const sales = await createMemberWithRole(owner.businessId, "perm-sales-independent-view", "SALES");
     cleanupUserIds.push(sales.userId);
+    // Every active member is auto-assigned to the business's default
+    // branch (ensure_member_branch_access.sql, Phase 1F/1G foundation),
+    // including one created via createMemberWithRole here — so the
+    // owner's own default branch is also a real, accessible branch for
+    // this SALES member.
+    const branchId = await getDefaultBranchId(owner.client, owner.businessId);
 
     currentClient = sales.client;
     let caught: unknown;
@@ -384,6 +397,7 @@ describe("exact permission implication boundaries", () => {
         formData({
           businessId: owner.businessId,
           creationKey: randomUuid(),
+          branchId,
           items: JSON.stringify([{ productId: product.id, quantity: "1" }]),
           paymentStatus: "UNPAID",
         })

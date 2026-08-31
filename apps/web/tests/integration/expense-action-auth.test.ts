@@ -281,6 +281,7 @@ describe("createExpense action boundary", () => {
     expect(Object.keys(args).sort()).toEqual(
       [
         "p_amount",
+        "p_branch_id",
         "p_business_id",
         "p_category_id",
         "p_creation_key",
