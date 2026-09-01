@@ -696,6 +696,234 @@ export type Database = {
           },
         ]
       }
+      invoice_items: {
+        Row: {
+          business_id: string
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_total: number
+          position: number
+          product_id: string | null
+          product_name_snapshot: string | null
+          quantity: number
+          sku_snapshot: string | null
+          unit_price: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          line_total: number
+          position: number
+          product_id?: string | null
+          product_name_snapshot?: string | null
+          quantity: number
+          sku_snapshot?: string | null
+          unit_price: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          position?: number
+          product_id?: string | null
+          product_name_snapshot?: string | null
+          quantity?: number
+          sku_snapshot?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_business_id_fkey"
+            columns: ["invoice_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      invoice_payments: {
+        Row: {
+          amount: number
+          branch_id: string
+          business_id: string
+          created_at: string
+          creation_key: string
+          id: string
+          invoice_id: string
+          note: string | null
+          paid_at: string
+          payment_method: string
+          recorded_by: string
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          business_id: string
+          created_at?: string
+          creation_key: string
+          id?: string
+          invoice_id: string
+          note?: string | null
+          paid_at?: string
+          payment_method: string
+          recorded_by: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          creation_key?: string
+          id?: string
+          invoice_id?: string
+          note?: string | null
+          paid_at?: string
+          payment_method?: string
+          recorded_by?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_invoice_id_business_id_branch_id_fkey"
+            columns: ["invoice_id", "business_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id", "business_id", "branch_id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_invoice_id_business_id_fkey"
+            columns: ["invoice_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount_paid: number
+          branch_id: string
+          branch_name_snapshot: string
+          business_id: string
+          created_at: string
+          created_by: string
+          creation_key: string
+          customer_email_snapshot: string | null
+          customer_id: string
+          customer_name_snapshot: string
+          customer_phone_snapshot: string | null
+          due_date: string | null
+          id: string
+          invoice_number: string
+          issued_at: string
+          notes: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          branch_id: string
+          branch_name_snapshot: string
+          business_id: string
+          created_at?: string
+          created_by: string
+          creation_key: string
+          customer_email_snapshot?: string | null
+          customer_id: string
+          customer_name_snapshot: string
+          customer_phone_snapshot?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          issued_at?: string
+          notes?: string | null
+          status?: string
+          total_amount: number
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          branch_id?: string
+          branch_name_snapshot?: string
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          creation_key?: string
+          customer_email_snapshot?: string | null
+          customer_id?: string
+          customer_name_snapshot?: string
+          customer_phone_snapshot?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issued_at?: string
+          notes?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_branch_id_business_id_fkey"
+            columns: ["branch_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_branches"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_business_id_fkey"
+            columns: ["customer_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string
@@ -1107,6 +1335,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_invoice: {
+        Args: {
+          p_branch_id: string
+          p_business_id: string
+          p_creation_key: string
+          p_customer_id: string
+          p_due_date?: string
+          p_items: Json
+          p_notes?: string
+        }
+        Returns: string
+      }
       create_product: {
         Args: {
           p_barcode?: string
@@ -1199,7 +1439,58 @@ export type Database = {
           name: string
         }[]
       }
+      get_invoice_branch_options: {
+        Args: { p_business_id: string }
+        Returns: {
+          code: string
+          id: string
+          is_default: boolean
+          is_primary: boolean
+          name: string
+        }[]
+      }
+      get_invoice_customer_options: {
+        Args: { p_business_id: string; p_search?: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      get_invoice_filter_branch_options: {
+        Args: { p_business_id: string }
+        Returns: {
+          code: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
+      get_invoice_product_options: {
+        Args: { p_business_id: string; p_search?: string }
+        Returns: {
+          id: string
+          name: string
+          selling_price: number
+          sku: string
+        }[]
+      }
+      get_invoice_void_eligibility: {
+        Args: { p_business_id: string; p_invoice_id: string }
+        Returns: boolean
+      }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
+      get_payable_invoice_options: {
+        Args: { p_business_id: string; p_search?: string }
+        Returns: {
+          amount_paid: number
+          branch_name_snapshot: string
+          customer_name_snapshot: string
+          id: string
+          invoice_number: string
+          status: string
+          total_amount: number
+        }[]
+      }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       has_branch_access: {
         Args: { p_branch_id: string; p_business_id: string }
@@ -1212,6 +1503,19 @@ export type Database = {
       issue_recovery_grant: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: string
+      }
+      list_invoice_payments_for_viewer: {
+        Args: { p_business_id: string; p_search?: string }
+        Returns: {
+          amount: number
+          branch_name_snapshot: string
+          customer_name_snapshot: string
+          id: string
+          invoice_number: string
+          paid_at: string
+          payment_method: string
+          reference: string
+        }[]
       }
       reactivate_business_branch: {
         Args: { p_branch_id: string; p_business_id: string }
@@ -1259,6 +1563,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_invoice_payment: {
+        Args: {
+          p_amount: number
+          p_business_id: string
+          p_creation_key: string
+          p_invoice_id: string
+          p_note?: string
+          p_paid_at: string
+          p_payment_method: string
+          p_reference?: string
+        }
+        Returns: string
+      }
       replace_member_branches: {
         Args: {
           p_branch_ids: Json
@@ -1297,6 +1614,10 @@ export type Database = {
       }
       void_expense: {
         Args: { p_business_id: string; p_expense_id: string; p_reason: string }
+        Returns: string
+      }
+      void_invoice: {
+        Args: { p_business_id: string; p_invoice_id: string }
         Returns: string
       }
     }

@@ -320,3 +320,37 @@ export const listInventoryFilterBranchOptions = cache(
     return rows.map((r) => ({ id: r.id, name: r.name }));
   }
 );
+
+// invoices_filter (Phase 1H) -------------------------------------------
+//
+// The invoice list's business-wide branch filter — invoices.view is
+// business-wide (never gated on operational branch assignment, matching
+// sales.view/inventory.view's own precedent), and a historical invoice
+// can reference a since-deactivated branch, so this includes INACTIVE
+// branches too, matching the reports/sales_filter scopes' own treatment.
+//
+// Codex adversarial review, remediation round 1, Medium 3: this used to
+// be built on the PLAIN, branches.view-gated listBranches, silently
+// requiring an UNRELATED permission for an invoices.view-only caller —
+// exactly the permission-split defect Phase 1G's own multi-round
+// remediation existed to eliminate, just re-introduced at a new surface
+// Phase 1G's own frozen get_business_branch_options RPC (fixed scope
+// whitelist, not modifiable — supabase/migrations/20260830080000_branch_option_rpc.sql)
+// cannot cover. Fixed via a NEW, additive, Phase-1H-specific RPC
+// (get_invoice_filter_branch_options, 20260831080700_invoice_picker_rpcs.sql)
+// authorized on invoices.view alone.
+export type InvoiceFilterBranchOption = { id: string; name: string; code: string | null; status: string };
+
+export const listInvoiceFilterBranchOptions = cache(
+  async (businessId: string): Promise<InvoiceFilterBranchOption[]> => {
+    await requireUser();
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_invoice_filter_branch_options", {
+      p_business_id: businessId,
+    });
+    if (error) {
+      throw new Error(`Failed to load invoice branch filter options: ${error.message}`);
+    }
+    return (data ?? []) as InvoiceFilterBranchOption[];
+  }
+);

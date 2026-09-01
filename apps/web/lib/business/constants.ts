@@ -78,6 +78,18 @@ export const PERMISSION = {
   STAFF_VIEW: "staff.view",
   STAFF_MANAGE: "staff.manage",
   STAFF_INVITE: "staff.invite",
+  // Phase 1H. Verified against the exact seeded keys in
+  // supabase/migrations/20260831080600_invoice_payment_permissions.sql.
+  // invoices.manage does NOT imply payments.record (and vice versa) —
+  // each is checked independently, matching every other permission pair
+  // above. ACCOUNTANT deliberately holds payments.record/invoices.view
+  // WITHOUT invoices.manage — see that migration's own header comment for
+  // the full reasoning (a mechanical constraint from the frozen Phase 1G
+  // branch-option RPC, not a stylistic choice).
+  INVOICES_VIEW: "invoices.view",
+  INVOICES_MANAGE: "invoices.manage",
+  PAYMENTS_VIEW: "payments.view",
+  PAYMENTS_RECORD: "payments.record",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

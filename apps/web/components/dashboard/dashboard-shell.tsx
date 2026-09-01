@@ -11,6 +11,7 @@ import {
   LineChart,
   Building2,
   IdCard,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
@@ -62,6 +63,18 @@ export async function DashboardShell({
   const expensesHref = canViewExpenses ? `/${businessId}/expenses` : `/${businessId}/expenses/new`;
   const canViewReports = permissions.has(PERMISSION.REPORTS_VIEW);
 
+  // Phase 1H remediation, Medium 6: Invoices was absent from navigation
+  // entirely. invoices.manage does NOT imply invoices.view (see
+  // 20260831080600_invoice_payment_permissions.sql's own header comment
+  // on why ACCOUNTANT/SALES-tier roles can diverge on these two keys) —
+  // a manage-only caller links straight to "New invoice" instead of the
+  // list page, which independently requires invoices.view and would 404
+  // them, mirroring the expenses/branches/staff nav links' own identical
+  // pattern above.
+  const canViewInvoices = permissions.has(PERMISSION.INVOICES_VIEW);
+  const canManageInvoices = permissions.has(PERMISSION.INVOICES_MANAGE);
+  const invoicesHref = canViewInvoices ? `/${businessId}/invoices` : `/${businessId}/invoices/new`;
+
   // Phase 1F. branches.manage does NOT imply branches.view — a manage-only
   // caller links straight to "New branch" instead of the list, which
   // independently requires branches.view and would 404 them. staff.invite
@@ -103,6 +116,9 @@ export async function DashboardShell({
     {
       label: "Finance",
       items: [
+        ...(canViewInvoices || canManageInvoices
+          ? [{ href: invoicesHref, label: "Invoices", icon: <FileText /> }]
+          : []),
         ...(canViewExpenses || canManageExpenses
           ? [
               { href: expensesHref, label: "Expenses", icon: <Wallet /> },

@@ -26,7 +26,7 @@ type DatabaseErrorLike = {
 // sale"). An optional context narrows the message without duplicating
 // the whole function — every existing call site (products/inventory
 // actions) omits it and gets byte-identical behavior to before.
-type ErrorContext = "sale";
+type ErrorContext = "sale" | "invoice_payment";
 
 const GENERIC_ERROR: MappedError = {
   message: "Something went wrong. Please try again.",
@@ -116,6 +116,18 @@ export function mapDatabaseError(
     return {
       message:
         "This invitation may already have been sent with different details. Check the invitation list before retrying.",
+    };
+  }
+  // Phase 1H — same "superstring before the generic fallback" rule as
+  // every other *_IDEMPOTENCY_KEY_REUSED variant above.
+  if (message.includes("INVOICE_IDEMPOTENCY_KEY_REUSED")) {
+    return {
+      message: "This invoice may already have been created with different details. Check the invoice list before retrying.",
+    };
+  }
+  if (message.includes("PAYMENT_IDEMPOTENCY_KEY_REUSED")) {
+    return {
+      message: "This payment may already have been recorded with different details. Check the payment history before retrying.",
     };
   }
   if (message.includes("IDEMPOTENCY_KEY_REUSED")) {
@@ -216,6 +228,18 @@ export function mapDatabaseError(
     return { message: "Discount cannot exceed the subtotal.", field: "discount" };
   }
   if (message.includes("INVALID_PAYMENT_AMOUNT")) {
+    if (context === "invoice_payment") {
+      // Codex adversarial review, remediation round 1, Medium 1:
+      // record_invoice_payment_rpc.sql now ALSO raises this exact code
+      // when p_amount carries more than 2 decimal places (never silently
+      // rounded) — the message covers both conditions this code can now
+      // mean, mirroring INVALID_EXPENSE_AMOUNT's own identical wording
+      // below.
+      return {
+        message: "Enter an amount with up to 2 decimal places, greater than zero.",
+        field: "amount",
+      };
+    }
     return {
       message: "The amount paid doesn't match the payment status you selected.",
       field: "amountPaid",
@@ -417,6 +441,79 @@ export function mapDatabaseError(
     // comment): the wrong-email/nonexistent cases must remain
     // indistinguishable at every layer, including this one.
     return { message: "This invitation link isn't valid. It may have expired or already been used." };
+  }
+
+  // Phase 1H — invoices + payments. Codes verified against the exact
+  // `raise exception` strings in
+  // supabase/migrations/20260831080200_create_invoice_creation_rpc.sql,
+  // supabase/migrations/20260831080400_record_invoice_payment_rpc.sql, and
+  // supabase/migrations/20260831080500_invoice_void_rpc.sql — not guessed.
+  // INVOICE_IDEMPOTENCY_KEY_REUSED/PAYMENT_IDEMPOTENCY_KEY_REUSED are
+  // handled earlier, alongside the other *_IDEMPOTENCY_KEY_REUSED checks.
+  // DUPLICATE_PRODUCT_LINE/CUSTOMER_NOT_FOUND/CUSTOMER_ARCHIVED/
+  // BRANCH_NOT_FOUND/PRODUCT_NOT_FOUND/PRODUCT_ARCHIVED are all reused
+  // verbatim from their existing Phase 1D mappings above (create_invoice
+  // raises the exact same codes for the exact same conditions) — never
+  // re-mapped here with a second, divergent message.
+  if (message.includes("MALFORMED_INVOICE_ITEMS")) {
+    return {
+      message: "One or more items on this invoice are invalid. Check descriptions, quantities, and prices.",
+      field: "items",
+    };
+  }
+  if (message.includes("TOO_MANY_INVOICE_ITEMS")) {
+    return { message: "This invoice has too many lines.", field: "items" };
+  }
+  if (message.includes("INVOICE_AMOUNT_OUT_OF_RANGE")) {
+    return { message: "This invoice's total is invalid — it must be greater than zero and not too large." };
+  }
+  if (message.includes("INVALID_INVOICE_NOTES")) {
+    return { message: "Notes are too long.", field: "notes" };
+  }
+  if (message.includes("INVOICE_HAS_PAYMENTS")) {
+    return { message: "This invoice has payments recorded against it and can no longer be voided." };
+  }
+  if (message.includes("INVOICE_ALREADY_VOID")) {
+    return { message: "This invoice has already been voided." };
+  }
+  if (message.includes("INVOICE_VOID")) {
+    return { message: "This invoice has been voided and can no longer receive payments." };
+  }
+  if (message.includes("INVOICE_ALREADY_PAID")) {
+    return { message: "This invoice is already fully paid." };
+  }
+  if (message.includes("INVOICE_NOT_FOUND")) {
+    // Same non-disclosure reasoning as PRODUCT_NOT_FOUND: a forged/
+    // foreign invoice_id and a genuinely nonexistent one are
+    // indistinguishable to the caller.
+    return { message: "This invoice is not available." };
+  }
+  if (message.includes("PAYMENT_EXCEEDS_BALANCE")) {
+    return { message: "This amount exceeds the invoice's outstanding balance.", field: "amount" };
+  }
+  if (message.includes("PAYMENT_AMOUNT_OUT_OF_RANGE")) {
+    return { message: "This payment amount is too large.", field: "amount" };
+  }
+  if (message.includes("INVALID_PAYMENT_METHOD")) {
+    return { message: "Choose a valid payment method.", field: "paymentMethod" };
+  }
+  if (message.includes("INVALID_PAYMENT_REFERENCE")) {
+    return { message: "Reference is too long.", field: "reference" };
+  }
+  if (message.includes("INVALID_PAYMENT_NOTE")) {
+    return { message: "Note is too long.", field: "note" };
+  }
+  // Codex security audit, SEC-02: record_invoice_payment now independently
+  // validates p_paid_at itself (private.is_valid_offset_bearing_instant)
+  // — these two codes only ever surface for a caller bypassing
+  // lib/validation/invoices.ts's own PaymentPaidAtSchema entirely (a
+  // direct RPC call), since the Server Action already rejects both cases
+  // before this RPC is ever reached in the normal application flow.
+  if (message.includes("INVALID_PAYMENT_DATE")) {
+    return { message: "Enter a valid date and time.", field: "paidAt" };
+  }
+  if (message.includes("PAYMENT_DATE_IN_FUTURE")) {
+    return { message: "Date cannot be in the future.", field: "paidAt" };
   }
 
   if (error.code === "42501" || message.includes("insufficient_privilege")) {
