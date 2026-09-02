@@ -130,6 +130,15 @@ export function mapDatabaseError(
       message: "This payment may already have been recorded with different details. Check the payment history before retrying.",
     };
   }
+  // Phase 1I — must be checked before the bare "IDEMPOTENCY_KEY_REUSED"
+  // fallback immediately below, for the identical "superstring before the
+  // generic fallback" reason as every other *_IDEMPOTENCY_KEY_REUSED
+  // variant above.
+  if (message.includes("RETURN_IDEMPOTENCY_KEY_REUSED")) {
+    return {
+      message: "This return may already have been created with different details. Check the return list before retrying.",
+    };
+  }
   if (message.includes("IDEMPOTENCY_KEY_REUSED")) {
     return {
       message:
@@ -515,6 +524,64 @@ export function mapDatabaseError(
   if (message.includes("PAYMENT_DATE_IN_FUTURE")) {
     return { message: "Date cannot be in the future.", field: "paidAt" };
   }
+
+  // Phase 1I — returns + refunds. Codes verified against the exact `raise
+  // exception` strings in
+  // supabase/migrations/20260901080300_create_sale_return_rpc.sql — not
+  // guessed. RETURN_IDEMPOTENCY_KEY_REUSED is handled earlier, alongside
+  // the other *_IDEMPOTENCY_KEY_REUSED checks (ordering matters there —
+  // see that block's own comment). RETURN_SALE_NOT_FOUND is deliberately
+  // the SAME message whether the sale is genuinely nonexistent,
+  // foreign-tenant, or merely in a branch the caller cannot access (or —
+  // Phase 1I branch-lifecycle remediation, SEC-01I — was deactivated
+  // while the request was in-flight) — never a distinguishable
+  // disclosure, matching that RPC's own non-disclosure contract exactly.
+  if (message.includes("RETURN_SALE_NOT_FOUND")) {
+    return { message: "The sale is no longer available for return.", field: "saleId" };
+  }
+  if (message.includes("RETURN_SALE_NOT_ELIGIBLE")) {
+    return { message: "This sale is not eligible for a return.", field: "saleId" };
+  }
+  if (message.includes("RETURN_ITEM_NOT_FOUND")) {
+    return { message: "One of the selected items is no longer available.", field: "items" };
+  }
+  if (message.includes("DUPLICATE_SALE_ITEM_LINE")) {
+    return {
+      message: "Each item can only appear once — combine the quantity into one line instead.",
+      field: "items",
+    };
+  }
+  if (message.includes("RETURN_QUANTITY_EXCEEDED")) {
+    return { message: "One or more items exceed the quantity available to return.", field: "items" };
+  }
+  if (message.includes("RETURN_REFUND_EXCEEDED")) {
+    return { message: "The refund amount is more than this sale can refund.", field: "refundAmount" };
+  }
+  if (message.includes("INVALID_REFUND_AMOUNT")) {
+    return { message: "Enter a refund amount with up to 2 decimal places.", field: "refundAmount" };
+  }
+  if (message.includes("INVALID_REFUND_METHOD")) {
+    return { message: "Choose a valid refund method.", field: "refundMethod" };
+  }
+  if (message.includes("INVALID_RETURN_REASON")) {
+    return { message: "Choose a valid reason.", field: "reason" };
+  }
+  if (message.includes("INVALID_RETURN_NOTES")) {
+    return { message: "Notes are too long.", field: "notes" };
+  }
+  if (message.includes("MALFORMED_RETURN_ITEMS")) {
+    return {
+      message: "One or more items in this return are invalid. Check quantities (up to 3 decimal places) and try again.",
+      field: "items",
+    };
+  }
+  if (message.includes("TOO_MANY_RETURN_ITEMS")) {
+    return { message: "This return has too many lines.", field: "items" };
+  }
+  // NO_DEFAULT_LOCATION is already mapped above (shared with the
+  // products/inventory context) — create_sale_return raises the exact
+  // same code for the identical structurally-unreachable condition, so it
+  // is never re-mapped here with a second, divergent message.
 
   if (error.code === "42501" || message.includes("insufficient_privilege")) {
     return PERMISSION_DENIED_ERROR;

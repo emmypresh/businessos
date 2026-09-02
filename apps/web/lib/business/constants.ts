@@ -90,6 +90,13 @@ export const PERMISSION = {
   INVOICES_MANAGE: "invoices.manage",
   PAYMENTS_VIEW: "payments.view",
   PAYMENTS_RECORD: "payments.record",
+  // Phase 1I. Verified against the exact seeded keys in
+  // supabase/migrations/20260901080400_returns_permissions.sql.
+  // returns.manage does NOT imply returns.view (and vice versa) — checked
+  // independently everywhere in lib/returns/, exactly like every other
+  // permission pair above.
+  RETURNS_VIEW: "returns.view",
+  RETURNS_MANAGE: "returns.manage",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

@@ -1655,6 +1655,38 @@ export type Database = {
         }[]
       }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
+      get_returnable_sale_items: {
+        Args: { p_business_id: string; p_sale_id: string }
+        Returns: {
+          already_returned: number
+          product_name_snapshot: string
+          quantity: number
+          sale_item_id: string
+          sku_snapshot: string
+          unit_price: number
+        }[]
+      }
+      get_returnable_sale_options: {
+        Args: { p_business_id: string; p_search?: string }
+        Returns: {
+          amount_paid: number
+          branch_name_snapshot: string
+          completed_at: string
+          customer_name_snapshot: string
+          id: string
+          sale_number: string
+          total: number
+        }[]
+      }
+      get_returns_branch_filter_options: {
+        Args: { p_business_id: string }
+        Returns: {
+          code: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
       has_branch_access: {
         Args: { p_branch_id: string; p_business_id: string }
         Returns: boolean
@@ -1678,6 +1710,29 @@ export type Database = {
           paid_at: string
           payment_method: string
           reference: string
+        }[]
+      }
+      list_returns_for_viewer: {
+        Args: {
+          p_branch_id?: string
+          p_business_id: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_limit?: number
+          p_reason?: string
+          p_search?: string
+        }
+        Returns: {
+          branch_name_snapshot: string
+          created_at: string
+          id: string
+          reason: string
+          refund_amount: number
+          refund_method: string
+          return_number: string
+          sale_id: string
+          sale_number: string
+          status: string
         }[]
       }
       reactivate_business_branch: {

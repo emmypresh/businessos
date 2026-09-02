@@ -12,6 +12,7 @@ import {
   Building2,
   IdCard,
   FileText,
+  Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
@@ -50,6 +51,18 @@ export async function DashboardShell({
   // A caller with sales.create but not sales.view links straight to
   // "New sale" instead of an inaccessible list page.
   const salesHref = canViewSales ? `/${businessId}/sales` : `/${businessId}/sales/new`;
+
+  // Phase 1I. returns.manage does NOT imply returns.view (and the reverse
+  // doesn't hold either) — a manage-only caller links straight to "New
+  // return" instead of the list page, which independently requires
+  // returns.view and would 404 them, mirroring the sales/invoices/expenses
+  // nav links' own identical pattern above. Returns lives under
+  // Operations, not Finance — the initiating workflow is tied to a sale
+  // and its stock, even though the refund itself has a financial effect
+  // (see this phase's own product brief).
+  const canViewReturns = permissions.has(PERMISSION.RETURNS_VIEW);
+  const canManageReturns = permissions.has(PERMISSION.RETURNS_MANAGE);
+  const returnsHref = canViewReturns ? `/${businessId}/returns` : `/${businessId}/returns/new`;
 
   // Phase 1E. expenses.manage does NOT imply expenses.view (and the
   // reverse doesn't hold either) — a manage-only caller links straight to
@@ -108,6 +121,7 @@ export async function DashboardShell({
       label: "Operations",
       items: [
         ...(canViewSales || canCreateSales ? [{ href: salesHref, label: "Sales", icon: <Receipt /> }] : []),
+        ...(canViewReturns || canManageReturns ? [{ href: returnsHref, label: "Returns", icon: <Undo2 /> }] : []),
         ...(canViewCustomers ? [{ href: `/${businessId}/customers`, label: "Customers", icon: <UserRound /> }] : []),
         ...(canViewProducts ? [{ href: `/${businessId}/products`, label: "Products", icon: <Package /> }] : []),
         ...(canViewInventory ? [{ href: `/${businessId}/inventory`, label: "Inventory", icon: <Boxes /> }] : []),

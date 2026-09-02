@@ -278,6 +278,42 @@ describe("Phase 1G — branch-aware operations error mapping", () => {
   });
 });
 
+describe("Phase 1I — returns + refunds error mapping", () => {
+  it("maps RETURN_IDEMPOTENCY_KEY_REUSED to its OWN message, not the generic IDEMPOTENCY_KEY_REUSED fallback (mirrors the Phase 1E EXPENSE_IDEMPOTENCY_KEY_REUSED ordering bug regression test)", () => {
+    expect(mapDatabaseError({ message: "RETURN_IDEMPOTENCY_KEY_REUSED" }).message).toContain("return");
+  });
+
+  it("RETURN_SALE_NOT_FOUND is deliberately the SAME message a nonexistent/foreign/inaccessible-branch sale all share — never a distinguishable disclosure", () => {
+    const mapped = mapDatabaseError({ message: "RETURN_SALE_NOT_FOUND" });
+    expect(mapped.message).toBe("The sale is no longer available for return.");
+    expect(mapped.field).toBe("saleId");
+  });
+
+  it("maps every return-invariant code to a safe, distinct, field-scoped message", () => {
+    expect(mapDatabaseError({ message: "RETURN_QUANTITY_EXCEEDED" }).field).toBe("items");
+    expect(mapDatabaseError({ message: "RETURN_REFUND_EXCEEDED" }).field).toBe("refundAmount");
+    expect(mapDatabaseError({ message: "INVALID_REFUND_AMOUNT" }).field).toBe("refundAmount");
+    expect(mapDatabaseError({ message: "INVALID_REFUND_METHOD" }).field).toBe("refundMethod");
+    expect(mapDatabaseError({ message: "INVALID_RETURN_REASON" }).field).toBe("reason");
+    expect(mapDatabaseError({ message: "INVALID_RETURN_NOTES" }).field).toBe("notes");
+  });
+
+  it("never leaks a raw private role name, schema name, or SQL keyword for any Phase 1I code", () => {
+    const codes = [
+      "RETURN_SALE_NOT_FOUND",
+      "RETURN_SALE_NOT_ELIGIBLE",
+      "RETURN_ITEM_NOT_FOUND",
+      "RETURN_QUANTITY_EXCEEDED",
+      "RETURN_REFUND_EXCEEDED",
+      "MALFORMED_RETURN_ITEMS",
+    ];
+    for (const code of codes) {
+      const message = mapDatabaseError({ message: code }).message.toLowerCase();
+      expect(message, code).not.toMatch(/private_|private\.|public\.|postgres|constraint|sqlstate/);
+    }
+  });
+});
+
 describe("toActionState", () => {
   it("a field-scoped mapping produces ONLY fieldErrors — no top-level error, so the message never renders twice", () => {
     const state = toActionState({ message: "This SKU is already in use.", field: "sku" });
