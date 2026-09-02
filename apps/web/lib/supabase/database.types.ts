@@ -34,6 +34,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_events: {
+        Row: {
+          action: string
+          actor_email_snapshot: string | null
+          actor_name_snapshot: string | null
+          actor_type: string
+          actor_user_id: string | null
+          branch_id: string | null
+          business_id: string
+          category: string
+          created_at: string
+          id: string
+          metadata: Json
+          outcome: string
+          resource_id: string | null
+          resource_label_snapshot: string | null
+          resource_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_email_snapshot?: string | null
+          actor_name_snapshot?: string | null
+          actor_type: string
+          actor_user_id?: string | null
+          branch_id?: string | null
+          business_id: string
+          category: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          outcome?: string
+          resource_id?: string | null
+          resource_label_snapshot?: string | null
+          resource_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email_snapshot?: string | null
+          actor_name_snapshot?: string | null
+          actor_type?: string
+          actor_user_id?: string | null
+          branch_id?: string | null
+          business_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          outcome?: string
+          resource_id?: string | null
+          resource_label_snapshot?: string | null
+          resource_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_branch_id_business_id_fkey"
+            columns: ["branch_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_branches"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "audit_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_branches: {
         Row: {
           address_line1: string | null
