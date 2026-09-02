@@ -197,7 +197,7 @@ describe("SECURITY DEFINER functions: search_path is locked, ownership is narrow
   // grantee-0-is-PUBLIC fix as the RPC EXECUTE ACL test above — an INNER
   // JOIN here would equally have made the `not.toContain("PUBLIC")`
   // assertion below structurally unable to fail.
-  it("private.current_verified_email has EXECUTE granted ONLY to private_invitation_acceptor — never authenticated/anon/PUBLIC", async () => {
+  it("private.current_verified_email has EXECUTE granted ONLY to its known, trusted consumer roles — never authenticated/anon/PUBLIC", async () => {
     const sql = createTestDbClient();
     try {
       const rows = await sql<{ grantee: string }[]>`
@@ -216,12 +216,33 @@ describe("SECURITY DEFINER functions: search_path is locked, ownership is narrow
       // the same ACL array — this is normal serialization, not a
       // second, unintended EXECUTE grant. The actual security property
       // this test protects is the ABSENCE of authenticated/anon/PUBLIC
-      // and the PRESENCE of exactly the one real consumer role.
+      // and the PRESENCE of exactly the known, reviewed consumer roles —
+      // updated for Phase 1J's own instrumentation round
+      // (20260902100000_instrument_core_audit_events.sql), which added
+      // ten more private writer roles as legitimate consumers (each
+      // derives an actor_email_snapshot for its own audit event from this
+      // same, already-audited function — never a new, separate read of
+      // auth.users).
       expect(grantees).toContain("private_invitation_acceptor");
       expect(grantees).not.toContain("authenticated");
       expect(grantees).not.toContain("anon");
       expect(grantees).not.toContain("PUBLIC");
-      expect(grantees.sort()).toEqual(["postgres", "private_invitation_acceptor"].sort());
+      expect(grantees.sort()).toEqual(
+        [
+          "postgres",
+          "private_invitation_acceptor",
+          "private_branch_writer",
+          "private_customer_creator",
+          "private_expense_writer",
+          "private_inventory_writer",
+          "private_invitation_writer",
+          "private_invoice_payment_writer",
+          "private_invoice_writer",
+          "private_product_creator",
+          "private_sale_return_writer",
+          "private_sale_writer",
+        ].sort()
+      );
     } finally {
       await sql.end();
     }
@@ -549,6 +570,24 @@ describe("business deletion still works with Phase 1F tables present", () => {
     });
 
     const admin = createAdminClient();
+
+    // Phase 1J, SEC-01J: audit_events.business_id is deliberately
+    // `on delete restrict` (never cascade) — a business with any audit
+    // history (which createBranch/inviteMember above now generate, via
+    // create_business_branch's own branch.created and
+    // create_business_invitation's own staff.invited instrumentation)
+    // can no longer be hard-deleted at all, by design (see
+    // 20260902090000_create_audit_events.sql's own header comment). This
+    // test's own purpose is proving Phase 1F tables cascade cleanly — an
+    // orthogonal concern to audit durability — so the business's own
+    // audit trail is cleared first.
+    const cleanupSql = createTestDbClient();
+    try {
+      await cleanupSql`delete from public.audit_events where business_id = ${owner.businessId}`;
+    } finally {
+      await cleanupSql.end();
+    }
+
     const { error } = await admin.from("businesses").delete().eq("id", owner.businessId);
     expect(error).toBeNull();
 

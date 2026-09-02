@@ -528,12 +528,18 @@ describe("audit_events — RLS, tenant isolation, and ACL", () => {
   it("20. seeded role matrix: OWNER/ADMIN/MANAGER/ACCOUNTANT hold audit.view; SALES/INVENTORY/VIEWER do not", async () => {
     const sql = createTestDbClient();
     try {
+      // Scoped to the seven fixed BusinessOS role names only — other
+      // tests in this shared local database may leave behind their own
+      // one-off custom-permission fixture roles
+      // (createRoleWithPermissions), which is expected and unrelated to
+      // this assertion.
       const rows = await sql<{ name: string }[]>`
         select r.name
         from public.roles r
         join public.role_permissions rp on rp.role_id = r.id
         join public.permissions p on p.id = rp.permission_id
         where p.key = 'audit.view'
+          and r.name in ('OWNER', 'ADMIN', 'MANAGER', 'SALES', 'INVENTORY', 'ACCOUNTANT', 'VIEWER')
       `;
       const roleNames = rows.map((r) => r.name).sort();
       expect(roleNames).toEqual(["ACCOUNTANT", "ADMIN", "MANAGER", "OWNER"].sort());

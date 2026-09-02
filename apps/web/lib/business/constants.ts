@@ -97,6 +97,11 @@ export const PERMISSION = {
   // permission pair above.
   RETURNS_VIEW: "returns.view",
   RETURNS_MANAGE: "returns.manage",
+  // Phase 1J. Verified against the exact seeded key in
+  // supabase/migrations/20260902090100_audit_permissions_and_writer.sql.
+  // No audit.manage exists — audit history is written only by trusted
+  // internal mechanisms, never "managed" by any user.
+  AUDIT_VIEW: "audit.view",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

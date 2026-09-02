@@ -1643,6 +1643,15 @@ export type Database = {
         Args: { p_branch_id: string; p_business_id: string }
         Returns: string
       }
+      get_audit_branch_filter_options: {
+        Args: { p_business_id: string }
+        Returns: {
+          code: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
       get_business_branch_options: {
         Args: { p_business_id: string; p_scope: string }
         Returns: {

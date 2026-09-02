@@ -261,6 +261,23 @@ describe("Phase 1D effective table/function ACLs", () => {
     });
     expect(sale.error).toBeNull();
 
+    // Phase 1J, SEC-01J: audit_events.business_id is deliberately
+    // `on delete restrict` (never cascade) — a business with any audit
+    // history (which create_sale/create_customer above now generate) can
+    // no longer be hard-deleted at all, by design (see
+    // 20260902090000_create_audit_events.sql's own header comment). This
+    // test's own purpose is proving customers/sales/sale_items cascade
+    // cleanly — an orthogonal concern to audit durability — so the
+    // business's own audit trail is cleared first, via a privileged
+    // connection, exactly like this file's own other privileged-cleanup
+    // patterns.
+    const cleanupSql = createTestDbClient();
+    try {
+      await cleanupSql`delete from public.audit_events where business_id = ${businessId}`;
+    } finally {
+      await cleanupSql.end();
+    }
+
     const { error: deleteErr } = await admin.from("businesses").delete().eq("id", businessId);
     expect(deleteErr).toBeNull();
 

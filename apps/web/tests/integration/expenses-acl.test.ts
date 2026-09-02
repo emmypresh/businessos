@@ -254,6 +254,21 @@ describe("Phase 1E effective table/function ACLs", () => {
     const expenseId = await makeExpense(client, businessId, categoryId);
     await client.rpc("void_expense", { p_business_id: businessId, p_expense_id: expenseId, p_reason: "pre-delete void" });
 
+    // Phase 1J, SEC-01J: audit_events.business_id is deliberately
+    // `on delete restrict` (never cascade) — a business with any audit
+    // history (which create_expense above now generates) can no longer
+    // be hard-deleted at all, by design (see
+    // 20260902090000_create_audit_events.sql's own header comment). This
+    // test's own purpose is proving expense_categories/expenses/request-
+    // ledger/sequences cascade cleanly — an orthogonal concern to audit
+    // durability — so the business's own audit trail is cleared first.
+    const cleanupSql = createTestDbClient();
+    try {
+      await cleanupSql`delete from public.audit_events where business_id = ${businessId}`;
+    } finally {
+      await cleanupSql.end();
+    }
+
     const { error: deleteErr } = await admin.from("businesses").delete().eq("id", businessId);
     expect(deleteErr).toBeNull();
 

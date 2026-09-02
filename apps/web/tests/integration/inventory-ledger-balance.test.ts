@@ -189,6 +189,16 @@ describe("ledger / balance invariants", () => {
 
     const sql = createTestDbClient();
     try {
+      // Phase 1J, SEC-01J: audit_events.business_id is deliberately
+      // `on delete restrict` (never cascade) — a business with any audit
+      // history (which the makeProduct call above now generates, via
+      // create_product's own product.created instrumentation) can no
+      // longer be hard-deleted at all, by design (see
+      // 20260902090000_create_audit_events.sql's own header comment).
+      // This test's own purpose is proving the inventory graph itself
+      // cascades cleanly — an orthogonal concern to audit durability —
+      // so the business's own audit trail is cleared first.
+      await sql`delete from public.audit_events where business_id = ${businessId}`;
       await sql`delete from public.businesses where id = ${businessId}`;
 
       const remainingBusiness = await sql`select id from public.businesses where id = ${businessId}`;

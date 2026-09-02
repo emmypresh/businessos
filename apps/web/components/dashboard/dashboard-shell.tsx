@@ -13,6 +13,7 @@ import {
   IdCard,
   FileText,
   Undo2,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
@@ -110,6 +111,11 @@ export async function DashboardShell({
   // what they've done.
   const staffHref = canViewStaff ? `/${businessId}/staff` : `/${businessId}/staff/invitations`;
 
+  // Phase 1J. There is no manage-without-view split here at all —
+  // audit.view is the ONLY permission (no audit.manage exists), so this
+  // is a plain boolean, unlike every other nav link above.
+  const canViewAudit = permissions.has(PERMISSION.AUDIT_VIEW);
+
   // Icons are rendered into ELEMENTS here (`<Package />`, not the bare
   // `Package` component reference) — see sidebar-nav.tsx's own NavItem
   // comment for why: this array crosses a Server -> Client Component
@@ -148,6 +154,7 @@ export async function DashboardShell({
         { href: `/${businessId}/members`, label: "Members", icon: <Users /> },
         ...(canViewBranches || canManageBranches ? [{ href: branchesHref, label: "Branches", icon: <Building2 /> }] : []),
         ...(canViewStaff || canInviteStaff ? [{ href: staffHref, label: "Staff", icon: <IdCard /> }] : []),
+        ...(canViewAudit ? [{ href: `/${businessId}/activity`, label: "Activity", icon: <Activity /> }] : []),
       ],
     },
   ].filter((section) => section.items.length > 0);
