@@ -993,6 +993,145 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          in_app_enabled: boolean
+          notification_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          in_app_enabled?: boolean
+          notification_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          in_app_enabled?: boolean
+          notification_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_recipients: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          notification_id: string
+          read_at: string | null
+          seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          notification_id: string
+          read_at?: string | null
+          seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          notification_id?: string
+          read_at?: string | null
+          seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_recipients_notification_id_business_id_fkey"
+            columns: ["notification_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          branch_id: string | null
+          business_id: string
+          category: string
+          created_at: string
+          dedup_key: string | null
+          id: string
+          metadata: Json
+          notification_type: string
+          resource_id: string | null
+          resource_type: string | null
+          severity: string
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          branch_id?: string | null
+          business_id: string
+          category: string
+          created_at?: string
+          dedup_key?: string | null
+          id?: string
+          metadata?: Json
+          notification_type: string
+          resource_id?: string | null
+          resource_type?: string | null
+          severity?: string
+          title: string
+        }
+        Update: {
+          body?: string | null
+          branch_id?: string | null
+          business_id?: string
+          category?: string
+          created_at?: string
+          dedup_key?: string | null
+          id?: string
+          metadata?: Json
+          notification_type?: string
+          resource_id?: string | null
+          resource_type?: string | null
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_branch_id_business_id_fkey"
+            columns: ["branch_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_branches"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string
