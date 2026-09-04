@@ -1859,6 +1859,13 @@ export type Database = {
         Returns: boolean
       }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
+      get_notification_branch_options: {
+        Args: { p_business_id: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_payable_invoice_options: {
         Args: { p_business_id: string; p_search?: string }
         Returns: {

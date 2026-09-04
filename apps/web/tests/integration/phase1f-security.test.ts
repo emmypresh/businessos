@@ -367,6 +367,13 @@ describe("private writer roles: narrow, non-login, no privilege escalation", () 
         address_line1: ["INSERT", "UPDATE"], address_line2: ["INSERT", "UPDATE"], city: ["INSERT", "UPDATE"],
         state: ["INSERT", "UPDATE"], country_code: ["INSERT", "UPDATE"], phone: ["INSERT", "UPDATE"],
         created_by: ["INSERT"],
+        // Phase 1K, 20260903090000_notification_instrumentation.sql:
+        // deactivate_business_branch's own branch.deactivated notification
+        // instrumentation captures the transition's fresh `updated_at` via
+        // `UPDATE ... RETURNING updated_at` for its dedup key — Postgres
+        // requires SELECT privilege on any RETURNING column, in addition
+        // to UPDATE (which this role already held on this table).
+        updated_at: ["SELECT"],
       }),
       ...branches("private", "business_branch_creation_requests", {
         business_id: ["SELECT", "INSERT"], creation_key: ["SELECT", "INSERT"],
@@ -584,6 +591,16 @@ describe("business deletion still works with Phase 1F tables present", () => {
     const cleanupSql = createTestDbClient();
     try {
       await cleanupSql`delete from public.audit_events where business_id = ${owner.businessId}`;
+      // Phase 1K: notifications.business_id is likewise `on delete
+      // restrict` (never cascade — see create_notifications.sql's own
+      // header comment, mirroring audit_events' identical SEC-01J
+      // rationale). inviteMember above now also raises a real
+      // staff.invited notification via create_business_invitation's own
+      // Phase 1K instrumentation, so it must be cleared here too, for the
+      // identical reason and by the identical mechanism — this deletes
+      // notification_recipients automatically via its own ON DELETE
+      // CASCADE from notifications.
+      await cleanupSql`delete from public.notifications where business_id = ${owner.businessId}`;
     } finally {
       await cleanupSql.end();
     }

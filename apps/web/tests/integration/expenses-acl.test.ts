@@ -265,6 +265,13 @@ describe("Phase 1E effective table/function ACLs", () => {
     const cleanupSql = createTestDbClient();
     try {
       await cleanupSql`delete from public.audit_events where business_id = ${businessId}`;
+      // Phase 1K: notifications.business_id is likewise `on delete
+      // restrict` (never cascade — mirrors audit_events' identical
+      // SEC-01J rationale). create_expense above now also raises a real
+      // expense.posted notification via its own Phase 1K instrumentation,
+      // so it must be cleared here too, for the identical reason —
+      // cascades to notification_recipients automatically.
+      await cleanupSql`delete from public.notifications where business_id = ${businessId}`;
     } finally {
       await cleanupSql.end();
     }

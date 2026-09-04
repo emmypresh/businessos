@@ -21,6 +21,8 @@ import { getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { SidebarNav, type NavSection } from "@/components/dashboard/sidebar-nav";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { getUnreadNotificationCount } from "@/lib/notifications/dal";
 import type { MembershipRow } from "@/lib/business/dal";
 
 export async function DashboardShell({
@@ -32,6 +34,12 @@ export async function DashboardShell({
 }) {
   const business = membership.businesses;
   const businessId = membership.business_id;
+
+  // Phase 1K: permissionless — every active member gets a bell, gated
+  // only on the SAME active membership this whole shell already requires
+  // (see lib/notifications/dal.ts's own header comment for why no
+  // operational permission is involved).
+  const unreadNotificationCount = await getUnreadNotificationCount(businessId);
 
   // Nav visibility only — a courtesy, not a security boundary. Every
   // route this links to independently re-verifies the same permission
@@ -176,6 +184,7 @@ export async function DashboardShell({
           (SheetTitle), so nothing is actually lost on mobile. */}
       <div className="flex items-center justify-between border-b bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
         <p className="min-w-0 truncate font-semibold tracking-tight">{business?.name}</p>
+        <NotificationBell businessId={businessId} initialUnreadCount={unreadNotificationCount} />
         <MobileNav sections={sections} businessName={business?.name ?? "BusinessOS"} />
       </div>
 
@@ -183,6 +192,9 @@ export async function DashboardShell({
         <div className="px-1">
           <p className="truncate font-semibold tracking-tight">{business?.name}</p>
           <p className="text-xs text-sidebar-foreground/60">{membership.roles?.name ?? "Member"}</p>
+        </div>
+        <div className="mt-3 px-1">
+          <NotificationBell businessId={businessId} initialUnreadCount={unreadNotificationCount} />
         </div>
         <div className="mt-6">
           <SidebarNav sections={sections} />
