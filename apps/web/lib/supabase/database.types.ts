@@ -103,6 +103,75 @@ export type Database = {
           },
         ]
       }
+      billing_transactions: {
+        Row: {
+          amount_minor: number
+          business_id: string
+          created_at: string
+          currency: string
+          failed_at: string | null
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          paid_at: string | null
+          provider: string
+          provider_channel: string | null
+          provider_reference: string
+          provider_transaction_code: string | null
+          status: string
+          subscription_id: string
+        }
+        Insert: {
+          amount_minor: number
+          business_id: string
+          created_at?: string
+          currency: string
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          paid_at?: string | null
+          provider: string
+          provider_channel?: string | null
+          provider_reference: string
+          provider_transaction_code?: string | null
+          status: string
+          subscription_id: string
+        }
+        Update: {
+          amount_minor?: number
+          business_id?: string
+          created_at?: string
+          currency?: string
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          paid_at?: string | null
+          provider?: string
+          provider_channel?: string | null
+          provider_reference?: string
+          provider_transaction_code?: string | null
+          status?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_transactions_subscription_id_business_id_fkey"
+            columns: ["subscription_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "business_subscriptions"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       business_branches: {
         Row: {
           address_line1: string | null
@@ -371,6 +440,110 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_subscriptions: {
+        Row: {
+          amount_minor: number | null
+          billing_interval: string | null
+          business_id: string
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          created_at: string
+          currency: string
+          current_period_ends_at: string | null
+          current_period_started_at: string | null
+          ended_at: string | null
+          grace_ends_at: string | null
+          id: string
+          plan_id: string
+          price_id: string | null
+          provider: string
+          provider_customer_code: string | null
+          provider_environment: string | null
+          provider_subscription_code: string | null
+          status: string
+          trial_ends_at: string | null
+          trial_started_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor?: number | null
+          billing_interval?: string | null
+          business_id: string
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          currency: string
+          current_period_ends_at?: string | null
+          current_period_started_at?: string | null
+          ended_at?: string | null
+          grace_ends_at?: string | null
+          id?: string
+          plan_id: string
+          price_id?: string | null
+          provider: string
+          provider_customer_code?: string | null
+          provider_environment?: string | null
+          provider_subscription_code?: string | null
+          status: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number | null
+          billing_interval?: string | null
+          business_id?: string
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_ends_at?: string | null
+          current_period_started_at?: string | null
+          ended_at?: string | null
+          grace_ends_at?: string | null
+          id?: string
+          plan_id?: string
+          price_id?: string | null
+          provider?: string
+          provider_customer_code?: string | null
+          provider_environment?: string | null
+          provider_subscription_code?: string | null
+          status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_subscriptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subscriptions_price_id_fkey"
+            columns: ["price_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subscriptions_price_id_plan_id_fkey"
+            columns: ["price_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plan_prices"
+            referencedColumns: ["id", "plan_id"]
           },
         ]
       }
@@ -1153,6 +1326,47 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_entitlements: {
+        Row: {
+          created_at: string
+          entitlement_key: string
+          id: string
+          plan_id: string
+          updated_at: string
+          value_boolean: boolean | null
+          value_integer: number | null
+          value_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          entitlement_key: string
+          id?: string
+          plan_id: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_integer?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          entitlement_key?: string
+          id?: string
+          plan_id?: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_integer?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
@@ -1608,6 +1822,98 @@ export type Database = {
           },
         ]
       }
+      subscription_plan_prices: {
+        Row: {
+          amount_minor: number
+          billing_interval: string
+          created_at: string
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          plan_id: string
+          provider: string
+          provider_environment: string
+          provider_plan_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          billing_interval: string
+          created_at?: string
+          currency: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          plan_id: string
+          provider: string
+          provider_environment?: string
+          provider_plan_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          billing_interval?: string
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          plan_id?: string
+          provider?: string
+          provider_environment?: string
+          provider_plan_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_public: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1799,6 +2105,15 @@ export type Database = {
           is_default: boolean
           is_primary: boolean
           name: string
+          status: string
+        }[]
+      }
+      get_business_entitlement: {
+        Args: { p_business_id: string }
+        Returns: {
+          effective_until: string
+          is_entitled: boolean
+          plan_code: string
           status: string
         }[]
       }
