@@ -51,6 +51,18 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "branch.deactivated": "Branch deactivated",
   "staff.invited": "Staff invited",
   "product.created": "Product created",
+  // Phase 1L. Verified against the exact action strings produced by
+  // supabase/migrations/20260905080000_trial_issuance.sql,
+  // 20260905080100_billing_action_writer.sql, and
+  // 20260905080200_billing_provider_writer.sql.
+  "subscription.trial_started": "Trial started",
+  "subscription.checkout_started": "Checkout started",
+  "subscription.activated": "Subscription activated",
+  "subscription.renewed": "Subscription renewed",
+  "subscription.payment_failed": "Payment failed",
+  "subscription.cancellation_scheduled": "Cancellation scheduled",
+  "subscription.canceled": "Subscription canceled",
+  "subscription.expired": "Subscription expired",
 };
 
 /**

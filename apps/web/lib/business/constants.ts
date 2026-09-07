@@ -102,6 +102,16 @@ export const PERMISSION = {
   // No audit.manage exists — audit history is written only by trusted
   // internal mechanisms, never "managed" by any user.
   AUDIT_VIEW: "audit.view",
+  // Phase 1L. Verified against the exact seeded keys in
+  // supabase/migrations/20260904080300_billing_permissions_and_private_writer.sql.
+  // billing.manage does NOT imply billing.view (though the seeded matrix
+  // happens to grant OWNER both) — checked independently everywhere in
+  // lib/billing/, exactly like every other permission pair above.
+  // billing.manage is OWNER-only; billing.view additionally includes
+  // ADMIN and ACCOUNTANT (the same financial-oversight tier as
+  // reports.view/audit.view).
+  BILLING_VIEW: "billing.view",
+  BILLING_MANAGE: "billing.manage",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

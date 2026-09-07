@@ -36,6 +36,27 @@ export function startOfUtcMonth(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
 
+// Phase 1L billing: derives a paid-through period end from a price's own
+// billing_interval and a period start — `Date.UTC` itself normalizes an
+// out-of-range month/day (e.g. adding a month to Jan 31 rolls into
+// March, never silently truncating), matching this module's own existing
+// UTC-arithmetic convention throughout. Used ONLY as a fallback when
+// Paystack's own webhook payload for a given event does not carry an
+// authoritative period end directly — never to override one it does.
+export function addUtcMonths(date: Date, months: number): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + months,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      date.getUTCMilliseconds()
+    )
+  );
+}
+
 /**
  * Parses a strict "YYYY-MM-DD" calendar date string into the UTC instant
  * at its start (00:00:00.000Z). Returns null for anything that isn't

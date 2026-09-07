@@ -14,6 +14,7 @@ import {
   FileText,
   Undo2,
   Activity,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
@@ -122,6 +123,7 @@ export async function DashboardShell({
   // Phase 1J. There is no manage-without-view split here at all —
   // audit.view is the ONLY permission (no audit.manage exists), so this
   // is a plain boolean, unlike every other nav link above.
+  const canViewBilling = permissions.has(PERMISSION.BILLING_VIEW);
   const canViewAudit = permissions.has(PERMISSION.AUDIT_VIEW);
 
   // Icons are rendered into ELEMENTS here (`<Package />`, not the bare
@@ -161,6 +163,9 @@ export async function DashboardShell({
       items: [
         { href: `/${businessId}/members`, label: "Members", icon: <Users /> },
         ...(canViewBranches || canManageBranches ? [{ href: branchesHref, label: "Branches", icon: <Building2 /> }] : []),
+        ...(canViewBilling
+          ? [{ href: `/${businessId}/settings/billing`, label: "Billing", icon: <CreditCard /> }]
+          : []),
         ...(canViewStaff || canInviteStaff ? [{ href: staffHref, label: "Staff", icon: <IdCard /> }] : []),
         ...(canViewAudit ? [{ href: `/${businessId}/activity`, label: "Activity", icon: <Activity /> }] : []),
       ],

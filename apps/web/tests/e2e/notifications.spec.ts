@@ -25,6 +25,16 @@ async function createOwnerAndBusiness(prefix: string) {
   return { email, userId: user.id, businessId: business!.id as string, client };
 }
 
+async function clearNotifications(businessId: string) {
+  const { createTestDbClient } = await import("../integration/helpers/db-client");
+  const sql = createTestDbClient();
+  try {
+    await sql`delete from public.notifications where business_id = ${businessId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
 async function raiseExpenseNotification(owner: Awaited<ReturnType<typeof createOwnerAndBusiness>>) {
   const { data: category } = await owner.client
     .from("expense_categories")
@@ -60,6 +70,13 @@ test.describe("Phase 1K notifications", () => {
 
   test("B: the empty state renders when a business has no notifications yet", async ({ page }) => {
     const owner = await createOwnerAndBusiness("e2e-notif-empty");
+    // Phase 1L application round: create_business now automatically
+    // raises its own subscription.trial_started notification for EVERY
+    // new business (20260905080000_trial_issuance.sql) — orthogonal to
+    // what this test is actually proving (the true zero-notification
+    // empty state). Cleared here so this test keeps its original,
+    // intended meaning.
+    await clearNotifications(owner.businessId);
 
     await loginAsInBrowser(page, owner.email, PASSWORD);
     await page.goto(`/${owner.businessId}`);
@@ -117,6 +134,11 @@ test.describe("Phase 1K notifications", () => {
 
   test("E: a preference toggle persists across reload, and suppresses a subsequent matching notification", async ({ page }) => {
     const owner = await createOwnerAndBusiness("e2e-notif-preferences");
+    // See test B's own identical comment on why this is cleared —
+    // otherwise the automatic trial notification would make the final
+    // "No notifications yet." assertion below false regardless of
+    // whether the preference-suppression behavior under test worked.
+    await clearNotifications(owner.businessId);
 
     await loginAsInBrowser(page, owner.email, PASSWORD);
     await page.goto(`/${owner.businessId}/notifications/preferences`);

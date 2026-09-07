@@ -583,6 +583,20 @@ export function mapDatabaseError(
   // same code for the identical structurally-unreachable condition, so it
   // is never re-mapped here with a second, divergent message.
 
+  // Phase 1L — billing. Codes verified against the exact `raise
+  // exception` strings in
+  // supabase/migrations/20260904080300_billing_permissions_and_private_writer.sql
+  // and 20260905080100_billing_action_writer.sql — not guessed.
+  if (message.includes("SUBSCRIPTION_NOT_CANCELABLE")) {
+    return { message: "This subscription cannot be canceled from its current state." };
+  }
+  if (message.includes("SUBSCRIPTION_NOT_FOUND")) {
+    // Same non-disclosure reasoning as PRODUCT_NOT_FOUND above: a
+    // forged/foreign business id and a genuinely missing subscription
+    // row are indistinguishable to the caller.
+    return { message: "No subscription is available for this business." };
+  }
+
   if (error.code === "42501" || message.includes("insufficient_privilege")) {
     return PERMISSION_DENIED_ERROR;
   }

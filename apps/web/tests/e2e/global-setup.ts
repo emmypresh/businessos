@@ -90,7 +90,20 @@ export default async function globalSetup() {
 
   const [landingBody, loginBody] = await Promise.all([landing.text(), login.text()]);
 
-  if (!landingBody.includes("BusinessOS") || !landingBody.includes("Run your business in one place")) {
+  // Content fingerprint: `data-testid="businessos-app-root"` on
+  // app/layout.tsx's own <body> — a stable, non-visual, application-owned
+  // structural marker present on EVERY route this app renders (landing,
+  // login, dashboard alike), rather than an exact hero-tagline sentence.
+  // A marketing/branding rewrite of the landing page's own copy (an
+  // expected, ongoing, legitimate kind of change) can never accidentally
+  // break this check the way the previous "Run your business in one
+  // place" substring check did; only a genuinely different application
+  // (or a build that never rendered this project's own root layout at
+  // all) would fail it. "BusinessOS" is kept as a second, independent
+  // signal (from <title>/metadata.applicationName and the logo's own alt
+  // text) — an unrelated server would need to coincidentally reproduce
+  // BOTH the exact testid AND the exact product name to pass.
+  if (!landingBody.includes("BusinessOS") || !landingBody.includes('data-testid="businessos-app-root"')) {
     throw new Error(
       `E2E target ${baseURL}'s landing page doesn't match BusinessOS's expected content. ` +
         "This usually means Playwright reused an unrelated server already listening on this port. " +

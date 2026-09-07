@@ -461,6 +461,7 @@ export type Database = {
           price_id: string | null
           provider: string
           provider_customer_code: string | null
+          provider_email_token: string | null
           provider_environment: string | null
           provider_subscription_code: string | null
           status: string
@@ -485,6 +486,7 @@ export type Database = {
           price_id?: string | null
           provider: string
           provider_customer_code?: string | null
+          provider_email_token?: string | null
           provider_environment?: string | null
           provider_subscription_code?: string | null
           status: string
@@ -509,6 +511,7 @@ export type Database = {
           price_id?: string | null
           provider?: string
           provider_customer_code?: string | null
+          provider_email_token?: string | null
           provider_environment?: string | null
           provider_subscription_code?: string | null
           status?: string
@@ -1923,6 +1926,36 @@ export type Database = {
         Args: { p_invitation_id: string }
         Returns: string
       }
+      activate_paystack_subscription: {
+        Args: {
+          p_business_id: string
+          p_period_end: string
+          p_period_start: string
+          p_plan_id: string
+          p_price_id?: string
+          p_provider_customer_code?: string
+          p_provider_environment?: string
+          p_provider_subscription_code?: string
+        }
+        Returns: string
+      }
+      begin_paystack_checkout_intent: {
+        Args: {
+          p_business_id: string
+          p_price_id: string
+          p_provider_reference: string
+        }
+        Returns: string
+      }
+      bind_paystack_subscription_identity: {
+        Args: {
+          p_business_id: string
+          p_provider_customer_code: string
+          p_provider_email_token?: string
+          p_provider_subscription_code: string
+        }
+        Returns: string
+      }
       change_member_role: {
         Args: { p_business_id: string; p_member_id: string; p_role: string }
         Returns: string
@@ -2088,6 +2121,21 @@ export type Database = {
         Args: { p_branch_id: string; p_business_id: string }
         Returns: string
       }
+      expire_paystack_subscription: {
+        Args: { p_business_id: string }
+        Returns: string
+      }
+      fail_paystack_checkout_intent: {
+        Args: { p_business_id: string; p_provider_reference: string }
+        Returns: undefined
+      }
+      find_paystack_business_by_customer_code: {
+        Args: {
+          p_provider_customer_code: string
+          p_provider_environment: string
+        }
+        Returns: string
+      }
       get_audit_branch_filter_options: {
         Args: { p_business_id: string }
         Returns: {
@@ -2193,6 +2241,15 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_paystack_subscription_disable_context: {
+        Args: { p_business_id: string }
+        Returns: {
+          provider: string
+          provider_email_token: string
+          provider_environment: string
+          provider_subscription_code: string
+        }[]
+      }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       get_returnable_sale_items: {
         Args: { p_business_id: string; p_sale_id: string }
@@ -2234,6 +2291,19 @@ export type Database = {
         Args: { p_business_id: string; p_permission_key: string }
         Returns: boolean
       }
+      ingest_paystack_provider_event: {
+        Args: {
+          p_business_id?: string
+          p_event_type: string
+          p_payload_hash: string
+          p_provider_event_key: string
+          p_subscription_id?: string
+        }
+        Returns: {
+          id: string
+          is_new: boolean
+        }[]
+      }
       issue_recovery_grant: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: string
@@ -2273,6 +2343,10 @@ export type Database = {
           sale_number: string
           status: string
         }[]
+      }
+      mark_paystack_subscription_payment_failed: {
+        Args: { p_business_id: string }
+        Returns: string
       }
       reactivate_business_branch: {
         Args: { p_branch_id: string; p_business_id: string }
@@ -2333,6 +2407,35 @@ export type Database = {
         }
         Returns: string
       }
+      record_paystack_billing_transaction: {
+        Args: {
+          p_amount_minor: number
+          p_business_id: string
+          p_currency: string
+          p_failed_at?: string
+          p_failure_code?: string
+          p_failure_message?: string
+          p_paid_at?: string
+          p_provider_channel?: string
+          p_provider_reference: string
+          p_provider_transaction_code?: string
+          p_status: string
+          p_subscription_id: string
+        }
+        Returns: string
+      }
+      record_subscription_checkout_started: {
+        Args: { p_business_id: string }
+        Returns: undefined
+      }
+      renew_paystack_subscription: {
+        Args: {
+          p_business_id: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: string
+      }
       replace_member_branches: {
         Args: {
           p_branch_ids: Json
@@ -2342,8 +2445,16 @@ export type Database = {
         }
         Returns: string
       }
+      request_subscription_cancellation: {
+        Args: { p_business_id: string }
+        Returns: string
+      }
       revoke_business_invitation: {
         Args: { p_business_id: string; p_invitation_id: string }
+        Returns: string
+      }
+      schedule_paystack_subscription_cancellation: {
+        Args: { p_business_id: string }
         Returns: string
       }
       set_default_business_branch: {

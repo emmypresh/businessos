@@ -1,19 +1,44 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient, deleteTestUser } from "./helpers/admin-client";
-import { createOwnerAndBusiness, createMemberWithRole, createMemberWithCustomPermissions } from "./helpers/inventory";
+import {
+  createOwnerAndBusiness as createOwnerAndBusinessWithAutoTrial,
+  createMemberWithRole,
+  createMemberWithCustomPermissions,
+} from "./helpers/inventory";
 import { createTestDbClient } from "./helpers/db-client";
 import { assertLocalSupabaseUrl } from "./helpers/url-safety";
 
 // Phase 1L — DATABASE FOUNDATION ONLY. Exercises the subscription/
 // billing catalog, the business_subscriptions state machine, billing
 // history, and provider-event idempotency directly against a real
-// database. No application layer exists yet — every trusted-function
-// call here goes through a raw Postgres connection
-// (createTestDbClient()), the same superuser test connection every
-// other phase's own DB-foundation round already uses for the identical
-// reason (private.create_initial_trial etc. have ZERO EXECUTE grants to
-// any real login role yet).
+// database. Every trusted-function call here still goes through a raw
+// Postgres connection (createTestDbClient()) — this file's own subject
+// is the FOUNDATION layer's contracts in isolation, never the
+// application layer's own wiring around them (see
+// tests/integration/subscription-billing-application.test.ts for that).
+//
+// Phase 1L APPLICATION-round note: create_business now automatically
+// issues a Growth trial (20260905080000_trial_issuance.sql) — every test
+// in THIS file was written, and still needs to run, against a business
+// with NO subscription row yet (each test calls createInitialTrial, or a
+// specific activation/renewal/failure/cancellation function, itself, in
+// a deliberate sequence it wants to prove in isolation). createOwnerAndBusiness
+// is shadowed here (this file only — every OTHER test file keeps using
+// the real one, which now correctly reflects production's automatic
+// trial) to delete that now-automatic trial immediately, restoring this
+// file's own original "no subscription yet" baseline transparently at
+// every one of its 70+ call sites, rather than hand-editing each one.
+async function createOwnerAndBusiness(prefix: string) {
+  const owner = await createOwnerAndBusinessWithAutoTrial(prefix);
+  const sql = createTestDbClient();
+  try {
+    await sql`delete from public.business_subscriptions where business_id = ${owner.businessId}`;
+  } finally {
+    await sql.end();
+  }
+  return owner;
+}
 
 let cleanupUserIds: string[] = [];
 afterEach(async () => {
@@ -1889,20 +1914,40 @@ describe("Role and function ACL audit — private_billing_writer and every trust
     }
   });
 
-  it("51. every trusted billing transition function has ZERO EXECUTE grants to PUBLIC, anon, authenticated, or service_role", async () => {
+  it("51. every trusted billing transition function has EXECUTE granted ONLY to its owner and the exact narrow Phase 1L application-round caller(s) that need it — never PUBLIC/anon/authenticated/service_role directly", async () => {
+    // Phase 1L APPLICATION round: each frozen trusted function below now
+    // has EXACTLY ONE additional narrow caller — the specific new
+    // application-layer wrapper role that forwards to it
+    // (20260905080000_trial_issuance.sql,
+    // 20260905080100_billing_action_writer.sql,
+    // 20260905080200_billing_provider_writer.sql) — never PUBLIC, never
+    // anon, never authenticated, and never service_role directly (every
+    // service_role-reachable caller is itself one of these new narrow
+    // `public.*` wrapper functions, never this private function).
+    const expectedGrantees: Record<string, string[]> = {
+      create_initial_trial: ["private_billing_writer", "private_business_creator"],
+      activate_subscription_from_verified_payment: ["private_billing_writer", "private_billing_provider_writer"],
+      record_subscription_renewal: ["private_billing_writer", "private_billing_provider_writer"],
+      record_subscription_payment_failed: ["private_billing_writer", "private_billing_provider_writer"],
+      // Phase 1L APP-1L-03 remediation round: a SECOND narrow caller —
+      // private_billing_provider_writer — was added for
+      // schedule_paystack_subscription_cancellation (the PROVIDER-
+      // initiated counterpart to the owner-facing
+      // request_subscription_cancellation, called from the
+      // subscription.disable webhook handler; see
+      // 20260906080000_provider_subscription_identity_and_environment.sql).
+      schedule_subscription_cancel: [
+        "private_billing_writer",
+        "private_billing_action_writer",
+        "private_billing_provider_writer",
+      ],
+      mark_subscription_expired: ["private_billing_writer", "private_billing_provider_writer"],
+      record_billing_transaction: ["private_billing_writer", "private_billing_provider_writer"],
+      record_provider_event: ["private_billing_writer", "private_billing_provider_writer"],
+    };
     const sql = createTestDbClient();
     try {
-      const functionNames = [
-        "create_initial_trial",
-        "activate_subscription_from_verified_payment",
-        "record_subscription_renewal",
-        "record_subscription_payment_failed",
-        "schedule_subscription_cancel",
-        "mark_subscription_expired",
-        "record_billing_transaction",
-        "record_provider_event",
-      ];
-      for (const fn of functionNames) {
+      for (const [fn, expected] of Object.entries(expectedGrantees)) {
         const rows = await sql<{ grantee: string }[]>`
           select case when acl.grantee = 0 then 'PUBLIC' else r.rolname end as grantee
           from pg_proc p
@@ -1911,11 +1956,12 @@ describe("Role and function ACL audit — private_billing_writer and every trust
           left join pg_roles r on r.oid = acl.grantee
           where n.nspname = 'private' and p.proname = ${fn} and acl.privilege_type = 'EXECUTE'
         `;
-        const grantees = rows.map((r) => r.grantee);
-        // The function's OWNER (private_billing_writer) always appears —
-        // expected owner privilege, not new exposure (see the Phase 1K
-        // round's own identical, already-reviewed reasoning).
-        expect(grantees, fn).toEqual(["private_billing_writer"]);
+        const grantees = rows.map((r) => r.grantee).sort();
+        expect(grantees, fn).toEqual([...expected].sort());
+        expect(grantees, fn).not.toContain("PUBLIC");
+        expect(grantees, fn).not.toContain("anon");
+        expect(grantees, fn).not.toContain("authenticated");
+        expect(grantees, fn).not.toContain("service_role");
       }
     } finally {
       await sql.end();

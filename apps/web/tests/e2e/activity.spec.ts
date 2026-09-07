@@ -166,6 +166,19 @@ test.describe("Phase 1J activity feed", () => {
 
   test("G: the empty state is shown when no activity has been recorded, without implying data was lost", async ({ page }) => {
     const owner = await createOwnerAndBusiness("e2e-activity-empty");
+    // Phase 1L application round: create_business now automatically
+    // raises its own subscription.trial_started audit event for EVERY
+    // new business (20260905080000_trial_issuance.sql) — orthogonal to
+    // what this test is actually proving (the true zero-history empty
+    // state renders correctly, never implying data loss). Cleared here
+    // so this test keeps its original, intended meaning.
+    const { createTestDbClient } = await import("../integration/helpers/db-client");
+    const sql = createTestDbClient();
+    try {
+      await sql`delete from public.audit_events where business_id = ${owner.businessId}`;
+    } finally {
+      await sql.end();
+    }
     await loginAsInBrowser(page, owner.email, PASSWORD);
     await page.goto(`/${owner.businessId}/activity`);
     await expect(page.getByText("No activity has been recorded yet.")).toBeVisible();
