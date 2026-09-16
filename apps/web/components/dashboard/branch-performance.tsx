@@ -44,7 +44,7 @@ export function BranchPerformance({ branches, currencyCode }: Props) {
             <TableBody>
               {branches.map((branch) => (
                 <TableRow key={branch.branchId}>
-                  <TableCell className="font-medium">{branch.branchName}</TableCell>
+                  <TableCell className="max-w-[10rem] truncate font-medium sm:max-w-[18rem]" title={branch.branchName}>{branch.branchName}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatMoney(branch.revenue, currencyCode)}</TableCell>
                   <TableCell className="text-right tabular-nums">{branch.orderCount}</TableCell>
                 </TableRow>

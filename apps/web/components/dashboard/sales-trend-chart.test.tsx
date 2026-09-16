@@ -108,4 +108,39 @@ describe("SalesTrendChart", () => {
     renderChart();
     expect(screen.queryByText(/performing strongly|healthy|growing|best-performing/i)).not.toBeInTheDocument();
   });
+
+  it("gives each chart instance a unique gradient id with a matching fill reference, avoiding collisions when multiple charts render in one document (B2-OBS-001)", () => {
+    const { container: containerA } = renderChart();
+    const { container: containerB } = renderChart();
+
+    const gradientA = containerA.querySelector("linearGradient");
+    const gradientB = containerB.querySelector("linearGradient");
+    expect(gradientA).toBeInTheDocument();
+    expect(gradientB).toBeInTheDocument();
+
+    const gradientIdA = gradientA!.getAttribute("id")!;
+    const gradientIdB = gradientB!.getAttribute("id")!;
+    expect(gradientIdA).not.toEqual(gradientIdB);
+
+    const fillA = containerA.querySelector("path.text-primary[fill^='url(#']");
+    const fillB = containerB.querySelector("path.text-primary[fill^='url(#']");
+    expect(fillA!.getAttribute("fill")).toBe(`url(#${gradientIdA})`);
+    expect(fillB!.getAttribute("fill")).toBe(`url(#${gradientIdB})`);
+  });
+
+  it("keeps the description aria-labelledby relationship valid and per-instance unique across multiple chart instances", () => {
+    const { container: containerA } = renderChart();
+    const { container: containerB } = renderChart();
+
+    for (const container of [containerA, containerB]) {
+      const svg = container.querySelector("svg[role='img']")!;
+      const labelledBy = svg.getAttribute("aria-labelledby")!;
+      const description = container.querySelector(`#${CSS.escape(labelledBy)}`);
+      expect(description).toBeInTheDocument();
+    }
+
+    const idA = containerA.querySelector("svg[role='img']")!.getAttribute("aria-labelledby");
+    const idB = containerB.querySelector("svg[role='img']")!.getAttribute("aria-labelledby");
+    expect(idA).not.toEqual(idB);
+  });
 });

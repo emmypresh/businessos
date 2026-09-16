@@ -42,6 +42,7 @@ const PADDING = { top: 16, right: 16, bottom: 28, left: 8 };
 export function SalesTrendChart({ businessId, points, hasActivity, currencyCode, rangeLabel }: Props) {
   const [metric, setMetric] = useState<SalesTrendMetric>(SALES_TREND_METRIC.REVENUE);
   const descriptionId = useId();
+  const gradientId = useId();
   const config = SALES_TREND_METRIC_CONFIG[metric];
 
   const values = useMemo(() => points.map((point) => metricValue(point, metric)), [points, metric]);
@@ -62,7 +63,7 @@ export function SalesTrendChart({ businessId, points, hasActivity, currencyCode,
     ? `${linePath} L ${coordinates[coordinates.length - 1].x.toFixed(2)} ${(PADDING.top + plotHeight).toFixed(2)} L ${coordinates[0].x.toFixed(2)} ${(PADDING.top + plotHeight).toFixed(2)} Z`
     : "";
 
-  const tickCount = Math.min(points.length, 6);
+  const tickCount = Math.min(points.length, 5);
   const tickIndexes = tickCount <= 1
     ? [0]
     : Array.from({ length: tickCount }, (_, i) => Math.round((i * (points.length - 1)) / (tickCount - 1)));
@@ -112,13 +113,13 @@ export function SalesTrendChart({ businessId, points, hasActivity, currencyCode,
               preserveAspectRatio="xMidYMid meet"
             >
               <defs>
-                <linearGradient id="sales-trend-fill" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="currentColor" stopOpacity="0.18" />
                   <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <line x1={PADDING.left} y1={PADDING.top + plotHeight} x2={CHART_WIDTH - PADDING.right} y2={PADDING.top + plotHeight} stroke="currentColor" strokeOpacity="0.15" />
-              <path d={areaPath} fill="url(#sales-trend-fill)" className="text-primary" />
+              <path d={areaPath} fill={`url(#${gradientId})`} className="text-primary" />
               <path d={linePath} fill="none" stroke="currentColor" strokeWidth="2" className="text-primary" />
               {coordinates.map((c) => (
                 <circle key={c.point.date} cx={c.x} cy={c.y} r="3" className="fill-primary">
@@ -131,12 +132,12 @@ export function SalesTrendChart({ businessId, points, hasActivity, currencyCode,
                 const c = coordinates[index];
                 if (!c) return null;
                 return (
-                  <text key={c.point.date} x={c.x} y={CHART_HEIGHT - 8} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+                  <text key={c.point.date} x={c.x} y={CHART_HEIGHT - 8} textAnchor="middle" className="fill-muted-foreground text-[11px]">
                     {c.point.label}
                   </text>
                 );
               })}
-              <text x={PADDING.left} y={PADDING.top} className="fill-muted-foreground text-[10px]">
+              <text x={PADDING.left} y={PADDING.top} className="fill-muted-foreground text-[11px]">
                 {formatAxisTick(metric, maxValue, currencyCode)}
               </text>
             </svg>

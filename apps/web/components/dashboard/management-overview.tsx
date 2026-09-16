@@ -73,7 +73,9 @@ export function ManagementOverview({ businessId, businessName, summary, previous
     <section aria-label="Customer and inventory insights" className="grid gap-4 lg:grid-cols-2">
       <CustomerInsights businessId={businessId} canViewCustomers={canViewCustomers} current={reporting.customerSummary} previous={previousReporting.customerSummary} />
       <InventoryInsights businessId={businessId} canViewInventory={canViewInventory} current={reporting.inventoryRisk} />
-      <div className="lg:col-span-2"><WhatsAppFollowUp businessId={businessId} followUpCount={reporting.whatsappFollowUpCount} /></div>
+      {reporting.whatsappFollowUpCount !== null ? (
+        <div className="lg:col-span-2"><WhatsAppFollowUp businessId={businessId} followUpCount={reporting.whatsappFollowUpCount} /></div>
+      ) : null}
     </section>
     <BranchPerformance branches={reporting.branchPerformance} currencyCode={summary.currencyCode} />
   </div>;

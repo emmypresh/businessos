@@ -39,4 +39,16 @@ describe("ManagementOverview", () => {
     expect(screen.queryByRole("link", { name: /view customers/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /view inventory/i })).not.toBeInTheDocument();
   });
+
+  it("never emits a duplicate DOM id across the full composed overview render", () => {
+    const { container } = render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
+    const ids = Array.from(container.querySelectorAll("[id]")).map((el) => el.id);
+    const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+    expect(duplicates).toEqual([]);
+  });
+
+  it("does not render an empty WhatsApp grid slot when the aggregate withholds the count (no awkward empty grid hole)", () => {
+    const { container } = render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={{ ...currentReporting, whatsappFollowUpCount: null }} previousReporting={priorReporting} canViewCustomers canViewInventory />);
+    expect(container.querySelector(".lg\\:col-span-2")).not.toBeInTheDocument();
+  });
 });
