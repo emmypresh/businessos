@@ -63,6 +63,15 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "subscription.cancellation_scheduled": "Cancellation scheduled",
   "subscription.canceled": "Subscription canceled",
   "subscription.expired": "Subscription expired",
+  // Phase 1M. Verified against the exact action strings produced by
+  // supabase/migrations/20260908080000_whatsapp_application_provider_writer.sql.
+  "whatsapp.account_connected": "WhatsApp connected",
+  "whatsapp.account_disconnected": "WhatsApp disconnected",
+  "whatsapp.message_sent": "WhatsApp message sent",
+  "whatsapp.message_failed": "WhatsApp message failed",
+  "whatsapp.inbound_received": "WhatsApp message received",
+  "whatsapp.template_synced": "WhatsApp template synced",
+  "whatsapp.consent_updated": "WhatsApp consent updated",
 };
 
 /**

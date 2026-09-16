@@ -112,6 +112,17 @@ export const PERMISSION = {
   // reports.view/audit.view).
   BILLING_VIEW: "billing.view",
   BILLING_MANAGE: "billing.manage",
+  // Phase 1M. Verified against the exact seeded keys in
+  // supabase/migrations/20260907080200_whatsapp_permissions_and_private_writer.sql.
+  // whatsapp.send does NOT imply whatsapp.manage (and vice versa) —
+  // checked independently everywhere in lib/whatsapp/, exactly like
+  // every other permission pair above. whatsapp.manage (account/number
+  // connection, customer consent recording) is OWNER/ADMIN-only;
+  // whatsapp.view/whatsapp.send additionally include MANAGER, SALES, and
+  // ACCOUNTANT (day-to-day customer conversation staff).
+  WHATSAPP_VIEW: "whatsapp.view",
+  WHATSAPP_SEND: "whatsapp.send",
+  WHATSAPP_MANAGE: "whatsapp.manage",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION)[keyof typeof PERMISSION];

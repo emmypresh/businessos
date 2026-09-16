@@ -627,7 +627,7 @@ describe("Private writer ACL — after Phase 1K application-layer grants", () =>
     expect(error).not.toBeNull();
   });
 
-  it("22/23. private.create_notification's EXECUTE grantees are EXACTLY the 5 expected Phase 1K writer roles — no more, no less", async () => {
+  it("22/23. private.create_notification's EXECUTE grantees are EXACTLY the expected writer roles — no more, no less", async () => {
     const sql = createTestDbClient();
     try {
       const rows = await sql<{ grantee: string }[]>`
@@ -645,6 +645,19 @@ describe("Private writer ACL — after Phase 1K application-layer grants", () =>
       // is expected owner privilege, not a new exposure (see this
       // function's own already-reviewed DB-foundation-round ACL tests
       // for the identical reasoning applied to the writer itself).
+      // Phase 1L application round: three new, narrow additional callers
+      // (20260905080000_trial_issuance.sql,
+      // 20260905080100_billing_action_writer.sql,
+      // 20260905080200_billing_provider_writer.sql) — each already has
+      // its own dedicated ACL test proving it holds nothing beyond what
+      // it needs.
+      // Phase 1M application round: one further narrow additional caller
+      // (20260908080000_whatsapp_application_provider_writer.sql) —
+      // private_whatsapp_provider_writer, granted EXECUTE solely to raise
+      // the useful-only whatsapp.account_disconnected /
+      // whatsapp.message_failed notifications; see that migration's own
+      // ACL tests (tests/integration/whatsapp-application.test.ts) for
+      // proof it holds nothing beyond what it needs.
       expect(grantees).toEqual(
         [
           "private_notification_writer",
@@ -653,6 +666,10 @@ describe("Private writer ACL — after Phase 1K application-layer grants", () =>
           "private_expense_writer",
           "private_invitation_writer",
           "private_branch_writer",
+          "private_business_creator",
+          "private_billing_action_writer",
+          "private_billing_provider_writer",
+          "private_whatsapp_provider_writer",
         ].sort()
       );
       expect(grantees).not.toContain("PUBLIC");
@@ -664,10 +681,42 @@ describe("Private writer ACL — after Phase 1K application-layer grants", () =>
     }
   });
 
-  it("22b. the resolver functions' EXECUTE grantees are likewise exactly the 5 expected writer roles", async () => {
+  it("22b. the resolver functions' EXECUTE grantees are likewise exactly the expected writer roles", async () => {
     const sql = createTestDbClient();
+    // Phase 1L application round: resolve_active_members_with_permission
+    // (only) gained two new narrow callers — private_billing_action_writer
+    // (owner-facing cancellation notification) and
+    // private_billing_provider_writer (provider-event-driven lifecycle
+    // notifications). filter_notification_recipients_by_preference is
+    // untouched by this round — neither new role ever calls it.
+    // Phase 1M application round: resolve_active_members_with_permission
+    // gained one further narrow caller — private_whatsapp_provider_writer
+    // (resolving whatsapp.manage/whatsapp.send holders as recipients for
+    // the two useful-only WhatsApp notifications). Again,
+    // filter_notification_recipients_by_preference is untouched.
+    const expectedByFunction: Record<string, string[]> = {
+      resolve_active_members_with_permission: [
+        "private_notification_recipient_resolver",
+        "private_invoice_payment_writer",
+        "private_sale_return_writer",
+        "private_expense_writer",
+        "private_invitation_writer",
+        "private_branch_writer",
+        "private_billing_action_writer",
+        "private_billing_provider_writer",
+        "private_whatsapp_provider_writer",
+      ],
+      filter_notification_recipients_by_preference: [
+        "private_notification_recipient_resolver",
+        "private_invoice_payment_writer",
+        "private_sale_return_writer",
+        "private_expense_writer",
+        "private_invitation_writer",
+        "private_branch_writer",
+      ],
+    };
     try {
-      for (const fn of ["resolve_active_members_with_permission", "filter_notification_recipients_by_preference"]) {
+      for (const [fn, expected] of Object.entries(expectedByFunction)) {
         const rows = await sql<{ grantee: string }[]>`
           select case when acl.grantee = 0 then 'PUBLIC' else r.rolname end as grantee
           from pg_proc p
@@ -680,16 +729,7 @@ describe("Private writer ACL — after Phase 1K application-layer grants", () =>
         // private_notification_recipient_resolver itself (both
         // functions' shared OWNER) always appears too — expected owner
         // privilege, not a new exposure (see the sibling test above).
-        expect(grantees, fn).toEqual(
-          [
-            "private_notification_recipient_resolver",
-            "private_invoice_payment_writer",
-            "private_sale_return_writer",
-            "private_expense_writer",
-            "private_invitation_writer",
-            "private_branch_writer",
-          ].sort()
-        );
+        expect(grantees, fn).toEqual([...expected].sort());
       }
     } finally {
       await sql.end();

@@ -58,6 +58,24 @@ export const NOTIFICATION_TYPE_LABEL: Record<string, string> = {
   "expense.posted": "Expense posted",
   "staff.invited": "Staff invitation",
   "branch.deactivated": "Branch deactivated",
+  // Phase 1L. Verified against the exact notification_type strings
+  // produced by supabase/migrations/20260905080000_trial_issuance.sql,
+  // 20260905080100_billing_action_writer.sql, and
+  // 20260905080200_billing_provider_writer.sql.
+  "subscription.trial_started": "Trial started",
+  "subscription.activated": "Subscription activated",
+  "subscription.renewed": "Subscription renewed",
+  "subscription.payment_failed": "Payment failed",
+  "subscription.cancellation_scheduled": "Cancellation scheduled",
+  "subscription.canceled": "Subscription canceled",
+  "subscription.expired": "Subscription expired",
+  // Phase 1M. Verified against the exact notification_type strings
+  // produced by
+  // supabase/migrations/20260908080000_whatsapp_application_provider_writer.sql.
+  // Useful-only, per this phase's own explicit instruction — never
+  // sent/delivered/read, never every inbound message.
+  "whatsapp.account_disconnected": "WhatsApp disconnected",
+  "whatsapp.message_failed": "WhatsApp message failed",
 };
 
 /**
@@ -94,6 +112,15 @@ export const SUPPORTED_NOTIFICATION_TYPES = [
   "expense.posted",
   "staff.invited",
   "branch.deactivated",
+  "subscription.trial_started",
+  "subscription.activated",
+  "subscription.renewed",
+  "subscription.payment_failed",
+  "subscription.cancellation_scheduled",
+  "subscription.canceled",
+  "subscription.expired",
+  "whatsapp.account_disconnected",
+  "whatsapp.message_failed",
 ] as const;
 
 export const RESOURCE_TYPE_LABEL: Record<string, string> = {
@@ -102,6 +129,7 @@ export const RESOURCE_TYPE_LABEL: Record<string, string> = {
   expense: "Expense",
   staff_invitation: "Invitation",
   branch: "Branch",
+  business_subscription: "Subscription",
 };
 
 // Codex security review, INFO-01 carryover: a cheap, deterministic bound

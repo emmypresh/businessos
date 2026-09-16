@@ -2424,6 +2424,37 @@ export type Database = {
         }
         Returns: string
       }
+      begin_whatsapp_outbound_message: {
+        Args: {
+          p_body_text?: string
+          p_business_id: string
+          p_client_creation_key?: string
+          p_conversation_id: string
+          p_message_type: string
+          p_template_id?: string
+        }
+        Returns: {
+          destination_phone_e164: string
+          is_new: boolean
+          message_id: string
+          opaque_callback_token: string
+          provider_phone_number_id: string
+          provider_template_id: string
+          template_language: string
+          template_name: string
+          whatsapp_account_id: string
+          whatsapp_phone_number_id: string
+        }[]
+      }
+      bind_outbound_provider_message_id: {
+        Args: {
+          p_actor_user_id: string
+          p_business_id: string
+          p_message_id: string
+          p_provider_message_id: string
+        }
+        Returns: undefined
+      }
       bind_paystack_subscription_identity: {
         Args: {
           p_business_id: string
@@ -2606,6 +2637,15 @@ export type Database = {
         Args: { p_business_id: string; p_provider_reference: string }
         Returns: undefined
       }
+      fail_whatsapp_outbound_message: {
+        Args: {
+          p_actor_user_id: string
+          p_business_id: string
+          p_failure_reason: string
+          p_message_id: string
+        }
+        Returns: undefined
+      }
       find_paystack_business_by_customer_code: {
         Args: {
           p_provider_customer_code: string
@@ -2760,6 +2800,16 @@ export type Database = {
           status: string
         }[]
       }
+      get_whatsapp_outbound_message_reconciliation_state: {
+        Args: { p_business_id: string; p_message_id: string }
+        Returns: {
+          bound_provider_message_id: string
+          correlation_state: string
+          correlation_token_exists: boolean
+          has_pending_repair: boolean
+          pending_provider_message_id: string
+        }[]
+      }
       has_branch_access: {
         Args: { p_branch_id: string; p_business_id: string }
         Returns: boolean
@@ -2768,6 +2818,44 @@ export type Database = {
         Args: { p_business_id: string; p_permission_key: string }
         Returns: boolean
       }
+      ingest_and_process_whatsapp_inbound_message: {
+        Args: {
+          p_body_text?: string
+          p_branch_id?: string
+          p_business_id: string
+          p_customer_id?: string
+          p_customer_phone_e164: string
+          p_message_type: string
+          p_payload_sha256: string
+          p_provider_event_key: string
+          p_provider_message_id: string
+          p_provider_timestamp?: string
+          p_whatsapp_phone_number_id: string
+        }
+        Returns: {
+          conversation_id: string
+          is_new_message: boolean
+          ledger_status: string
+          message_id: string
+        }[]
+      }
+      ingest_and_process_whatsapp_status_event: {
+        Args: {
+          p_business_id: string
+          p_failure_reason?: string
+          p_opaque_callback_token?: string
+          p_payload_sha256: string
+          p_provider_event_key: string
+          p_provider_message_id: string
+          p_provider_timestamp?: string
+          p_status: string
+          p_whatsapp_phone_number_id: string
+        }
+        Returns: {
+          ledger_status: string
+          message_resolved: boolean
+        }[]
+      }
       ingest_paystack_provider_event: {
         Args: {
           p_business_id?: string
@@ -2775,6 +2863,21 @@ export type Database = {
           p_payload_hash: string
           p_provider_event_key: string
           p_subscription_id?: string
+        }
+        Returns: {
+          id: string
+          is_new: boolean
+        }[]
+      }
+      ingest_whatsapp_webhook_event: {
+        Args: {
+          p_business_id?: string
+          p_event_type: string
+          p_message_id?: string
+          p_payload_sha256: string
+          p_provider: string
+          p_provider_event_key: string
+          p_whatsapp_phone_number_id?: string
         }
         Returns: {
           id: string
@@ -2846,6 +2949,24 @@ export type Database = {
           p_set_service?: boolean
         }
         Returns: string
+      }
+      record_inbound_whatsapp_message: {
+        Args: {
+          p_body_text?: string
+          p_branch_id?: string
+          p_business_id: string
+          p_customer_id?: string
+          p_customer_phone_e164: string
+          p_message_type: string
+          p_provider_message_id: string
+          p_provider_timestamp?: string
+          p_whatsapp_phone_number_id: string
+        }
+        Returns: {
+          conversation_id: string
+          is_new: boolean
+          message_id: string
+        }[]
       }
       record_inventory_movement: {
         Args: {
@@ -2919,6 +3040,16 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: undefined
       }
+      record_whatsapp_provider_message_status: {
+        Args: {
+          p_business_id: string
+          p_failure_reason?: string
+          p_message_id: string
+          p_provider_timestamp?: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       renew_paystack_subscription: {
         Args: {
           p_business_id: string
@@ -2926,6 +3057,19 @@ export type Database = {
           p_period_start: string
         }
         Returns: string
+      }
+      repair_whatsapp_provider_bind: {
+        Args: {
+          p_actor_user_id?: string
+          p_business_id: string
+          p_message_id: string
+          p_provider_message_id: string
+        }
+        Returns: {
+          bound_provider_message_id: string
+          resolved: boolean
+          retryable: boolean
+        }[]
       }
       replace_member_branches: {
         Args: {
@@ -2956,6 +3100,20 @@ export type Database = {
         Args: { p_business_id: string; p_member_id: string }
         Returns: string
       }
+      sync_whatsapp_template: {
+        Args: {
+          p_actor_user_id?: string
+          p_body_snapshot?: string
+          p_business_id: string
+          p_category: string
+          p_language: string
+          p_name: string
+          p_provider_template_id: string
+          p_status: string
+          p_whatsapp_account_id: string
+        }
+        Returns: string
+      }
       update_business_branch: {
         Args: {
           p_address_line1?: string
@@ -2968,6 +3126,27 @@ export type Database = {
           p_name: string
           p_phone?: string
           p_state?: string
+        }
+        Returns: string
+      }
+      upsert_meta_whatsapp_account: {
+        Args: {
+          p_actor_user_id: string
+          p_business_id: string
+          p_created_by?: string
+          p_display_name?: string
+          p_provider_business_account_id: string
+          p_status: string
+        }
+        Returns: string
+      }
+      upsert_meta_whatsapp_phone_number: {
+        Args: {
+          p_business_id: string
+          p_display_phone_number: string
+          p_is_primary?: boolean
+          p_provider_phone_number_id: string
+          p_whatsapp_account_id: string
         }
         Returns: string
       }
@@ -2997,12 +3176,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3026,11 +3205,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3051,11 +3230,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3076,11 +3255,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3093,11 +3272,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
