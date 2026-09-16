@@ -22,6 +22,29 @@ import { REPORT_RANGE_PRESET, type ReportRangePreset } from "./constants";
 
 export type ReportRange = { from: string; to: string };
 
+/**
+ * Returns the immediately preceding, equal-duration interval for a report
+ * range. Both periods are half-open UTC instants: [from, to) and
+ * [previous.from, previous.to). This intentionally compares elapsed time,
+ * not an inclusive "previous calendar month" approximation, so a custom
+ * 30-day report and its comparison always contain the same duration.
+ */
+export function resolveComparableRange(range: ReportRange): { current: ReportRange; previous: ReportRange } {
+  const from = new Date(range.from);
+  const to = new Date(range.to);
+  const duration = to.getTime() - from.getTime();
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error("resolveComparableRange requires a strictly increasing report range.");
+  }
+  return {
+    current: range,
+    previous: {
+      from: new Date(from.getTime() - duration).toISOString(),
+      to: from.toISOString(),
+    },
+  };
+}
+
 type RelativePreset = Exclude<ReportRangePreset, "custom">;
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePresetRange, resolveCustomRange, resolveReportRange } from "./ranges";
+import { resolvePresetRange, resolveCustomRange, resolveReportRange, resolveComparableRange } from "./ranges";
 import { REPORT_RANGE_PRESET } from "./constants";
 
 // A fixed instant, deliberately mid-day and mid-month (not a boundary
@@ -105,5 +105,14 @@ describe("resolveReportRange", () => {
 
   it("returns null for CUSTOM with no custom range supplied — never a fabricated zero-width range", () => {
     expect(resolveReportRange(REPORT_RANGE_PRESET.CUSTOM, null, NOW)).toBeNull();
+  });
+});
+
+describe("resolveComparableRange", () => {
+  it("uses adjacent equal-duration half-open UTC periods", () => {
+    expect(resolveComparableRange({ from: "2026-08-01T00:00:00.000Z", to: "2026-08-31T00:00:00.000Z" })).toEqual({
+      current: { from: "2026-08-01T00:00:00.000Z", to: "2026-08-31T00:00:00.000Z" },
+      previous: { from: "2026-07-02T00:00:00.000Z", to: "2026-08-01T00:00:00.000Z" },
+    });
   });
 });

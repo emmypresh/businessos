@@ -24,6 +24,58 @@ export type FinancialSummary = {
   expenseCount: number;
 };
 
+export type ManagementReportingAggregate = {
+  salesTrend: { date: string; revenue: number; orderCount: number; averageOrderValue: number }[];
+  customerSummary: { newCustomers: number; returningCustomers: number; repeatCustomers: number };
+  inventoryRisk: { lowStockProducts: number; outOfStockProducts: number; slowMovingProducts: number };
+  branchPerformance: { branchId: string; branchName: string; revenue: number; orderCount: number }[];
+  whatsappFollowUpCount: number | null;
+};
+
+function parseManagementReportingAggregate(value: Json): ManagementReportingAggregate {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Failed to load management reporting: unexpected response shape.");
+  const root = value as Record<string, Json>;
+  const object = (key: string) => {
+    const candidate = root[key];
+    if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) throw new Error("Failed to load management reporting: unexpected response shape.");
+    return candidate as Record<string, Json>;
+  };
+  const number = (row: Record<string, Json>, key: string) => {
+    const candidate = row[key];
+    if (typeof candidate !== "number" || !Number.isFinite(candidate)) throw new Error("Failed to load management reporting: unexpected response shape.");
+    return candidate;
+  };
+  const string = (row: Record<string, Json>, key: string) => {
+    const candidate = row[key];
+    if (typeof candidate !== "string") throw new Error("Failed to load management reporting: unexpected response shape.");
+    return candidate;
+  };
+  const array = (key: string) => {
+    const candidate = root[key];
+    if (!Array.isArray(candidate)) throw new Error("Failed to load management reporting: unexpected response shape.");
+    return candidate;
+  };
+  const customer = object("customer_summary");
+  const inventory = object("inventory_risk");
+  const followUp = root.whatsapp_follow_up_count;
+  if (followUp !== null && (typeof followUp !== "number" || !Number.isFinite(followUp))) throw new Error("Failed to load management reporting: unexpected response shape.");
+  return {
+    salesTrend: array("sales_trend").map((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) throw new Error("Failed to load management reporting: unexpected response shape.");
+      const row = entry as Record<string, Json>;
+      return { date: string(row, "date"), revenue: number(row, "revenue"), orderCount: number(row, "order_count"), averageOrderValue: number(row, "average_order_value") };
+    }),
+    customerSummary: { newCustomers: number(customer, "new_customers"), returningCustomers: number(customer, "returning_customers"), repeatCustomers: number(customer, "repeat_customers") },
+    inventoryRisk: { lowStockProducts: number(inventory, "low_stock_products"), outOfStockProducts: number(inventory, "out_of_stock_products"), slowMovingProducts: number(inventory, "slow_moving_products") },
+    branchPerformance: array("branch_performance").map((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) throw new Error("Failed to load management reporting: unexpected response shape.");
+      const row = entry as Record<string, Json>;
+      return { branchId: string(row, "branch_id"), branchName: string(row, "branch_name"), revenue: number(row, "revenue"), orderCount: number(row, "order_count") };
+    }),
+    whatsappFollowUpCount: followUp,
+  };
+}
+
 /**
  * Defensively narrows get_financial_summary's jsonb return shape —
  * mirrors lib/inventory/cost.ts's parseCostValue precedent: every field
@@ -116,5 +168,20 @@ export const getFinancialSummary = cache(
     }
 
     return parseFinancialSummary(data);
+  }
+);
+
+/** Read-only, server-authorized Phase 1N aggregate; no raw rows are returned. */
+export const getManagementReportingAggregate = cache(
+  async (businessId: string, from: string, to: string): Promise<ManagementReportingAggregate> => {
+    await requireUser();
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_management_reporting_aggregate", {
+      p_business_id: businessId,
+      p_from: from,
+      p_to: to,
+    });
+    if (error) throw new Error(mapDatabaseError(error).message);
+    return parseManagementReportingAggregate(data);
   }
 );

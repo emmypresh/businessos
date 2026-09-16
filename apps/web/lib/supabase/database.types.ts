@@ -2691,6 +2691,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_management_reporting_aggregate: {
+        Args: {
+          p_business_id: string
+          p_from: string
+          p_to: string
+        }
+        Returns: Json
+      }
       get_invitation_branch_options: {
         Args: { p_business_id: string }
         Returns: {
