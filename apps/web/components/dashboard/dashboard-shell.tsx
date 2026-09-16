@@ -15,6 +15,7 @@ import {
   Undo2,
   Activity,
   CreditCard,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
@@ -126,6 +127,10 @@ export async function DashboardShell({
   const canViewBilling = permissions.has(PERMISSION.BILLING_VIEW);
   const canViewAudit = permissions.has(PERMISSION.AUDIT_VIEW);
 
+  // WhatsApp is a day-to-day customer-service surface. Visibility is a
+  // courtesy only: its route independently applies whatsapp.view.
+  const canViewWhatsapp = permissions.has(PERMISSION.WHATSAPP_VIEW);
+
   // Icons are rendered into ELEMENTS here (`<Package />`, not the bare
   // `Package` component reference) — see sidebar-nav.tsx's own NavItem
   // comment for why: this array crosses a Server -> Client Component
@@ -139,6 +144,7 @@ export async function DashboardShell({
         ...(canViewSales || canCreateSales ? [{ href: salesHref, label: "Sales", icon: <Receipt /> }] : []),
         ...(canViewReturns || canManageReturns ? [{ href: returnsHref, label: "Returns", icon: <Undo2 /> }] : []),
         ...(canViewCustomers ? [{ href: `/${businessId}/customers`, label: "Customers", icon: <UserRound /> }] : []),
+        ...(canViewWhatsapp ? [{ href: `/${businessId}/whatsapp`, label: "WhatsApp", icon: <MessageCircle /> }] : []),
         ...(canViewProducts ? [{ href: `/${businessId}/products`, label: "Products", icon: <Package /> }] : []),
         ...(canViewInventory ? [{ href: `/${businessId}/inventory`, label: "Inventory", icon: <Boxes /> }] : []),
       ],
