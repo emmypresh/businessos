@@ -20,7 +20,18 @@ export default async function BusinessDashboardPage({
       getManagementReportingAggregate(businessId, range.current.from, range.current.to),
       getManagementReportingAggregate(businessId, range.previous.from, range.previous.to),
     ]);
-    return <ManagementOverview businessId={businessId} businessName={membership.businesses?.name ?? "Business"} summary={summary} previousSummary={previousSummary} reporting={reporting} previousReporting={previousReporting} />;
+    return (
+      <ManagementOverview
+        businessId={businessId}
+        businessName={membership.businesses?.name ?? "Business"}
+        summary={summary}
+        previousSummary={previousSummary}
+        reporting={reporting}
+        previousReporting={previousReporting}
+        canViewCustomers={permissions.has(PERMISSION.CUSTOMERS_VIEW)}
+        canViewInventory={permissions.has(PERMISSION.INVENTORY_VIEW)}
+      />
+    );
   }
 
   return (

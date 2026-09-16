@@ -6,8 +6,19 @@ import type { FinancialSummary, ManagementReportingAggregate } from "@/lib/repor
 import { formatComparison } from "@/lib/reports/comparison";
 import { buildSalesTrendChartModel } from "@/lib/reports/sales-trend-chart";
 import { SalesTrendChart } from "@/components/dashboard/sales-trend-chart";
+import { CustomerInsights } from "@/components/dashboard/customer-insights";
+import { InventoryInsights } from "@/components/dashboard/inventory-insights";
 
-type Props = { businessId: string; businessName: string; summary: FinancialSummary; previousSummary: FinancialSummary; reporting: ManagementReportingAggregate; previousReporting: ManagementReportingAggregate };
+type Props = {
+  businessId: string;
+  businessName: string;
+  summary: FinancialSummary;
+  previousSummary: FinancialSummary;
+  reporting: ManagementReportingAggregate;
+  previousReporting: ManagementReportingAggregate;
+  canViewCustomers: boolean;
+  canViewInventory: boolean;
+};
 
 function reportingSales(reporting: ManagementReportingAggregate) {
   const revenue = reporting.salesTrend.reduce((total, day) => total + day.revenue, 0);
@@ -26,15 +37,7 @@ function ComparisonCard({ label, value, current, previous }: { label: string; va
   </Card>;
 }
 
-function ComparisonRow({ label, current, previous }: { label: string; current: number; previous: number }) {
-  const comparison = formatComparison(current, previous);
-  return <div className="grid gap-1 border-t py-3 first:border-t-0 first:pt-0 sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-x-4">
-    <p className="text-sm font-medium">{label}</p>
-    <p className="text-sm tabular-nums"><span className="font-semibold">{current}</span> <span className="text-muted-foreground">· {comparison.label}</span></p>
-  </div>;
-}
-
-export function ManagementOverview({ businessId, businessName, summary, previousSummary, reporting, previousReporting }: Props) {
+export function ManagementOverview({ businessId, businessName, summary, previousSummary, reporting, previousReporting, canViewCustomers, canViewInventory }: Props) {
   const money = (amount: number) => formatMoney(amount, summary.currencyCode);
   const currentSales = reportingSales(reporting);
   const priorSales = reportingSales(previousReporting);
@@ -65,17 +68,9 @@ export function ManagementOverview({ businessId, businessName, summary, previous
       <h2 id="sales-trend-heading" className="sr-only">Sales and revenue trend</h2>
       <SalesTrendChart businessId={businessId} points={chartModel.points} hasActivity={chartModel.hasActivity} currencyCode={summary.currencyCode} rangeLabel="Last 30 days (UTC)" />
     </section>
-    <section aria-label="Customer and inventory indicators" className="grid gap-4 lg:grid-cols-2">
-      <Card><CardHeader><CardTitle>Customers</CardTitle></CardHeader><CardContent>
-        <ComparisonRow label="New customer records" current={reporting.customerSummary.newCustomers} previous={previousReporting.customerSummary.newCustomers} />
-        <ComparisonRow label="Returning customers" current={reporting.customerSummary.returningCustomers} previous={previousReporting.customerSummary.returningCustomers} />
-        <ComparisonRow label="Repeat customers" current={reporting.customerSummary.repeatCustomers} previous={previousReporting.customerSummary.repeatCustomers} />
-      </CardContent></Card>
-      <Card><CardHeader><CardTitle>Current inventory status</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">
-        <p><span className="font-semibold tabular-nums">{reporting.inventoryRisk.outOfStockProducts}</span> out-of-stock products</p>
-        <p><span className="font-semibold tabular-nums">{reporting.inventoryRisk.lowStockProducts}</span> low-stock products</p>
-        <p><span className="font-semibold tabular-nums">{reporting.inventoryRisk.slowMovingProducts}</span> unsold-with-stock products</p>
-      </CardContent></Card>
+    <section aria-label="Customer and inventory insights" className="grid gap-4 lg:grid-cols-2">
+      <CustomerInsights businessId={businessId} canViewCustomers={canViewCustomers} current={reporting.customerSummary} previous={previousReporting.customerSummary} />
+      <InventoryInsights businessId={businessId} canViewInventory={canViewInventory} current={reporting.inventoryRisk} />
       {reporting.whatsappFollowUpCount !== null ? <Card className="lg:col-span-2"><CardHeader><CardTitle>WhatsApp follow-up</CardTitle></CardHeader><CardContent><p className="text-sm"><span className="font-semibold tabular-nums">{reporting.whatsappFollowUpCount}</span> open conversations where the last recorded message direction is inbound</p></CardContent></Card> : null}
     </section>
   </div>;

@@ -31,6 +31,13 @@ describe("BusinessDashboardPage reports.view path", () => {
     expect(calls[1][1]).toBe(calls[0][0]);
   });
 
+  it("derives customer/inventory drilldown visibility from the already-loaded reports.view permission set, widening nothing new", async () => {
+    getPermissions.mockResolvedValue(new Set(["reports.view", "customers.view"]));
+    const element = (await BusinessDashboardPage({ params: Promise.resolve({ businessId }), searchParams: Promise.resolve({}) })) as { props: Record<string, unknown> };
+    expect(element.props.canViewCustomers).toBe(true);
+    expect(element.props.canViewInventory).toBe(false);
+  });
+
   it("preserves the welcome view and makes no protected reporting call without reports.view", async () => {
     getPermissions.mockResolvedValue(new Set());
     const element = await BusinessDashboardPage({ params: Promise.resolve({ businessId }), searchParams: Promise.resolve({}) });

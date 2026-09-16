@@ -12,23 +12,29 @@ describe("ManagementOverview", () => {
   const priorReporting = { ...currentReporting, salesTrend: [{ date: "2026-08-15", revenue: 1000, orderCount: 5, averageOrderValue: 200 }], customerSummary: { newCustomers: 0, returningCustomers: 2, repeatCustomers: 2 } };
 
   it("renders truthful KPI definitions, comparisons, responsive grid classes, and the real scoped report link", () => {
-    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} />);
+    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
     expect(screen.getByRole("heading", { name: "Acme Stores" })).toBeInTheDocument();
     expect(screen.getAllByText("NGN 1,200.00").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /financial overview/i })).toHaveAttribute("href", "/business-a/reports");
     expect(screen.getByText("Completed-sales revenue")).toBeInTheDocument();
     expect(screen.getByText("Up 20% vs previous period")).toBeInTheDocument();
-    expect(screen.getByText("No prior data")).toBeInTheDocument();
-    expect(screen.getByText("out-of-stock products")).toBeInTheDocument();
+    expect(screen.getAllByText("No prior data").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 product out of stock")).toBeInTheDocument();
     expect(screen.queryByText(/health score|forecast|profit/i)).not.toBeInTheDocument();
     expect(screen.getByText("WhatsApp follow-up")).toBeInTheDocument();
-    expect(screen.getByText("unsold-with-stock products")).toBeInTheDocument();
+    expect(screen.getByText("2 stocked products had no completed sale in this period")).toBeInTheDocument();
     expect(screen.getByLabelText("Last 30 days financial summary")).toHaveClass("sm:grid-cols-2", "xl:grid-cols-3");
   });
 
   it("omits the WhatsApp card when the authorized aggregate withholds it and renders zero-safe no-activity text", () => {
-    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={{ ...currentSummary, cashCollected: 0, netCashFlow: 0 }} previousSummary={{ ...priorSummary, cashCollected: 0, netCashFlow: 0 }} reporting={{ ...currentReporting, salesTrend: [], whatsappFollowUpCount: null }} previousReporting={{ ...priorReporting, salesTrend: [] }} />);
+    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={{ ...currentSummary, cashCollected: 0, netCashFlow: 0 }} previousSummary={{ ...priorSummary, cashCollected: 0, netCashFlow: 0 }} reporting={{ ...currentReporting, salesTrend: [], whatsappFollowUpCount: null }} previousReporting={{ ...priorReporting, salesTrend: [] }} canViewCustomers canViewInventory />);
     expect(screen.queryByText("WhatsApp follow-up")).not.toBeInTheDocument();
     expect(screen.getAllByText("No activity in either period").length).toBeGreaterThan(0);
+  });
+
+  it("hides customer and inventory drilldown links when the caller lacks those permissions", () => {
+    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers={false} canViewInventory={false} />);
+    expect(screen.queryByRole("link", { name: /view customers/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /view inventory/i })).not.toBeInTheDocument();
   });
 });
