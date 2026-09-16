@@ -16,7 +16,7 @@ describe("ManagementOverview", () => {
     expect(screen.getByRole("heading", { name: "Acme Stores" })).toBeInTheDocument();
     expect(screen.getAllByText("NGN 1,200.00").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /financial overview/i })).toHaveAttribute("href", "/business-a/reports");
-    expect(screen.getByText("Completed-sales revenue")).toBeInTheDocument();
+    expect(screen.getAllByText("Completed-sales revenue").length).toBeGreaterThan(0);
     expect(screen.getByText("Up 20% vs previous period")).toBeInTheDocument();
     expect(screen.getAllByText("No prior data").length).toBeGreaterThan(0);
     expect(screen.getByText("1 product out of stock")).toBeInTheDocument();
@@ -24,6 +24,8 @@ describe("ManagementOverview", () => {
     expect(screen.getByText("WhatsApp follow-up")).toBeInTheDocument();
     expect(screen.getByText("2 stocked products had no completed sale in this period")).toBeInTheDocument();
     expect(screen.getByLabelText("Last 30 days financial summary")).toHaveClass("sm:grid-cols-2", "xl:grid-cols-3");
+    expect(screen.getByRole("region", { name: "Branch performance" })).toBeInTheDocument();
+    expect(screen.getByText("Main")).toBeInTheDocument();
   });
 
   it("omits the WhatsApp card when the authorized aggregate withholds it and renders zero-safe no-activity text", () => {

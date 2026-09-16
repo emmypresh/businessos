@@ -8,6 +8,7 @@ import { buildSalesTrendChartModel } from "@/lib/reports/sales-trend-chart";
 import { SalesTrendChart } from "@/components/dashboard/sales-trend-chart";
 import { CustomerInsights } from "@/components/dashboard/customer-insights";
 import { InventoryInsights } from "@/components/dashboard/inventory-insights";
+import { BranchPerformance } from "@/components/dashboard/branch-performance";
 
 type Props = {
   businessId: string;
@@ -73,5 +74,6 @@ export function ManagementOverview({ businessId, businessName, summary, previous
       <InventoryInsights businessId={businessId} canViewInventory={canViewInventory} current={reporting.inventoryRisk} />
       {reporting.whatsappFollowUpCount !== null ? <Card className="lg:col-span-2"><CardHeader><CardTitle>WhatsApp follow-up</CardTitle></CardHeader><CardContent><p className="text-sm"><span className="font-semibold tabular-nums">{reporting.whatsappFollowUpCount}</span> open conversations where the last recorded message direction is inbound</p></CardContent></Card> : null}
     </section>
+    <BranchPerformance branches={reporting.branchPerformance} currencyCode={summary.currencyCode} />
   </div>;
 }
