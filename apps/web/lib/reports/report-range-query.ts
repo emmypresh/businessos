@@ -136,3 +136,18 @@ export function parseReportRangeQuery(
 // Re-exported so callers building on this module never need a second
 // import from lib/validation/reports just to type a custom-range shape.
 export type { CustomReportRangeInput } from "@/lib/validation/reports";
+
+// Phase 1N-C2: a pure, additive query-string builder so a detail report
+// (e.g. /reports/sales) can link to/from the /reports workspace without
+// losing the caller's selected period. Deliberately carries ONLY
+// preset/dateFrom/dateTo — never `branch` — because this module has no
+// opinion on whether a given detail report's backend safely supports
+// branch-scoped semantics; a detail report page decides that for itself
+// and must not blindly forward a branch id it cannot honor.
+export function buildReportRangeSearchParams(input: ReportRangeQueryInput): URLSearchParams {
+  const params = new URLSearchParams();
+  if (input.preset) params.set("preset", input.preset);
+  if (input.dateFrom) params.set("dateFrom", input.dateFrom);
+  if (input.dateTo) params.set("dateTo", input.dateTo);
+  return params;
+}

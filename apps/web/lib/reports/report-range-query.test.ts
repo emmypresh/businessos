@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseReportRangeQuery,
   formatReportRangeLabel,
+  buildReportRangeSearchParams,
   MAX_REPORT_RANGE_DAYS,
   EXCESSIVE_RANGE_MESSAGE,
 } from "./report-range-query";
@@ -191,5 +192,28 @@ describe("formatReportRangeLabel", () => {
 
   it(`MAX_REPORT_RANGE_DAYS matches the frozen management-aggregate cap`, () => {
     expect(MAX_REPORT_RANGE_DAYS).toBe(366);
+  });
+});
+
+describe("buildReportRangeSearchParams", () => {
+  it("carries a preset forward", () => {
+    expect(buildReportRangeSearchParams({ preset: "last_7_days" }).toString()).toBe("preset=last_7_days");
+  });
+
+  it("carries preset plus custom dateFrom/dateTo forward", () => {
+    const params = buildReportRangeSearchParams({ preset: "custom", dateFrom: "2026-08-01", dateTo: "2026-08-10" });
+    expect(params.get("preset")).toBe("custom");
+    expect(params.get("dateFrom")).toBe("2026-08-01");
+    expect(params.get("dateTo")).toBe("2026-08-10");
+  });
+
+  it("never includes a branch key — this module has no branch opinion", () => {
+    const params = buildReportRangeSearchParams({ preset: "last_30_days" });
+    expect(params.has("branch")).toBe(false);
+    expect(Array.from(params.keys())).toEqual(["preset"]);
+  });
+
+  it("omits unset fields rather than emitting empty query keys", () => {
+    expect(buildReportRangeSearchParams({}).toString()).toBe("");
   });
 });

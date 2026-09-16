@@ -1,7 +1,7 @@
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getFinancialSummary } from "@/lib/reports/dal";
-import { parseReportRangeQuery } from "@/lib/reports/report-range-query";
+import { buildReportRangeSearchParams, parseReportRangeQuery } from "@/lib/reports/report-range-query";
 import { listReportBranchOptions } from "@/lib/branches/dal";
 import { BRANCH_STATUS } from "@/lib/branches/constants";
 import { DateRangePicker } from "@/components/reports/date-range-picker";
@@ -53,11 +53,17 @@ export default async function ReportsPage({
   // back to Last 30 days silently; only an attempted-and-invalid custom
   // range (including one wider than the 366-day maximum) surfaces as an
   // inline error, never a thrown error or raw stack trace.
-  const rangeQuery = parseReportRangeQuery({
+  const rangeQueryInput = {
     preset: typeof query.preset === "string" ? query.preset : undefined,
     dateFrom: typeof query.dateFrom === "string" ? query.dateFrom : undefined,
     dateTo: typeof query.dateTo === "string" ? query.dateTo : undefined,
-  });
+  };
+  const rangeQuery = parseReportRangeQuery(rangeQueryInput);
+  // Sales & Revenue (C2) shares this exact range query string so the
+  // caller's selected period survives navigating into the detail report —
+  // never the branch param, which C2's backend does not safely support
+  // (see report-categories.tsx's own header comment).
+  const rangeSearch = buildReportRangeSearchParams(rangeQueryInput).toString();
 
   return (
     <div className="flex flex-col gap-8">
@@ -119,7 +125,7 @@ export default async function ReportsPage({
         )}
       </div>
 
-      <ReportCategories />
+      <ReportCategories businessId={businessId} rangeSearch={rangeSearch} />
     </div>
   );
 }
