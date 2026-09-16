@@ -9,6 +9,7 @@ import { SalesTrendChart } from "@/components/dashboard/sales-trend-chart";
 import { CustomerInsights } from "@/components/dashboard/customer-insights";
 import { InventoryInsights } from "@/components/dashboard/inventory-insights";
 import { BranchPerformance } from "@/components/dashboard/branch-performance";
+import { WhatsAppFollowUp } from "@/components/dashboard/whatsapp-follow-up";
 
 type Props = {
   businessId: string;
@@ -72,7 +73,7 @@ export function ManagementOverview({ businessId, businessName, summary, previous
     <section aria-label="Customer and inventory insights" className="grid gap-4 lg:grid-cols-2">
       <CustomerInsights businessId={businessId} canViewCustomers={canViewCustomers} current={reporting.customerSummary} previous={previousReporting.customerSummary} />
       <InventoryInsights businessId={businessId} canViewInventory={canViewInventory} current={reporting.inventoryRisk} />
-      {reporting.whatsappFollowUpCount !== null ? <Card className="lg:col-span-2"><CardHeader><CardTitle>WhatsApp follow-up</CardTitle></CardHeader><CardContent><p className="text-sm"><span className="font-semibold tabular-nums">{reporting.whatsappFollowUpCount}</span> open conversations where the last recorded message direction is inbound</p></CardContent></Card> : null}
+      <div className="lg:col-span-2"><WhatsAppFollowUp businessId={businessId} followUpCount={reporting.whatsappFollowUpCount} /></div>
     </section>
     <BranchPerformance branches={reporting.branchPerformance} currencyCode={summary.currencyCode} />
   </div>;
