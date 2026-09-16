@@ -14,7 +14,7 @@ describe("ManagementOverview", () => {
   it("renders truthful KPI definitions, comparisons, responsive grid classes, and the real scoped report link", () => {
     render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} />);
     expect(screen.getByRole("heading", { name: "Acme Stores" })).toBeInTheDocument();
-    expect(screen.getByText("NGN 1,200.00")).toBeInTheDocument();
+    expect(screen.getAllByText("NGN 1,200.00").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /financial overview/i })).toHaveAttribute("href", "/business-a/reports");
     expect(screen.getByText("Completed-sales revenue")).toBeInTheDocument();
     expect(screen.getByText("Up 20% vs previous period")).toBeInTheDocument();

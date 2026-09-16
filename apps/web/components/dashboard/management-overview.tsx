@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/currency";
 import type { FinancialSummary, ManagementReportingAggregate } from "@/lib/reports/dal";
 import { formatComparison } from "@/lib/reports/comparison";
+import { buildSalesTrendChartModel } from "@/lib/reports/sales-trend-chart";
+import { SalesTrendChart } from "@/components/dashboard/sales-trend-chart";
 
 type Props = { businessId: string; businessName: string; summary: FinancialSummary; previousSummary: FinancialSummary; reporting: ManagementReportingAggregate; previousReporting: ManagementReportingAggregate };
 
@@ -36,6 +38,7 @@ export function ManagementOverview({ businessId, businessName, summary, previous
   const money = (amount: number) => formatMoney(amount, summary.currencyCode);
   const currentSales = reportingSales(reporting);
   const priorSales = reportingSales(previousReporting);
+  const chartModel = buildSalesTrendChartModel(reporting.salesTrend);
 
   return <div className="flex flex-col gap-6">
     <section className="flex flex-col justify-between gap-4 rounded-2xl bg-primary p-6 text-primary-foreground shadow-sm sm:flex-row sm:items-end">
@@ -57,6 +60,10 @@ export function ManagementOverview({ businessId, businessName, summary, previous
         <ComparisonCard label="Cash collected" value={money(summary.cashCollected)} current={summary.cashCollected} previous={previousSummary.cashCollected} />
         <ComparisonCard label="Net cash flow" value={money(summary.netCashFlow)} current={summary.netCashFlow} previous={previousSummary.netCashFlow} />
       </div>
+    </section>
+    <section aria-labelledby="sales-trend-heading">
+      <h2 id="sales-trend-heading" className="sr-only">Sales and revenue trend</h2>
+      <SalesTrendChart businessId={businessId} points={chartModel.points} hasActivity={chartModel.hasActivity} currencyCode={summary.currencyCode} rangeLabel="Last 30 days (UTC)" />
     </section>
     <section aria-label="Customer and inventory indicators" className="grid gap-4 lg:grid-cols-2">
       <Card><CardHeader><CardTitle>Customers</CardTitle></CardHeader><CardContent>
