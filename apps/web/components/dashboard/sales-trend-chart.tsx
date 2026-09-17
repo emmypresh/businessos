@@ -35,8 +35,14 @@ function formatAxisTick(metric: SalesTrendMetric, value: number, currencyCode: s
   return formatCompactCurrency(value, currencyCode);
 }
 
-const CHART_WIDTH = 640;
-const CHART_HEIGHT = 220;
+// Wider aspect ratio (was 640x220, ~2.9:1) so the responsive SVG
+// (preserveAspectRatio + w-full) settles at an ArchitectUI-like
+// ~300-380px visible height at typical dashboard content widths instead
+// of growing past 600px on ultrawide screens — see this file's own
+// `max-w-5xl` wrapper below, which additionally caps the rendered width
+// so the card never has to stretch this tall even at extreme viewports.
+const CHART_WIDTH = 960;
+const CHART_HEIGHT = 300;
 const PADDING = { top: 16, right: 16, bottom: 28, left: 8 };
 
 export function SalesTrendChart({ businessId, points, hasActivity, currencyCode, rangeLabel }: Props) {
@@ -71,7 +77,7 @@ export function SalesTrendChart({ businessId, points, hasActivity, currencyCode,
 
   return (
     <Card>
-      <CardHeader className="gap-3">
+      <CardHeader className="gap-3 border-b pb-4">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div>
             <CardTitle>Sales &amp; revenue trend</CardTitle>
@@ -105,11 +111,17 @@ export function SalesTrendChart({ businessId, points, hasActivity, currencyCode,
           </div>
         ) : (
           <>
+            {/* max-w-5xl caps the rendered width on ultrawide viewports —
+                without it, the responsive SVG (w-full) grows tall in
+                lockstep with an unbounded-width card, which is exactly
+                the "chart is too tall on ultrawide" defect this pass
+                fixes. Chart data/points are unaffected; only the visual
+                render size changes. */}
             <svg
               role="img"
               aria-labelledby={descriptionId}
               viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-              className="w-full max-w-full"
+              className="mx-auto w-full max-w-5xl"
               preserveAspectRatio="xMidYMid meet"
             >
               <defs>

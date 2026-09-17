@@ -9,6 +9,8 @@ import { FinancialKpiCards } from "@/components/reports/financial-kpi-cards";
 import { FinancialCharts } from "@/components/reports/financial-charts";
 import { ReportCategories } from "@/components/reports/report-categories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { LineChart } from "lucide-react";
 import { z } from "zod";
 
 const BranchParamSchema = z.uuid();
@@ -67,12 +69,11 @@ export default async function ReportsPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="text-sm text-muted-foreground">
-          Business-wide reporting for the selected date range.
-        </p>
-      </div>
+      <PageHeader
+        title="Reports"
+        description="Business-wide reporting for the selected date range."
+        icon={<LineChart aria-hidden="true" />}
+      />
 
       <div className="flex flex-col gap-6">
         <div>

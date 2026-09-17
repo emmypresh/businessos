@@ -5,32 +5,28 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* BusinessOS Design System v1 — warm-neutral light surface, restrained
-     emerald accent (`--primary`). Every existing shadcn component already
-     consumes these tokens by name, so this palette change alone re-colors
-     primary buttons/badges/focus-rings across every existing page
-     (products, sales, customers, expenses, reports, auth) without any
-     per-page edits — the intentional "shared design change improves
-     existing pages automatically" the brief calls for. Semantic
-     success/warning/info are NEW tokens (destructive already existed);
-     nothing here renames or removes a token an existing component reads,
-     so this is additive, not a breaking repaint. */
-  --background: oklch(0.985 0.002 95);
-  --foreground: oklch(0.18 0.008 264);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.008 264);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.008 264);
-  --primary: oklch(0.5 0.11 162);
-  --primary-foreground: oklch(0.99 0.005 162);
-  --primary-soft: oklch(0.95 0.03 162);
-  --primary-soft-foreground: oklch(0.32 0.08 162);
-  --secondary: oklch(0.96 0.003 95);
-  --secondary-foreground: oklch(0.24 0.01 264);
-  --muted: oklch(0.96 0.003 95);
-  --muted-foreground: oklch(0.5 0.012 264);
-  --accent: oklch(0.955 0.006 162);
-  --accent-foreground: oklch(0.24 0.01 264);
+  /* BusinessOS Design System v2 — the supplied logo's exact navy and
+     electric blue anchor the interface. Navy carries trust and hierarchy;
+     blue is reserved for actions, focus, information, and active navigation.
+     Cool neutral surfaces keep the product calm and premium. */
+  --brand-navy: #001030;
+  --brand-blue: #0050ff;
+  --background: #f5f5f7;
+  --foreground: var(--brand-navy);
+  --card: #ffffff;
+  --card-foreground: var(--brand-navy);
+  --popover: #ffffff;
+  --popover-foreground: var(--brand-navy);
+  --primary: var(--brand-blue);
+  --primary-foreground: #ffffff;
+  --primary-soft: #eaf0ff;
+  --primary-soft-foreground: #0037b3;
+  --secondary: #eef1f6;
+  --secondary-foreground: #10213d;
+  --muted: #eef1f6;
+  --muted-foreground: #56657a;
+  --accent: #e8eeff;
+  --accent-foreground: #001a47;
   --destructive: oklch(0.577 0.215 27.325);
   --destructive-foreground: oklch(0.99 0.005 27);
   --success: oklch(0.5 0.11 162);
@@ -45,31 +41,59 @@
      large contrast headroom). */
   --warning: oklch(0.54 0.14 75);
   --warning-foreground: oklch(0.99 0.01 75);
-  --info: oklch(0.52 0.12 245);
-  --info-foreground: oklch(0.99 0.005 245);
-  --border: oklch(0.9 0.004 95);
-  --input: oklch(0.9 0.004 95);
-  --ring: oklch(0.5 0.11 162 / 45%);
-  --chart-1: oklch(0.5 0.11 162);
-  --chart-2: oklch(0.52 0.12 245);
-  --chart-3: oklch(0.6 0.14 75);
-  --chart-4: oklch(0.55 0.18 27);
-  --chart-5: oklch(0.556 0 0);
+  --info: var(--brand-blue);
+  --info-foreground: #ffffff;
+  --border: #dfe4ec;
+  --input: #cbd5e1;
+  --ring: rgb(0 80 255 / 45%);
+  --chart-1: var(--brand-blue);
+  --chart-2: var(--brand-navy);
+  --chart-3: #3e6bff;
+  --chart-4: #7898ff;
+  --chart-5: #6f7d92;
   --radius: 0.625rem;
-  --sidebar: oklch(0.16 0.008 264);
-  --sidebar-foreground: oklch(0.9 0.004 95);
-  --sidebar-primary: oklch(0.6 0.13 162);
-  --sidebar-primary-foreground: oklch(0.14 0.008 264);
-  --sidebar-accent: oklch(0.22 0.01 264);
-  --sidebar-accent-foreground: oklch(0.97 0.003 95);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.6 0.13 162 / 45%);
+  /* ArchitectUI-style primary (light) sidebar: white surface, dark-navy
+     text, and a subtle blue "soft fill" active state — this is the
+     light-mode default per Phase 1N-UI1's visual remediation brief. The
+     .dark class and prefers-color-scheme(dark) media query further below
+     restore the previous navy sidebar for dark mode only. */
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--brand-navy);
+  --sidebar-primary: var(--brand-blue);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--primary-soft);
+  --sidebar-accent-foreground: var(--primary-soft-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: rgb(0 80 255 / 45%);
+  /* ArchitectUI-style KPI icon-tile accents — one color family per
+     metric (management-overview.tsx, financial-kpi-cards.tsx,
+     report-categories.tsx) so the KPI row never reads as a single
+     reused green. Defined as tokens (not Tailwind `dark:` utilities)
+     because this file's dark palette is activated two ways — the `.dark`
+     class AND the prefers-color-scheme(dark) media query below — while
+     `@custom-variant dark (&:is(.dark *))` above only responds to the
+     `.dark` class. A `dark:` utility on these tiles would silently never
+     apply for an OS-dark-mode visitor with no explicit toggle (this app
+     has none), so the light/dark pair lives here instead, exactly like
+     every other token in this file. */
+  --kpi-blue-bg: oklch(0.93 0.03 258);
+  --kpi-blue-fg: oklch(0.5 0.19 258);
+  --kpi-emerald-bg: oklch(0.93 0.05 162);
+  --kpi-emerald-fg: oklch(0.5 0.13 162);
+  --kpi-purple-bg: oklch(0.93 0.03 305);
+  --kpi-purple-fg: oklch(0.5 0.18 305);
+  --kpi-cyan-bg: oklch(0.93 0.04 220);
+  --kpi-cyan-fg: oklch(0.5 0.11 220);
+  --kpi-orange-bg: oklch(0.93 0.05 55);
+  --kpi-orange-fg: oklch(0.55 0.16 55);
+  --kpi-slate-bg: oklch(0.93 0.01 264);
+  --kpi-slate-fg: oklch(0.48 0.02 264);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -110,6 +134,18 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-kpi-blue-bg: var(--kpi-blue-bg);
+  --color-kpi-blue-fg: var(--kpi-blue-fg);
+  --color-kpi-emerald-bg: var(--kpi-emerald-bg);
+  --color-kpi-emerald-fg: var(--kpi-emerald-fg);
+  --color-kpi-purple-bg: var(--kpi-purple-bg);
+  --color-kpi-purple-fg: var(--kpi-purple-fg);
+  --color-kpi-cyan-bg: var(--kpi-cyan-bg);
+  --color-kpi-cyan-fg: var(--kpi-cyan-fg);
+  --color-kpi-orange-bg: var(--kpi-orange-bg);
+  --color-kpi-orange-fg: var(--kpi-orange-fg);
+  --color-kpi-slate-bg: var(--kpi-slate-bg);
+  --color-kpi-slate-fg: var(--kpi-slate-fg);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -138,96 +174,119 @@
         below is copied verbatim from `.dark`. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: oklch(0.16 0.006 264);
-    --foreground: oklch(0.94 0.004 95);
-    --card: oklch(0.195 0.008 264);
-    --card-foreground: oklch(0.94 0.004 95);
-    --popover: oklch(0.21 0.009 264);
-    --popover-foreground: oklch(0.94 0.004 95);
-    --primary: oklch(0.64 0.13 162);
-    --primary-foreground: oklch(0.14 0.008 264);
-    --primary-soft: oklch(0.27 0.05 162);
-    --primary-soft-foreground: oklch(0.85 0.07 162);
-    --secondary: oklch(0.24 0.008 264);
-    --secondary-foreground: oklch(0.94 0.004 95);
-    --muted: oklch(0.22 0.007 264);
-    --muted-foreground: oklch(0.64 0.012 264);
-    --accent: oklch(0.25 0.02 162);
-    --accent-foreground: oklch(0.94 0.004 95);
+    --background: #071426;
+    --foreground: #f3f6fc;
+    --card: #0d1c33;
+    --card-foreground: #f3f6fc;
+    --popover: #11223c;
+    --popover-foreground: #f3f6fc;
+    --primary: var(--brand-blue);
+    --primary-foreground: #ffffff;
+    --primary-soft: #102c66;
+    --primary-soft-foreground: #c7d4ff;
+    --secondary: #12233c;
+    --secondary-foreground: #eef3fb;
+    --muted: #0f2038;
+    --muted-foreground: #a9b4c6;
+    --accent: #102d63;
+    --accent-foreground: #f4f7ff;
     --destructive: oklch(0.62 0.19 25);
     --destructive-foreground: oklch(0.14 0.008 264);
     --success: oklch(0.64 0.13 162);
     --success-foreground: oklch(0.14 0.008 264);
     --warning: oklch(0.68 0.14 75);
     --warning-foreground: oklch(0.16 0.02 75);
-    --info: oklch(0.64 0.13 245);
-    --info-foreground: oklch(0.14 0.008 264);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 14%);
-    --ring: oklch(0.64 0.13 162 / 45%);
-    --chart-1: oklch(0.64 0.13 162);
-    --chart-2: oklch(0.64 0.13 245);
-    --chart-3: oklch(0.68 0.14 75);
-    --chart-4: oklch(0.62 0.19 25);
-    --chart-5: oklch(0.65 0 0);
-    --sidebar: oklch(0.12 0.008 264);
-    --sidebar-foreground: oklch(0.88 0.006 95);
-    --sidebar-primary: oklch(0.64 0.13 162);
-    --sidebar-primary-foreground: oklch(0.12 0.008 264);
-    --sidebar-accent: oklch(0.19 0.01 264);
-    --sidebar-accent-foreground: oklch(0.96 0.003 95);
-    --sidebar-border: oklch(1 0 0 / 7%);
-    --sidebar-ring: oklch(0.64 0.13 162 / 45%);
+    --info: #7d9dff;
+    --info-foreground: #071426;
+    --border: rgb(255 255 255 / 10%);
+    --input: rgb(255 255 255 / 14%);
+    --ring: rgb(77 124 255 / 55%);
+    --chart-1: #5b84ff;
+    --chart-2: #8fa8ff;
+    --chart-3: #c2ceff;
+    --chart-4: #466ea8;
+    --chart-5: #74839a;
+    --sidebar: var(--brand-navy);
+    --sidebar-foreground: #e8eefb;
+    --sidebar-primary: var(--brand-blue);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #0c2753;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgb(255 255 255 / 10%);
+    --sidebar-ring: rgb(0 80 255 / 55%);
+    --kpi-blue-bg: oklch(0.3 0.07 258);
+    --kpi-blue-fg: oklch(0.78 0.11 258);
+    --kpi-emerald-bg: oklch(0.3 0.06 162);
+    --kpi-emerald-fg: oklch(0.75 0.12 162);
+    --kpi-purple-bg: oklch(0.3 0.07 305);
+    --kpi-purple-fg: oklch(0.78 0.1 305);
+    --kpi-cyan-bg: oklch(0.3 0.06 220);
+    --kpi-cyan-fg: oklch(0.78 0.08 220);
+    --kpi-orange-bg: oklch(0.32 0.07 55);
+    --kpi-orange-fg: oklch(0.78 0.12 55);
+    --kpi-slate-bg: oklch(0.32 0.01 264);
+    --kpi-slate-fg: oklch(0.78 0.015 264);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 .dark {
-  --background: oklch(0.16 0.006 264);
-  --foreground: oklch(0.94 0.004 95);
-  --card: oklch(0.195 0.008 264);
-  --card-foreground: oklch(0.94 0.004 95);
-  --popover: oklch(0.21 0.009 264);
-  --popover-foreground: oklch(0.94 0.004 95);
-  --primary: oklch(0.64 0.13 162);
-  --primary-foreground: oklch(0.14 0.008 264);
-  --primary-soft: oklch(0.27 0.05 162);
-  --primary-soft-foreground: oklch(0.85 0.07 162);
-  --secondary: oklch(0.24 0.008 264);
-  --secondary-foreground: oklch(0.94 0.004 95);
-  --muted: oklch(0.22 0.007 264);
-  --muted-foreground: oklch(0.64 0.012 264);
-  --accent: oklch(0.25 0.02 162);
-  --accent-foreground: oklch(0.94 0.004 95);
+  --background: #071426;
+  --foreground: #f3f6fc;
+  --card: #0d1c33;
+  --card-foreground: #f3f6fc;
+  --popover: #11223c;
+  --popover-foreground: #f3f6fc;
+  --primary: var(--brand-blue);
+  --primary-foreground: #ffffff;
+  --primary-soft: #102c66;
+  --primary-soft-foreground: #c7d4ff;
+  --secondary: #12233c;
+  --secondary-foreground: #eef3fb;
+  --muted: #0f2038;
+  --muted-foreground: #a9b4c6;
+  --accent: #102d63;
+  --accent-foreground: #f4f7ff;
   --destructive: oklch(0.62 0.19 25);
   --destructive-foreground: oklch(0.14 0.008 264);
   --success: oklch(0.64 0.13 162);
   --success-foreground: oklch(0.14 0.008 264);
   --warning: oklch(0.68 0.14 75);
   --warning-foreground: oklch(0.16 0.02 75);
-  --info: oklch(0.64 0.13 245);
-  --info-foreground: oklch(0.14 0.008 264);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.64 0.13 162 / 45%);
-  --chart-1: oklch(0.64 0.13 162);
-  --chart-2: oklch(0.64 0.13 245);
-  --chart-3: oklch(0.68 0.14 75);
-  --chart-4: oklch(0.62 0.19 25);
-  --chart-5: oklch(0.65 0 0);
-  --sidebar: oklch(0.12 0.008 264);
-  --sidebar-foreground: oklch(0.88 0.006 95);
-  --sidebar-primary: oklch(0.64 0.13 162);
-  --sidebar-primary-foreground: oklch(0.12 0.008 264);
-  --sidebar-accent: oklch(0.19 0.01 264);
-  --sidebar-accent-foreground: oklch(0.96 0.003 95);
-  --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.64 0.13 162 / 45%);
+  --info: #7d9dff;
+  --info-foreground: #071426;
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 14%);
+  --ring: rgb(77 124 255 / 55%);
+  --chart-1: #5b84ff;
+  --chart-2: #8fa8ff;
+  --chart-3: #c2ceff;
+  --chart-4: #466ea8;
+  --chart-5: #74839a;
+  --sidebar: var(--brand-navy);
+  --sidebar-foreground: #e8eefb;
+  --sidebar-primary: var(--brand-blue);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #0c2753;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: rgb(0 80 255 / 55%);
+  --kpi-blue-bg: oklch(0.3 0.07 258);
+  --kpi-blue-fg: oklch(0.78 0.11 258);
+  --kpi-emerald-bg: oklch(0.3 0.06 162);
+  --kpi-emerald-fg: oklch(0.75 0.12 162);
+  --kpi-purple-bg: oklch(0.3 0.07 305);
+  --kpi-purple-fg: oklch(0.78 0.1 305);
+  --kpi-cyan-bg: oklch(0.3 0.06 220);
+  --kpi-cyan-fg: oklch(0.78 0.08 220);
+  --kpi-orange-bg: oklch(0.32 0.07 55);
+  --kpi-orange-fg: oklch(0.78 0.12 55);
+  --kpi-slate-bg: oklch(0.32 0.01 264);
+  --kpi-slate-fg: oklch(0.78 0.015 264);
 }
 
 @layer base {
@@ -236,8 +295,12 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   html {
     @apply font-sans;
+    font-optical-sizing: auto;
+    font-variant-numeric: tabular-nums;
   }
 }

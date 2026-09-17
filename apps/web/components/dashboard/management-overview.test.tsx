@@ -23,7 +23,7 @@ describe("ManagementOverview", () => {
     expect(screen.queryByText(/health score|forecast|profit/i)).not.toBeInTheDocument();
     expect(screen.getByText("WhatsApp follow-up")).toBeInTheDocument();
     expect(screen.getByText("2 stocked products had no completed sale in this period")).toBeInTheDocument();
-    expect(screen.getByLabelText("Last 30 days financial summary")).toHaveClass("sm:grid-cols-2", "xl:grid-cols-3");
+    expect(screen.getByLabelText("Last 30 days financial summary")).toHaveClass("sm:grid-cols-2", "lg:grid-cols-4");
     expect(screen.getByRole("region", { name: "Branch performance" })).toBeInTheDocument();
     expect(screen.getByText("Main")).toBeInTheDocument();
   });

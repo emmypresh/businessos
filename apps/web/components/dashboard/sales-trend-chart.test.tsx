@@ -101,7 +101,7 @@ describe("SalesTrendChart", () => {
 
   it("is responsive: the chart svg scales to its container width", () => {
     renderChart();
-    expect(screen.getByRole("img")).toHaveClass("w-full", "max-w-full");
+    expect(screen.getByRole("img")).toHaveClass("w-full", "max-w-5xl");
   });
 
   it("does not render any AI-generated performance judgment copy", () => {

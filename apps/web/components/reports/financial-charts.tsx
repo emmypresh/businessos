@@ -59,10 +59,10 @@ export function FinancialCharts({ summary }: { summary: FinancialSummary }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
-        <CardHeader>
+        <CardHeader className="border-b pb-4">
           <CardTitle className="text-base">Cash flow comparison</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-4 pt-4">
           <ComparisonBar
             label="Cash collected"
             value={summary.cashCollected}
@@ -86,10 +86,10 @@ export function FinancialCharts({ summary }: { summary: FinancialSummary }) {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="border-b pb-4">
           <CardTitle className="text-base">Sales collection state</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-4 pt-4">
           <ComparisonBar
             label="Gross sales"
             value={summary.grossSales}

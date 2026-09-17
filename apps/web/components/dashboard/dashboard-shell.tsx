@@ -204,9 +204,6 @@ export async function DashboardShell({
           <p className="truncate font-semibold tracking-tight">{business?.name}</p>
           <p className="text-xs text-sidebar-foreground/60">{membership.roles?.name ?? "Member"}</p>
         </div>
-        <div className="mt-3 px-1">
-          <NotificationBell businessId={businessId} initialUnreadCount={unreadNotificationCount} />
-        </div>
         <div className="mt-6">
           <SidebarNav sections={sections} />
         </div>
@@ -223,7 +220,39 @@ export async function DashboardShell({
         </form>
       </aside>
 
-      <main className="flex-1 overflow-x-auto p-6 md:p-8">{children}</main>
+      {/* Desktop content column: an ArchitectUI-style top header (real
+          business context + the same NotificationBell that used to live
+          inside <aside> above — relocated here, not duplicated, so a
+          header row exists at all on desktop) sitting above the page
+          canvas. Hidden below md; the mobile top bar above already
+          carries the same two real controls (business name, bell) for
+          narrow viewports. `sticky top-0` keeps it pinned above the
+          scrolling <main> below it, matching the reference's persistent
+          admin header. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 hidden h-16 shrink-0 items-center justify-between border-b bg-card px-6 shadow-xs md:flex">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
+              <Building2 className="size-4.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{business?.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{membership.roles?.name ?? "Member"}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 border-l pl-3">
+            <NotificationBell businessId={businessId} initialUnreadCount={unreadNotificationCount} />
+          </div>
+        </header>
+        {/* max-w-[1600px] keeps content readable on ultrawide monitors
+            instead of letting cards/tables stretch the full viewport
+            width — the "excess horizontal whitespace" defect this pass
+            fixes. mx-auto only centers; it never shrinks content below
+            its natural width on narrower/laptop screens. */}
+        <main className="flex-1 overflow-x-auto bg-background p-6 md:p-8">
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
