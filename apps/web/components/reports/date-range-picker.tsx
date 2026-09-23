@@ -42,68 +42,84 @@ export function DateRangePicker({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    // ArchitectUI-style filter toolbar surface (UI3): a bordered/shadowed
+    // card wrapping the same controls, same param names, same validation —
+    // purely a presentational grouping so this reads as one toolbar
+    // instead of loose inline controls next to the page copy.
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-xs sm:p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         {branches.length > 0 ? (
-          <Select
-            value={searchParams.get("branch") ?? "company-wide"}
-            onValueChange={(value) => pushParams({ branch: value === "company-wide" ? null : value })}
-          >
-            {/* w-full sm:w-56: never w-fit's unbounded intrinsic sizing —
-                see components/products/product-form.tsx's identical
-                comment. Codex adversarial review, application-layer
-                round 2, Blocker 6. */}
-            <SelectTrigger className="w-full min-w-0 sm:w-56" aria-label="Branch">
-              <SelectValue placeholder="Branch">
-                {(value: string) =>
-                  resolveBranchSelectLabel(value, branches, {
-                    sentinels: { "company-wide": "Company-wide" },
-                    placeholder: "Branch",
-                  })
-                }
-              </SelectValue>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">Branch</span>
+            <Select
+              value={searchParams.get("branch") ?? "company-wide"}
+              onValueChange={(value) => pushParams({ branch: value === "company-wide" ? null : value })}
+            >
+              {/* w-full sm:w-56: never w-fit's unbounded intrinsic sizing —
+                  see components/products/product-form.tsx's identical
+                  comment. Codex adversarial review, application-layer
+                  round 2, Blocker 6. */}
+              <SelectTrigger className="w-full min-w-0 sm:w-56" aria-label="Branch">
+                <SelectValue placeholder="Branch">
+                  {(value: string) =>
+                    resolveBranchSelectLabel(value, branches, {
+                      sentinels: { "company-wide": "Company-wide" },
+                      placeholder: "Branch",
+                    })
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="company-wide">Company-wide</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id} className="max-w-full">
+                    <span className="truncate">
+                      {branch.name}
+                      {branch.status === BRANCH_STATUS.INACTIVE ? " (inactive)" : ""}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">Date range</span>
+          <Select value={preset} onValueChange={(value) => pushParams({ preset: value })}>
+            <SelectTrigger className="sm:w-48">
+              <SelectValue placeholder="Date range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="company-wide">Company-wide</SelectItem>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id} className="max-w-full">
-                  <span className="truncate">
-                    {branch.name}
-                    {branch.status === BRANCH_STATUS.INACTIVE ? " (inactive)" : ""}
-                  </span>
+              {Object.values(REPORT_RANGE_PRESET).map((value) => (
+                <SelectItem key={value} value={value}>
+                  {REPORT_RANGE_PRESET_LABEL[value]}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        ) : null}
-        <Select value={preset} onValueChange={(value) => pushParams({ preset: value })}>
-          <SelectTrigger className="sm:w-48">
-            <SelectValue placeholder="Date range" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.values(REPORT_RANGE_PRESET).map((value) => (
-              <SelectItem key={value} value={value}>
-                {REPORT_RANGE_PRESET_LABEL[value]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        </div>
         {preset === REPORT_RANGE_PRESET.CUSTOM ? (
           <>
-            <Input
-              type="date"
-              aria-label="From date"
-              value={searchParams.get("dateFrom") ?? ""}
-              onChange={(e) => pushParams({ dateFrom: e.target.value || null })}
-              className="sm:w-40"
-            />
-            <Input
-              type="date"
-              aria-label="To date"
-              value={searchParams.get("dateTo") ?? ""}
-              onChange={(e) => pushParams({ dateTo: e.target.value || null })}
-              className="sm:w-40"
-            />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">From</span>
+              <Input
+                type="date"
+                aria-label="From date"
+                value={searchParams.get("dateFrom") ?? ""}
+                onChange={(e) => pushParams({ dateFrom: e.target.value || null })}
+                className="sm:w-40"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">To</span>
+              <Input
+                type="date"
+                aria-label="To date"
+                value={searchParams.get("dateTo") ?? ""}
+                onChange={(e) => pushParams({ dateTo: e.target.value || null })}
+                className="sm:w-40"
+              />
+            </div>
           </>
         ) : null}
       </div>

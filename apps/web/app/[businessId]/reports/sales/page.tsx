@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LineChart } from "lucide-react";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getFinancialSummary, getManagementReportingAggregate } from "@/lib/reports/dal";
@@ -9,6 +9,7 @@ import { SalesSummaryCards } from "@/components/reports/sales-summary-cards";
 import { SalesTrendReportChart } from "@/components/reports/sales-trend-report-chart";
 import { SalesDailyTable } from "@/components/reports/sales-daily-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 // Phase 1N-C2 — Sales & Revenue detailed report.
 //
@@ -53,18 +54,24 @@ export default async function SalesReportPage({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
-        <Link
-          href={backHref}
-          className="inline-flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden="true" /> Back to Reports
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sales &amp; Revenue</h1>
-          <p className="text-sm text-muted-foreground">
-            Completed-sales performance{rangeQuery.status === "ok" ? ` for ${rangeQuery.query.label}` : ""}.
-          </p>
-        </div>
+        {/* Same compact ArchitectUI-style PageHeader every other route
+            uses (Reports workspace, dashboard) — the "Back to Reports"
+            affordance rides in the breadcrumbs slot above the h1 so it
+            stays a real, range-preserving link with the exact accessible
+            name E2E asserts against, not a bespoke header. */}
+        <PageHeader
+          title="Sales & Revenue"
+          description={`Completed-sales performance${rangeQuery.status === "ok" ? ` for ${rangeQuery.query.label}` : ""}.`}
+          icon={<LineChart aria-hidden="true" />}
+          breadcrumbs={
+            <Link
+              href={backHref}
+              className="inline-flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden="true" /> Back to Reports
+            </Link>
+          }
+        />
         {rangeQuery.status === "ok" ? (
           <p className="text-sm text-muted-foreground" data-testid="active-report-range">
             {rangeQuery.query.label}
@@ -147,7 +154,11 @@ async function SalesReportContent({
       </section>
 
       <section aria-labelledby="sales-daily-heading" className="flex flex-col gap-3">
-        <h2 id="sales-daily-heading" className="text-lg font-semibold tracking-tight">
+        {/* Visible heading now lives in SalesDailyTable's own CardTitle
+            (same pattern sales-trend-heading/SalesTrendReportChart already
+            uses) — this sr-only h2 keeps exactly one real heading in the
+            accessibility tree per section, with no duplicate id/text. */}
+        <h2 id="sales-daily-heading" className="sr-only">
           Daily breakdown
         </h2>
         <SalesDailyTable points={chartModel.points} currencyCode={summary.currencyCode} />
