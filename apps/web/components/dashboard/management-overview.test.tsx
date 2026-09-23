@@ -23,7 +23,7 @@ describe("ManagementOverview", () => {
     expect(screen.queryByText(/health score|forecast|profit/i)).not.toBeInTheDocument();
     expect(screen.getByText("WhatsApp follow-up")).toBeInTheDocument();
     expect(screen.getByText("2 stocked products had no completed sale in this period")).toBeInTheDocument();
-    expect(screen.getByLabelText("Last 30 days financial summary")).toHaveClass("sm:grid-cols-2", "lg:grid-cols-4", "kpi-5col:grid-cols-5!");
+    expect(screen.getByLabelText("Last 30 days financial summary")).toHaveClass("sm:grid-cols-2", "xl:grid-cols-4", "kpi-5col:grid-cols-5!");
     expect(screen.getByLabelText("Customer and inventory insights")).toHaveClass("xl:grid-cols-3");
     expect(screen.getByRole("region", { name: "Branch performance" })).toBeInTheDocument();
     expect(screen.getByText("Main")).toBeInTheDocument();
@@ -35,10 +35,10 @@ describe("ManagementOverview", () => {
     expect(screen.getAllByText("No activity in either period").length).toBeGreaterThan(0);
   });
 
-  it("spans the fifth KPI card across the fourth row at lg without fabricating a sixth card", () => {
+  it("spans the fifth KPI card across the fourth row at xl without fabricating a sixth card", () => {
     render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
     const netCashFlowCard = screen.getByText("Net cash flow").closest('[data-slot="card"]');
-    expect(netCashFlowCard).toHaveClass("sm:col-span-2", "lg:col-span-2", "kpi-5col:col-span-1!");
+    expect(netCashFlowCard).toHaveClass("sm:col-span-2", "xl:col-span-2", "kpi-5col:col-span-1!");
     const kpiSection = screen.getByLabelText("Last 30 days financial summary");
     expect(kpiSection.querySelectorAll('[data-slot="card"]')).toHaveLength(5);
   });
@@ -52,6 +52,18 @@ describe("ManagementOverview", () => {
     // wrap point — never a mid-digit-group break, and never truncated.
     expect(value).not.toHaveClass("truncate");
     expect(value.textContent).toBe("NGN 1,234,567,890.00");
+  });
+
+  // Phase 1N-UI4: lg:grid-cols-4 (activating at 1024px) was measured live
+  // against the dashboard shell to clip this exact stress value up to
+  // ~40px past the card edge across 1024-1152px — four columns didn't
+  // clear a safe margin until ~1200px, so this locks in xl (1280px)
+  // rather than lg as the four-column floor. See the KPI grid's own
+  // inline comment for the live measurements.
+  it("never activates four KPI columns before xl — lg:grid-cols-4 clipped extreme values at 1024-1152px", () => {
+    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
+    const kpiSection = screen.getByLabelText("Last 30 days financial summary");
+    expect(kpiSection.className).not.toMatch(/(?<!x)l:grid-cols-4/);
   });
 
   it.each([

@@ -125,31 +125,40 @@ export function ManagementOverview({ businessId, businessName, summary, previous
           real KPIs share one row only once there's genuinely room for the
           largest NGN amounts (option C from the UI2 brief). Tailwind's xl
           breakpoint (1280px) was measured with a headless-browser fixture
-          (tmp-kpi-fixture, see PHASE 1N-UI2 remediation) to be unsafe:
-          with the persistent 240px sidebar, card gaps and padding, each
-          KPI value content box is ~150-176px wide at 1280-1400px while the
-          largest formatted amount ("NGN 1,234,567,890.00" at text-2xl)
-          measures ~177px, so five columns clip the number there. A
-          min-[1440px]: ARBITRARY variant was tried first and silently
-          failed: Tailwind appends arbitrary variants at their source
-          position rather than sorting them by width, so lg:grid-cols-4
-          (compiled later) kept overriding it even past 1440px — a
-          registered --breakpoint-* token is required to sort correctly
-          against lg/xl — and even after registering it, Tailwind v4 does
-          NOT merge a custom --breakpoint-* extension into the same sorted
-          media-query order as the core sm/md/lg/xl/2xl scale, so its
-          block still compiled before lg's and kept losing. The `!`
-          (important) modifier is the fix that actually wins regardless of
-          source order, verified via the same fixture reading computed
-          grid-template-columns at 1440px. The value content box first
-          clears 177px at ~1405px in the fixture; 1440px was chosen
-          instead of that hairline cutoff to leave margin for
-          font-rendering differences across browsers/OS and because it was
-          already verified safe in the original bug report. Below that,
+          (tmp-kpi-fixture, see PHASE 1N-UI2 remediation) to be unsafe FOR
+          FIVE columns: with the persistent 240px sidebar, card gaps and
+          padding, each KPI value content box is ~150-176px wide at
+          1280-1400px while the largest formatted amount ("NGN
+          1,234,567,890.00" at text-2xl) measures ~177px, so five columns
+          clip the number there. A min-[1440px]: ARBITRARY variant was
+          tried first and silently failed: Tailwind appends arbitrary
+          variants at their source position rather than sorting them by
+          width, so lg:grid-cols-4 (compiled later) kept overriding it even
+          past 1440px — a registered --breakpoint-* token is required to
+          sort correctly against lg/xl — and even after registering it,
+          Tailwind v4 does NOT merge a custom --breakpoint-* extension into
+          the same sorted media-query order as the core sm/md/lg/xl/2xl
+          scale, so its block still compiled before lg's and kept losing.
+          The `!` (important) modifier is the fix that actually wins
+          regardless of source order, verified via the same fixture
+          reading computed grid-template-columns at 1440px. Below that,
           four columns leaves the fifth card as an awkward single-column
-          orphan, so it spans both of the last row's two lg columns instead
-          (option A) rather than introducing a sixth placeholder card. */}
-      <div aria-label="Last 30 days financial summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 kpi-5col:grid-cols-5!">
+          orphan, so it spans both of the row's two middle columns instead
+          (option A) rather than introducing a sixth placeholder card.
+
+          UI4: the FOUR-column tier itself was never verified below
+          1280px. lg:grid-cols-4 activates at 1024px, but a live
+          measurement (Phase 1N-UI4 remediation) of that same extreme
+          value against the real dashboard shell found each of the four
+          cards only ~136-200px wide across the 1024-1152px sub-range,
+          visibly clipping the number past the card's right edge (up to
+          ~40px of real, visible clipping at 1024px, still ~8px clipped at
+          1152px) — first clean at ~1200px. Four columns now waits for xl
+          (1280px, ~24px of verified margin) instead of lg; sm:grid-cols-2
+          already covers 640-1279px safely (confirmed by the same
+          fixture), so this only removes the unsafe 1024-1279px 4-column
+          window, not the working 2-column one. */}
+      <div aria-label="Last 30 days financial summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 kpi-5col:grid-cols-5!">
         <ComparisonCard label="Completed-sales revenue" value={money(currentSales.revenue)} current={currentSales.revenue} previous={priorSales.revenue} accent={KPI_ACCENTS.revenue} />
         <ComparisonCard label="Completed sales" value={String(currentSales.salesCount)} current={currentSales.salesCount} previous={priorSales.salesCount} accent={KPI_ACCENTS.sales} />
         <ComparisonCard label="Average order value" value={money(currentSales.averageOrderValue)} current={currentSales.averageOrderValue} previous={priorSales.averageOrderValue} accent={KPI_ACCENTS.aov} />
@@ -160,7 +169,7 @@ export function ManagementOverview({ businessId, businessName, summary, previous
           current={summary.netCashFlow}
           previous={previousSummary.netCashFlow}
           accent={KPI_ACCENTS.netCashFlow}
-          className="sm:col-span-2 lg:col-span-2 kpi-5col:col-span-1!"
+          className="sm:col-span-2 xl:col-span-2 kpi-5col:col-span-1!"
         />
       </div>
     </section>

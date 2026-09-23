@@ -86,8 +86,27 @@ export function DateRangePicker({
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground">Date range</span>
           <Select value={preset} onValueChange={(value) => pushParams({ preset: value })}>
-            <SelectTrigger className="sm:w-48">
-              <SelectValue placeholder="Date range" />
+            {/* UI4: this project's Select primitive (@base-ui/react/select)
+                does NOT derive a closed trigger's displayed text from its
+                matching <SelectItem>'s own rendered children — it falls
+                back to stringifying the raw controlled value with no
+                `children` render-function on <SelectValue> (see
+                lib/branches/select-label.ts's own header comment, written
+                when this exact bug was first found and fixed for every
+                branch Select). This sibling Select was never given the
+                same fix: its trigger showed the raw preset id (e.g.
+                "last_30_days") instead of "Last 30 days (UTC)" once
+                closed — a real, live, visible defect confirmed by manual
+                QA, not just an accessible-name gap. `aria-label` here
+                fixes the *accessible* name (matching the Branch trigger's
+                own aria-label above); the `children` render-function on
+                SelectValue below fixes the *visible* text using the exact
+                same REPORT_RANGE_PRESET_LABEL map every <SelectItem>
+                already renders from. */}
+            <SelectTrigger className="sm:w-48" aria-label="Date range">
+              <SelectValue placeholder="Date range">
+                {(value: string) => REPORT_RANGE_PRESET_LABEL[value as keyof typeof REPORT_RANGE_PRESET_LABEL] ?? "Date range"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {Object.values(REPORT_RANGE_PRESET).map((value) => (

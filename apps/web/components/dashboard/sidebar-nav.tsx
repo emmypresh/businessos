@@ -109,7 +109,14 @@ export function SidebarNav({ sections, onNavigate }: { sections: NavSection[]; o
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sidebar-foreground/85 transition-colors",
+                  // UI4: these links previously had no focus-visible
+                  // treatment at all — Tab landed on them with only the
+                  // browser's own default outline, inconsistent with
+                  // every other interactive control in the shell (which
+                  // uses this exact --sidebar-ring token, already defined
+                  // in globals.css for both light and dark, but never
+                  // wired up here).
+                  "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sidebar-foreground/85 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                   item.nested && "pl-8 text-[13px] text-sidebar-foreground/65",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"

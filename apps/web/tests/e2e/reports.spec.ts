@@ -45,6 +45,22 @@ test.describe("financial overview", () => {
     expect(bodyText.toLowerCase()).not.toMatch(/\bprofit\b|\bmargin\b/);
   });
 
+  // Phase 1N-UI4: the Date range trigger's own <SelectValue> had no
+  // `children` render-function, so this project's Select primitive
+  // (@base-ui/react/select — see lib/branches/select-label.ts's own
+  // header comment for why) fell back to stringifying the raw controlled
+  // value: the trigger showed "last_30_days" instead of "Last 30 days
+  // (UTC)" once closed. Locks in the fix — the same one already applied
+  // to the sibling Branch Select.
+  test("the Date range trigger shows the human-readable preset label, never the raw preset value", async ({ page }) => {
+    const { email, businessId } = await createOwnerAndBusiness("e2e-report-range-label");
+    await loginAsInBrowser(page, email, PASSWORD);
+
+    await page.goto(`/${businessId}/reports?preset=last_30_days`);
+    await expect(page.getByLabel("Date range")).toContainText("Last 30 days (UTC)");
+    await expect(page.getByLabel("Date range")).not.toHaveText(/last_30_days/);
+  });
+
   test("gross sales, cash collected, expenses, and net cash flow reflect real activity", async ({ page }) => {
     const owner = await createOwnerAndBusiness("e2e-report-kpis");
     const suffix = `${Date.now()}`;
