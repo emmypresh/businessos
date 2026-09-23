@@ -1,5 +1,30 @@
 import { z } from "zod";
 
+// Client-side feedback only — create_business's own validation
+// (supabase/migrations/20260909080100_create_business_country_currency.sql)
+// remains the actual authority, including its uppercasing and its
+// businesses_country_code_check/businesses_currency_code_check backstop.
+// Mirrors lib/validation/branches.ts's BranchCountryCodeSchema exactly:
+// rejects lowercase, symbols ("₦"), and free-form names ("Nigeria") — only
+// a well-formed 2-letter ISO code passes.
+export const CountryCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{2}$/, { error: "Enter a valid 2-letter ISO country code." });
+
+// Same shape as CountryCodeSchema, for ISO 4217's 3-letter currency codes
+// (e.g. "NGN", not "₦" or "Naira").
+export const CurrencyCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{3}$/, { error: "Enter a valid 3-letter ISO currency code." });
+
+// Not wired into the signup form in Phase 1Q-0A (onboarding UI is
+// redesigned in 1Q-0B) — declared now, as optional, so create_business's
+// forthcoming country/currency parameters have a validated shape to carry
+// the moment a caller starts sending them, without a second schema change.
 export const CreateBusinessSchema = z.object({
   name: z
     .string()
@@ -21,6 +46,8 @@ export const CreateBusinessSchema = z.object({
       error:
         "Slug can only contain lowercase letters, numbers, and single hyphens between them.",
     }),
+  countryCode: CountryCodeSchema.optional(),
+  currencyCode: CurrencyCodeSchema.optional(),
 });
 
 export type CreateBusinessInput = z.infer<typeof CreateBusinessSchema>;

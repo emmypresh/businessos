@@ -552,8 +552,10 @@ export type Database = {
       }
       businesses: {
         Row: {
+          country_code: string
           created_at: string
           created_by: string
+          currency_code: string
           id: string
           name: string
           slug: string
@@ -561,8 +563,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          country_code: string
           created_at?: string
           created_by: string
+          currency_code: string
           id?: string
           name: string
           slug: string
@@ -570,8 +574,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          country_code?: string
           created_at?: string
           created_by?: string
+          currency_code?: string
           id?: string
           name?: string
           slug?: string
@@ -2470,10 +2476,17 @@ export type Database = {
       }
       consume_recovery_grant: { Args: { p_grant_id: string }; Returns: boolean }
       create_business: {
-        Args: { p_name: string; p_slug: string }
+        Args: {
+          p_country_code?: string
+          p_currency_code?: string
+          p_name: string
+          p_slug: string
+        }
         Returns: {
+          country_code: string
           created_at: string
           created_by: string
+          currency_code: string
           id: string
           name: string
           slug: string
