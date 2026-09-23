@@ -91,6 +91,18 @@
 }
 
 @theme inline {
+  /* A registered breakpoint (not an arbitrary min-[1440px]: variant) so
+     Tailwind sorts it correctly against lg/xl in the generated cascade.
+     An arbitrary variant is appended wherever it's authored and is NOT
+     reordered by width, so at 1440px `lg:grid-cols-4` (a real, sorted
+     breakpoint that also matches at 1440px) was silently overriding it
+     purely by later source position — confirmed via a headless-browser
+     fixture reading the computed grid-template-columns. See PHASE 1N-UI2.
+     1440px was chosen (over the earliest technically-safe ~1405px) as
+     the point where five KPI columns have enough content width for the
+     largest formatted NGN amount, with margin for cross-browser font
+     rendering differences. */
+  --breakpoint-kpi-5col: 1440px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
