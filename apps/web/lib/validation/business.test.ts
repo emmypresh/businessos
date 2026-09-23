@@ -1,76 +1,89 @@
 import { describe, expect, it } from "vitest";
-import { CountryCodeSchema, CreateBusinessSchema, CurrencyCodeSchema } from "./business";
+import { CountryCodeSchema, CreateBusinessSchema, CurrencyCodeSchema, UpdateBusinessTimezoneSchema } from "./business";
+
+const VALID = {
+  name: "Acme Hardware",
+  slug: "acme-hardware",
+  countryCode: "NG",
+  timezone: "Africa/Lagos",
+};
 
 describe("CreateBusinessSchema", () => {
-  it("accepts a valid name and slug", () => {
-    const result = CreateBusinessSchema.safeParse({
-      name: "Acme Hardware",
-      slug: "acme-hardware",
-    });
+  it("accepts a valid submission", () => {
+    const result = CreateBusinessSchema.safeParse(VALID);
     expect(result.success).toBe(true);
   });
 
   it("rejects a name shorter than 2 characters", () => {
-    expect(
-      CreateBusinessSchema.safeParse({ name: "A", slug: "a" }).success
-    ).toBe(false);
+    expect(CreateBusinessSchema.safeParse({ ...VALID, name: "A" }).success).toBe(false);
   });
 
   it("rejects a name longer than 150 characters", () => {
-    expect(
-      CreateBusinessSchema.safeParse({
-        name: "A".repeat(151),
-        slug: "a".repeat(10),
-      }).success
-    ).toBe(false);
+    expect(CreateBusinessSchema.safeParse({ ...VALID, name: "A".repeat(151) }).success).toBe(false);
   });
 
   it("rejects a slug with uppercase letters", () => {
-    expect(
-      CreateBusinessSchema.safeParse({
-        name: "Acme",
-        slug: "Acme-Hardware",
-      }).success
-    ).toBe(false);
+    expect(CreateBusinessSchema.safeParse({ ...VALID, slug: "Acme-Hardware" }).success).toBe(false);
   });
 
   it("rejects a slug with consecutive or edge hyphens", () => {
-    expect(
-      CreateBusinessSchema.safeParse({ name: "Acme", slug: "-acme" }).success
-    ).toBe(false);
-    expect(
-      CreateBusinessSchema.safeParse({ name: "Acme", slug: "acme--hw" })
-        .success
-    ).toBe(false);
+    expect(CreateBusinessSchema.safeParse({ ...VALID, slug: "-acme" }).success).toBe(false);
+    expect(CreateBusinessSchema.safeParse({ ...VALID, slug: "acme--hw" }).success).toBe(false);
   });
 
   it("rejects a slug over 63 characters", () => {
-    expect(
-      CreateBusinessSchema.safeParse({
-        name: "Acme",
-        slug: "a".repeat(64),
-      }).success
-    ).toBe(false);
+    expect(CreateBusinessSchema.safeParse({ ...VALID, slug: "a".repeat(64) }).success).toBe(false);
   });
 
-  it("accepts a valid optional countryCode/currencyCode pair", () => {
-    const result = CreateBusinessSchema.safeParse({
-      name: "Acme Hardware",
-      slug: "acme-hardware",
-      countryCode: "gh",
-      currencyCode: "ghs",
-    });
+  it("uppercases a lowercase countryCode and accepts it (normalized, not rejected)", () => {
+    const result = CreateBusinessSchema.safeParse({ ...VALID, countryCode: "gh", timezone: "Africa/Accra" });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.countryCode).toBe("GH");
-      expect(result.data.currencyCode).toBe("GHS");
     }
   });
 
-  it("still accepts a request with no countryCode/currencyCode at all", () => {
-    expect(
-      CreateBusinessSchema.safeParse({ name: "Acme", slug: "acme" }).success
-    ).toBe(true);
+  it("rejects a country outside the launch catalog even though it is shape-valid (the 1Q-0A low finding: FR/CHF-style pairs)", () => {
+    const result = CreateBusinessSchema.safeParse({ ...VALID, countryCode: "FR", timezone: "Europe/Paris" });
+    expect(result.success).toBe(false);
+  });
+
+  it("has no currencyCode field at all — currency can never be client-submitted", () => {
+    const result = CreateBusinessSchema.safeParse({ ...VALID, currencyCode: "CHF" });
+    // The extra field is simply ignored by zod's default (non-strict)
+    // parsing — it is never read into result.data, and there is no way
+    // for a submitted currencyCode to influence server-derived currency.
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("currencyCode" in result.data).toBe(false);
+    }
+  });
+
+  it("requires countryCode", () => {
+    const withoutCountry: Record<string, string> = { ...VALID };
+    delete withoutCountry.countryCode;
+    expect(CreateBusinessSchema.safeParse(withoutCountry).success).toBe(false);
+  });
+
+  it("requires timezone", () => {
+    const withoutTimezone: Record<string, string> = { ...VALID };
+    delete withoutTimezone.timezone;
+    expect(CreateBusinessSchema.safeParse(withoutTimezone).success).toBe(false);
+  });
+
+  it("rejects a timezone that isn't one of the country's own options (e.g. GB + America/Chicago)", () => {
+    const result = CreateBusinessSchema.safeParse({ ...VALID, countryCode: "GB", timezone: "America/Chicago" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts each US timezone option", () => {
+    for (const tz of ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"]) {
+      expect(CreateBusinessSchema.safeParse({ ...VALID, countryCode: "US", timezone: tz }).success).toBe(true);
+    }
+  });
+
+  it("rejects a malformed timezone string", () => {
+    expect(CreateBusinessSchema.safeParse({ ...VALID, timezone: "Not/A/Zone" }).success).toBe(false);
   });
 });
 
@@ -109,5 +122,15 @@ describe("CurrencyCodeSchema", () => {
   it("rejects the wrong length", () => {
     expect(CurrencyCodeSchema.safeParse("NG").success).toBe(false);
     expect(CurrencyCodeSchema.safeParse("NGNX").success).toBe(false);
+  });
+});
+
+describe("UpdateBusinessTimezoneSchema", () => {
+  it("accepts a well-formed timezone string", () => {
+    expect(UpdateBusinessTimezoneSchema.safeParse({ timezone: "Africa/Lagos" }).success).toBe(true);
+  });
+
+  it("rejects an empty timezone", () => {
+    expect(UpdateBusinessTimezoneSchema.safeParse({ timezone: "" }).success).toBe(false);
   });
 });

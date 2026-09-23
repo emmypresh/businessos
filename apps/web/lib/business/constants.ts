@@ -40,6 +40,17 @@ export type RoleName = (typeof ROLE_NAME)[keyof typeof ROLE_NAME];
  * branch on.
  */
 export const PERMISSION = {
+  // Phase 1Q-0B. Verified against the exact seeded key in
+  // supabase/migrations/20260825202821_create_roles_permissions.sql
+  // ("business.manage": "Update business details such as name, slug, and
+  // status.") — seeded since Phase 1 but never previously checked by any
+  // application code. Gates the new business Settings surface: viewing
+  // and editing country/currency/timezone. Held by OWNER and ADMIN only
+  // (that migration's own seed: OWNER gets every Phase 1 permission,
+  // ADMIN gets everything except business.delete) — matches the phase
+  // brief's "only appropriate business administrators" instruction
+  // without inventing a new permission or hardcoding a role-name check.
+  BUSINESS_MANAGE: "business.manage",
   PRODUCTS_VIEW: "products.view",
   PRODUCTS_MANAGE: "products.manage",
   INVENTORY_VIEW: "inventory.view",

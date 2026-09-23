@@ -36,7 +36,14 @@ describe("create_business country/currency", () => {
     expect(data?.currency_code).toBe("NGN");
   });
 
-  it("an explicit country with no currency derives the currency from the catalog", async () => {
+  // Codex remediation (Phase 1Q-0B-0B): GH is a supported catalog country
+  // but is not yet fully operational — the RPC boundary now enforces the
+  // NG-only activation gate itself, so a direct call for GH (even with a
+  // fully well-formed, correctly-derived currency) is rejected before any
+  // row is created. See tests/integration/create-business-rpc-security.test.ts
+  // for the dedicated non-NG activation-gate and mismatch-rejection suite,
+  // which supersedes what these two cases used to assert.
+  it("an explicit non-operational country with no currency is rejected by the activation gate, not silently allowed through", async () => {
     const { client, userId } = await signedInClient("cc-derive");
     cleanupUserIds.push(userId);
 
@@ -45,12 +52,11 @@ describe("create_business country/currency", () => {
       p_slug: `accra-traders-${Date.now()}`,
       p_country_code: "gh",
     });
-    expect(error).toBeNull();
-    expect(data?.country_code).toBe("GH");
-    expect(data?.currency_code).toBe("GHS");
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
   });
 
-  it("an explicit country AND currency persists exactly as given, even if it diverges from the country's default", async () => {
+  it("a currency diverging from the country's deterministic pairing is rejected, not persisted as given (CURRENCY_COUNTRY_MISMATCH)", async () => {
     const { client, userId } = await signedInClient("cc-override");
     cleanupUserIds.push(userId);
 
@@ -60,9 +66,8 @@ describe("create_business country/currency", () => {
       p_country_code: "gh",
       p_currency_code: "usd",
     });
-    expect(error).toBeNull();
-    expect(data?.country_code).toBe("GH");
-    expect(data?.currency_code).toBe("USD");
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
   });
 
   it("rejects a malformed country code (a free-form name)", async () => {

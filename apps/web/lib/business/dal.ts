@@ -117,6 +117,40 @@ export const getPermissions = cache(
   }
 );
 
+export type BusinessDetails = {
+  id: string;
+  name: string;
+  slug: string;
+  country_code: string;
+  currency_code: string;
+  timezone: string;
+};
+
+// Phase 1Q-0B. A separate cached call (not a modification of
+// getBusinessMembership's own MEMBERSHIP_SELECT shape) so nothing already
+// shipped is affected — mirrors getPermissions' own "SEPARATE cached
+// call" precedent above. RLS (businesses_select, membership-derived)
+// remains the actual enforcement boundary; the caller (the Settings page)
+// additionally gates on business.manage before ever calling this.
+export const getBusinessDetails = cache(
+  async (businessId: string): Promise<BusinessDetails | null> => {
+    await requireUser();
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("id, name, slug, country_code, currency_code, timezone")
+      .eq("id", businessId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to load business details: ${error.message}`);
+    }
+
+    return data as BusinessDetails | null;
+  }
+);
+
 export async function hasPermission(
   businessId: string,
   permission: PermissionKey

@@ -560,6 +560,7 @@ export type Database = {
           name: string
           slug: string
           status: string
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -571,6 +572,7 @@ export type Database = {
           name: string
           slug: string
           status?: string
+          timezone: string
           updated_at?: string
         }
         Update: {
@@ -582,6 +584,7 @@ export type Database = {
           name?: string
           slug?: string
           status?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -2481,6 +2484,7 @@ export type Database = {
           p_currency_code?: string
           p_name: string
           p_slug: string
+          p_timezone?: string
         }
         Returns: {
           country_code: string
@@ -2491,6 +2495,7 @@ export type Database = {
           name: string
           slug: string
           status: string
+          timezone: string
           updated_at: string
         }
         SetofOptions: {

@@ -1,36 +1,50 @@
 /**
- * Codex adversarial review, remediation round 1, Low 4: BusinessOS has no
- * per-business timezone setting yet (the product is Nigeria-only today —
- * see e.g. lib/currency.ts's own hardcoded "NGN"), and a handful of
- * SERVER-rendered read paths need "today's calendar date" for a
- * comparison against a stored `date` column with no time-of-day
- * component of its own (invoice.due_date). Unlike a form submission
- * (lib/expenses/expense-form.tsx's/lib/invoices/payment-form.tsx's own
- * datetime-local -> ISO conversion), there is no browser present at
- * render time to ask "what is the user's own local time?" — this code
- * runs in whatever timezone the server process happens to be deployed
- * in, which is NOT reliably Africa/Lagos (Vercel functions default to
- * UTC). `new Date().toISOString().slice(0, 10)` therefore silently
- * computes the wrong calendar day for part of every day: at 00:30 WAT
- * (Africa/Lagos, UTC+1) the UTC calendar date is still "yesterday".
+ * Phase 1Q-0B: businesses now store their own IANA timezone
+ * (businesses.timezone — see supabase/migrations/20260923090000_business_
+ * timezone.sql), closing the gap this file's own original header comment
+ * (Codex adversarial review, remediation round 1, Low 4) flagged: "the
+ * moment a second business timezone is ever supported, this becomes the
+ * one place that needs to learn to read a real per-business setting
+ * instead of a hardcoded constant."
  *
- * Africa/Lagos has NO daylight saving (a fixed year-round UTC+1 offset,
- * unlike, say, US/Europe timezones) — so a fixed +1 hour shift before
- * taking the UTC date slice is an exact, permanently-correct conversion
- * for this one timezone, not an approximation that drifts across DST
- * boundaries. This is a deliberate, narrowly-scoped fix for BusinessOS's
- * current Nigeria-only product assumptions (explicitly not a general
- * IANA-timezone solution, and not Phase 2 "BOS Edge" infrastructure) —
- * the moment a second business timezone is ever supported, this becomes
- * the one place that needs to learn to read a real per-business setting
- * instead of a hardcoded constant.
+ * This now uses Intl.DateTimeFormat with an explicit `timeZone`, not a
+ * fixed UTC-offset arithmetic shift — the original implementation's fixed
+ * +1 hour trick was only ever an exact conversion for Africa/Lagos
+ * (a timezone with no daylight saving). Several of this phase's OTHER
+ * launch timezones DO observe DST (the four US zones, and Europe/London's
+ * BST), so a fixed offset would silently compute the wrong calendar date
+ * for those businesses part of the year. Intl's own tz-database-backed
+ * conversion is correct for every IANA zone, DST or not, and produces
+ * IDENTICAL output to the old fixed-offset code for Africa/Lagos — so
+ * every existing caller (which passes no timezone and gets the default
+ * below) keeps its exact previous behavior.
+ *
+ * `en-CA` is used purely as a formatting trick: that locale's short date
+ * format is already "YYYY-MM-DD", so no manual reassembly of
+ * year/month/day parts is needed.
+ *
+ * DEFAULT_BUSINESS_TIMEZONE remains Africa/Lagos — every business created
+ * before this phase was backfilled to it (see that same migration), and
+ * it is still the right fallback for any SERVER-rendered call site that
+ * has not yet been threaded a real businesses.timezone value (see this
+ * file's own "remaining Africa/Lagos assumptions" note in the phase
+ * report — reporting's own UTC range semantics are explicitly UNCHANGED
+ * by this phase and do NOT call this function).
  */
-const LAGOS_UTC_OFFSET_HOURS = 1;
+export const DEFAULT_BUSINESS_TIMEZONE = "Africa/Lagos";
 
-/** Today's calendar date (YYYY-MM-DD) in Africa/Lagos, computed from the
- * current instant — safe to call from server-rendered code with no
- * browser/request-local timezone context available. */
-export function businessTodayDateString(now: Date = new Date()): string {
-  const shifted = new Date(now.getTime() + LAGOS_UTC_OFFSET_HOURS * 60 * 60 * 1000);
-  return shifted.toISOString().slice(0, 10);
+/** Today's calendar date (YYYY-MM-DD) in the given IANA timezone, computed
+ * from the current instant — safe to call from server-rendered code with
+ * no browser/request-local timezone context available. Defaults to
+ * Africa/Lagos when no business timezone is available yet. */
+export function businessTodayDateString(
+  now: Date = new Date(),
+  timezone: string = DEFAULT_BUSINESS_TIMEZONE
+): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
 }
