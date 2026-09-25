@@ -202,7 +202,7 @@ describe("Phase 1G — narrow, exact grants on new columns/tables", () => {
     }
   });
 
-  it("private_reports_reader's new grants are narrow: sales/expenses gain only branch_id, business_branches gains only id/business_id", async () => {
+  it("private_reports_reader's grants stay narrow and exact, column by column, across sales/expenses/business_branches", async () => {
     const sql = createTestDbClient();
     try {
       const salesRows = await sql<{ column_name: string }[]>`
@@ -219,11 +219,29 @@ describe("Phase 1G — narrow, exact grants on new columns/tables", () => {
         ["amount_paid", "branch_id", "business_id", "completed_at", "customer_id", "id", "status", "total"].sort()
       );
 
+      const expenseRows = await sql<{ column_name: string }[]>`
+        select column_name from information_schema.role_column_grants
+        where grantee = 'private_reports_reader' and table_name = 'expenses' and privilege_type = 'SELECT'
+      `;
+      // Phase 1N-C4: get_branch_detail_report's own branch-scoped expense
+      // total needs business_id/amount/status/incurred_at in addition to
+      // the branch_id this role already held (20260829080400_branch_aware_financial_summary.sql)
+      // — see 20260926080200_get_branch_detail_report_rpc.sql's own grant.
+      expect(expenseRows.map((r) => r.column_name).sort()).toEqual(
+        ["amount", "branch_id", "business_id", "incurred_at", "status"].sort()
+      );
+
       const branchRows = await sql<{ column_name: string }[]>`
         select column_name from information_schema.role_column_grants
         where grantee = 'private_reports_reader' and table_name = 'business_branches' and privilege_type = 'SELECT'
       `;
-      expect(branchRows.map((r) => r.column_name).sort()).toEqual(["business_id", "id"]);
+      // Phase 1N-C4: get_branch_detail_report's own comparison table/search
+      // needs name/code/status in addition to the id/business_id this role
+      // already held — see 20260926080200_get_branch_detail_report_rpc.sql's
+      // own grant.
+      expect(branchRows.map((r) => r.column_name).sort()).toEqual(
+        ["business_id", "code", "id", "name", "status"].sort()
+      );
     } finally {
       await sql.end();
     }

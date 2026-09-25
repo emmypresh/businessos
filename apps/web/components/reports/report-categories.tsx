@@ -20,9 +20,10 @@ const CATEGORY_ICONS = {
 // item states its own status in text, not color alone, so it reads
 // correctly with a screen reader and in dark mode.
 // Phase 1N-C3: Customers and Inventory are now real, business-scoped links
-// (same rangeSearch-preserving convention Sales & Revenue already uses) —
-// Branches remains deliberately NOT a link; that is 1N-C4, out of this
-// phase's scope.
+// (same rangeSearch-preserving convention Sales & Revenue already uses).
+// Phase 1N-C4: Branches is now a real, business-scoped link too — the last
+// of the four categories, so PLANNED_REPORT_CATEGORIES is now empty and
+// rendered as an empty list (harmless — see the map below).
 const LINKED_REPORT_CATEGORIES = [
   {
     name: "Sales & Revenue",
@@ -39,14 +40,14 @@ const LINKED_REPORT_CATEGORIES = [
     href: "inventory",
     description: "Stock position, low/out-of-stock counts, and movement activity for the selected period.",
   },
-] as const;
-
-const PLANNED_REPORT_CATEGORIES = [
   {
     name: "Branches",
-    description: "Per-branch revenue and order volume for the selected period.",
+    href: "branches",
+    description: "Per-branch revenue, order volume, and drilldown detail for the selected period.",
   },
 ] as const;
+
+const PLANNED_REPORT_CATEGORIES: readonly { name: keyof typeof CATEGORY_ICONS; description: string }[] = [];
 
 export function ReportCategories({ businessId, rangeSearch }: { businessId: string; rangeSearch: string }) {
   return (

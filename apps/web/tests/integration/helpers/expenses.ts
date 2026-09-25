@@ -50,6 +50,11 @@ export function expensePayload(
     payee?: string;
     reference?: string;
     notes?: string;
+    // Phase 1N-C4: branch attribution for the Branch Detailed Report's own
+    // expense-total metric. Omitted (undefined) matches create_expense's
+    // own default of NULL — a company-wide expense, exactly as before this
+    // field was added.
+    branchId?: string;
   } = {}
 ) {
   return {
@@ -57,6 +62,7 @@ export function expensePayload(
     p_creation_key: overrides.creationKey ?? randomUuid(),
     p_category_id: categoryId,
     p_amount: overrides.amount ?? 1000,
+    p_branch_id: overrides.branchId,
     p_payment_method: overrides.paymentMethod ?? "CASH",
     p_incurred_at: overrides.incurredAt ?? new Date().toISOString(),
     p_payee: overrides.payee,
