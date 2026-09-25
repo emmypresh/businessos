@@ -134,11 +134,34 @@ export function SalesTrendChart({ businessId, points, hasActivity, currencyCode,
               <path d={areaPath} fill={`url(#${gradientId})`} className="text-primary" />
               <path d={linePath} fill="none" stroke="currentColor" strokeWidth="2" className="text-primary" />
               {coordinates.map((c) => (
-                <circle key={c.point.date} cx={c.x} cy={c.y} r="3" className="fill-primary">
-                  <title>
-                    {c.point.label}: {formatMetricValue(metric, c.value, currencyCode)}
-                  </title>
-                </circle>
+                // A nested <title> CHILD ELEMENT here (rather than a
+                // `title` attribute) reproduces a confirmed SSR/hydration
+                // mismatch: React 19's built-in document-metadata
+                // ("Float") support treats every <title> host element as
+                // a hoistable page-title resource by tag name alone, not
+                // namespace-aware — it strips this SVG tooltip title's
+                // text out of its SSR position (leaving <title></title>
+                // empty for all 30 points), while the client keeps it
+                // inline post-hydration, producing a 100% reproducible
+                // React error #418 on every dashboard load. The `title`
+                // attribute form below renders the same native
+                // hover-tooltip behavior without going through that
+                // element-hoisting path. The sr-only <table> further
+                // below remains the real accessible-name mechanism for
+                // this chart; this is a mouse-hover convenience only.
+                <circle
+                  key={c.point.date}
+                  cx={c.x}
+                  cy={c.y}
+                  r="3"
+                  className="fill-primary"
+                  // `title` is a valid, browser-supported global attribute
+                  // on SVG elements (renders the same native hover
+                  // tooltip), but @types/react's SVGProps doesn't list it
+                  // — spread it in rather than widening the whole
+                  // element's prop type.
+                  {...{ title: `${c.point.label}: ${formatMetricValue(metric, c.value, currencyCode)}` }}
+                />
               ))}
               {uniqueTickIndexes.map((index) => {
                 const c = coordinates[index];

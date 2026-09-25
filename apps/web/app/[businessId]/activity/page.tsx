@@ -1,7 +1,8 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listActivityEvents, getActivityBranchOptions, getActivityActorOptions } from "@/lib/audit/dal";
 import { ActivityFilterSchema } from "@/lib/validation/audit";
+import { getLocaleForCountry } from "@/lib/business/country-currency";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { ActivityFilters } from "@/components/activity/activity-filters";
@@ -33,10 +34,16 @@ export default async function ActivityPage({
   const filters = parsedFilters.success ? parsedFilters.data : {};
   const cursor = typeof query.cursor === "string" ? query.cursor : undefined;
 
-  const [allBranches, allActors] = await Promise.all([
+  const [allBranches, allActors, business] = await Promise.all([
     getActivityBranchOptions(businessId),
     getActivityActorOptions(businessId),
+    // Display-only: derives this feed's deterministic timestamp locale.
+    // A missing business record here falls back to "en-US" via
+    // getLocaleForCountry's own undefined-country fallback below, rather
+    // than blocking an already-permission-gated activity view.
+    getBusinessDetails(businessId),
   ]);
+  const locale = getLocaleForCountry(business?.country_code ?? "");
   const branchId = filters.branchId && allBranches.some((b) => b.id === filters.branchId) ? filters.branchId : undefined;
   const actorUserId =
     filters.actorUserId && allActors.some((a) => a.userId === filters.actorUserId) ? filters.actorUserId : undefined;
@@ -84,7 +91,7 @@ export default async function ActivityPage({
         />
       ) : (
         <>
-          <ActivityFeed events={rows} branchNames={branchNames} />
+          <ActivityFeed events={rows} branchNames={branchNames} locale={locale} />
           <PaginationLink href={baseHref} nextCursor={nextCursor} />
         </>
       )}

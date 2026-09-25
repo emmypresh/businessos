@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { getBusinessMembership } from "@/lib/business/dal";
+import { getBusinessMembership, getBusinessDetails } from "@/lib/business/dal";
 import {
   listNotificationsForCurrentUser,
   getNotificationBranchOptions,
 } from "@/lib/notifications/dal";
 import { NotificationFilterSchema } from "@/lib/validation/notifications";
+import { getLocaleForCountry } from "@/lib/business/country-currency";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { NotificationFilters } from "@/components/notifications/notification-filters";
@@ -36,7 +37,7 @@ export default async function NotificationsPage({
   const filters = parsedFilters.success ? parsedFilters.data : {};
   const cursor = typeof query.cursor === "string" ? query.cursor : undefined;
 
-  const [{ rows, nextCursor }, branches] = await Promise.all([
+  const [{ rows, nextCursor }, branches, business] = await Promise.all([
     listNotificationsForCurrentUser(businessId, {
       search: filters.search,
       category: filters.category,
@@ -45,7 +46,11 @@ export default async function NotificationsPage({
       cursor,
     }),
     getNotificationBranchOptions(businessId),
+    // Display-only: derives this feed's deterministic timestamp locale,
+    // same pattern as the Activity page.
+    getBusinessDetails(businessId),
   ]);
+  const locale = getLocaleForCountry(business?.country_code ?? "");
 
   const branchNames = Object.fromEntries(branches.map((b) => [b.id, b.name]));
 
@@ -87,7 +92,7 @@ export default async function NotificationsPage({
         />
       ) : (
         <>
-          <NotificationFeed businessId={businessId} notifications={rows} branchNames={branchNames} />
+          <NotificationFeed businessId={businessId} notifications={rows} branchNames={branchNames} locale={locale} />
           <PaginationLink href={baseHref} nextCursor={nextCursor} />
         </>
       )}

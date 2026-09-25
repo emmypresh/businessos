@@ -3,6 +3,7 @@ import { PERMISSION } from "@/lib/business/constants";
 import { getInvoiceBranchOptions } from "@/lib/invoices/dal";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CurrencyUnavailableState } from "@/components/business/currency-unavailable-state";
 
 export default async function NewInvoicePage({
   params,
@@ -22,8 +23,10 @@ export default async function NewInvoicePage({
   // invoices.manage does not, and must not be made to, imply.
   const { options: branches, primaryBranchId } = await getInvoiceBranchOptions(businessId);
   const business = await getBusinessDetails(businessId);
+  // Fail closed rather than assuming NGN when the business record couldn't
+  // be loaded — matches products/new and expenses/new's own pattern.
   if (!business) {
-    throw new Error("Failed to load business currency.");
+    return <CurrencyUnavailableState action="create an invoice" />;
   }
 
   // A caller with invoices.manage but no invoices.view lands back here

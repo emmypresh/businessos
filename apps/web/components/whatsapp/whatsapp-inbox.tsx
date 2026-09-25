@@ -25,7 +25,44 @@ export function serviceWindowState(endsAt: string | null, now = Date.now()) {
   return endsAt && new Date(endsAt).getTime() > now ? "OPEN" : "CLOSED";
 }
 
-function formatTime(value: string | null) { return value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "No messages"; }
+// WAI-006: chat timestamps are meant to read in the viewing staff
+// member's own local time (the same convention WhatsApp itself uses),
+// never a fixed business timezone — there is no per-viewer timezone
+// column to pass server-side anyway. But `Intl.DateTimeFormat(undefined,
+// ...)` resolves its "default locale" independently on each side: the
+// Node server's own ICU/OS locale during SSR vs. the browser's locale
+// during hydration. Those two frequently disagree (e.g. server on
+// en-US, browser on en-NG/en-GB), producing two different date strings
+// for the identical instant and a full React hydration-mismatch error
+// on first paint. A fixed, explicit locale keeps the server-rendered
+// HTML and React's first client render byte-for-byte identical (no
+// mismatch is possible), and <ClientLocalTime> below then swaps to the
+// real browser-local rendering after hydration, once React is no
+// longer comparing against server output.
+const TIME_FORMAT_LOCALE = "en-US";
+function formatTimeWithLocale(value: string | null, locale: string | undefined) {
+  return value
+    ? new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value))
+    : "No messages";
+}
+function formatTime(value: string | null) { return formatTimeWithLocale(value, TIME_FORMAT_LOCALE); }
+
+// Renders formatTime's fixed-locale text on both the server and React's
+// first client pass (so hydration never mismatches), then swaps to the
+// viewer's real browser-local formatting by writing directly to the DOM
+// node in an effect — which by definition only ever runs client-side,
+// after hydration has already completed. A ref-based DOM write (not
+// setState) is used deliberately: this is a one-way sync FROM the
+// browser's own Intl default INTO this already-hydrated node, not a
+// value React needs to track or re-render from, so there is nothing to
+// hold in React state and no cascading re-render to trigger.
+function ClientLocalTime({ value, className }: { value: string | null; className?: string }) {
+  const ref = useRef<HTMLTimeElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.textContent = formatTimeWithLocale(value, undefined);
+  }, [value]);
+  return <time ref={ref} className={className}>{formatTime(value)}</time>;
+}
 
 // WAI-003: the frozen backend's raw failure_reason (provider/webhook/SQL
 // diagnostic text) is never part of this browser-safe read model at all
@@ -57,7 +94,7 @@ function MessageStatus({ status }: { status: string }) {
 
 function ConversationRow({ businessId, conversation, active }: { businessId: string; conversation: WhatsappInboxConversationRow; active: boolean }) {
   const preview = conversation.lastMessage?.bodyText || (conversation.lastMessage ? `${conversation.lastMessage.messageType} message` : "No messages yet");
-  return <Link href={`/${businessId}/whatsapp?conversation=${encodeURIComponent(conversation.id)}`} aria-current={active ? "page" : undefined} className={`flex min-h-20 items-center gap-3 px-4 py-3 outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-muted" : ""}`}><span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">{conversation.customerName?.slice(0, 1).toUpperCase() ?? "?"}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="truncate font-medium">{conversation.customerName ?? conversation.customerPhoneE164}</span><time className="shrink-0 text-xs text-muted-foreground">{formatTime(conversation.lastMessageAt)}</time></span><span className="mt-1 flex items-center gap-2"><span className="truncate text-sm text-muted-foreground">{preview}</span>{!conversation.customerId ? <Badge variant="outline">Unmatched</Badge> : null}</span></span></Link>;
+  return <Link href={`/${businessId}/whatsapp?conversation=${encodeURIComponent(conversation.id)}`} aria-current={active ? "page" : undefined} className={`flex min-h-20 items-center gap-3 px-4 py-3 outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-muted" : ""}`}><span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">{conversation.customerName?.slice(0, 1).toUpperCase() ?? "?"}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="truncate font-medium">{conversation.customerName ?? conversation.customerPhoneE164}</span><ClientLocalTime className="shrink-0 text-xs text-muted-foreground" value={conversation.lastMessageAt} /></span><span className="mt-1 flex items-center gap-2"><span className="truncate text-sm text-muted-foreground">{preview}</span>{!conversation.customerId ? <Badge variant="outline">Unmatched</Badge> : null}</span></span></Link>;
 }
 
 function Composer({ businessId, conversation, templates, canSend }: { businessId: string; conversation: WhatsappInboxConversationRow; templates: WhatsappSendableTemplateRow[]; canSend: boolean }) {
@@ -239,7 +276,7 @@ function Composer({ businessId, conversation, templates, canSend }: { businessId
 }
 
 function Thread({ businessId, conversation, messages, templates, canSend }: { businessId: string; conversation: WhatsappInboxConversationRow; messages: WhatsappInboxMessageRow[]; templates: WhatsappSendableTemplateRow[]; canSend: boolean }) {
-  return <section className="flex min-h-[34rem] flex-col rounded-xl border bg-card" aria-label="Conversation"><header className="flex min-h-16 items-center gap-3 border-b px-4"><Link href={`/${businessId}/whatsapp`} className="lg:hidden"><Button variant="ghost" size="icon" aria-label="Back to conversations"><ArrowLeft /></Button></Link><span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">{conversation.customerName?.slice(0, 1).toUpperCase() ?? "?"}</span><div className="min-w-0"><h2 className="truncate font-semibold">{conversation.customerName ?? conversation.customerPhoneE164}</h2><p className="text-sm text-muted-foreground">{conversation.customerId ? conversation.customerPhoneE164 : "Unmatched phone number"}</p></div></header><div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 p-4">{messages.length === 0 ? <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><MessageCircle className="mb-3 size-8 text-muted-foreground" aria-hidden="true" /><p className="font-medium">No messages in this conversation</p><p className="text-sm text-muted-foreground">New provider messages will appear here after they are processed.</p></div> : messages.map((message) => <article key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${message.direction === "OUTBOUND" ? "bg-primary text-primary-foreground" : "border bg-background"}`}><p className="whitespace-pre-wrap break-words">{message.bodyText || `${message.messageType} message`}</p><div className={`mt-1 flex items-center justify-end gap-2 ${message.direction === "OUTBOUND" ? "text-primary-foreground/75" : "text-muted-foreground"}`}><time className="text-xs">{formatTime(message.createdAt)}</time>{message.direction === "OUTBOUND" ? <MessageStatus status={message.status} /> : null}</div>{message.status === "FAILED" ? <p className="mt-1 text-xs text-destructive">{SAFE_FAILED_MESSAGE_LABEL}</p> : null}</div></article>)}</div><Composer key={conversation.id} businessId={businessId} conversation={conversation} templates={templates} canSend={canSend} /></section>;
+  return <section className="flex min-h-[34rem] flex-col rounded-xl border bg-card" aria-label="Conversation"><header className="flex min-h-16 items-center gap-3 border-b px-4"><Link href={`/${businessId}/whatsapp`} className="lg:hidden"><Button variant="ghost" size="icon" aria-label="Back to conversations"><ArrowLeft /></Button></Link><span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">{conversation.customerName?.slice(0, 1).toUpperCase() ?? "?"}</span><div className="min-w-0"><h2 className="truncate font-semibold">{conversation.customerName ?? conversation.customerPhoneE164}</h2><p className="text-sm text-muted-foreground">{conversation.customerId ? conversation.customerPhoneE164 : "Unmatched phone number"}</p></div></header><div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 p-4">{messages.length === 0 ? <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><MessageCircle className="mb-3 size-8 text-muted-foreground" aria-hidden="true" /><p className="font-medium">No messages in this conversation</p><p className="text-sm text-muted-foreground">New provider messages will appear here after they are processed.</p></div> : messages.map((message) => <article key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${message.direction === "OUTBOUND" ? "bg-primary text-primary-foreground" : "border bg-background"}`}><p className="whitespace-pre-wrap break-words">{message.bodyText || `${message.messageType} message`}</p><div className={`mt-1 flex items-center justify-end gap-2 ${message.direction === "OUTBOUND" ? "text-primary-foreground/75" : "text-muted-foreground"}`}><ClientLocalTime className="text-xs" value={message.createdAt} />{message.direction === "OUTBOUND" ? <MessageStatus status={message.status} /> : null}</div>{message.status === "FAILED" ? <p className="mt-1 text-xs text-destructive">{SAFE_FAILED_MESSAGE_LABEL}</p> : null}</div></article>)}</div><Composer key={conversation.id} businessId={businessId} conversation={conversation} templates={templates} canSend={canSend} /></section>;
 }
 
 export function WhatsappInbox({ businessId, conversations, activeConversation, messages, templates, canSend }: { businessId: string; conversations: WhatsappInboxConversationRow[]; activeConversation: WhatsappInboxConversationRow | null; messages: WhatsappInboxMessageRow[]; templates: WhatsappSendableTemplateRow[]; canSend: boolean }) {

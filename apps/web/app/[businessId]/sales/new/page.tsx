@@ -5,6 +5,7 @@ import { getOperationalBranchOptions } from "@/lib/branches/dal";
 import { SaleForm } from "@/components/sales/sale-form";
 import { NoActiveBranchState } from "@/components/branches/no-active-branch-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CurrencyUnavailableState } from "@/components/business/currency-unavailable-state";
 
 export default async function NewSalePage({
   params,
@@ -26,8 +27,10 @@ export default async function NewSalePage({
   const { rows } = await listCustomers(businessId, { status: "active" });
   const { options: branches, primaryBranchId } = await getOperationalBranchOptions(businessId);
   const business = await getBusinessDetails(businessId);
+  // Fail closed rather than assuming NGN when the business record couldn't
+  // be loaded — matches products/new and expenses/new's own pattern.
   if (!business) {
-    throw new Error("Failed to load business currency.");
+    return <CurrencyUnavailableState action="record a sale" />;
   }
 
   // A caller with sales.create but not sales.view lands back here after a

@@ -44,8 +44,8 @@ const SEVERITY_TONE: Record<string, StatusTone> = {
   CRITICAL: "destructive",
 };
 
-function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString("en-NG", {
+function formatTimestamp(value: string, locale: string): string {
+  return new Date(value).toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -55,10 +55,16 @@ export function NotificationFeed({
   businessId,
   notifications,
   branchNames = {},
+  locale = "en-US",
 }: {
   businessId: string;
   notifications: NotificationRow[];
   branchNames?: Record<string, string>;
+  /** Business display locale (lib/business/country-currency.ts's
+   * getLocaleForCountry) — never the viewer's browser locale. Defaults to
+   * "en-US" only for callers that don't yet thread a business locale
+   * through. */
+  locale?: string;
 }) {
   const [rows, setRows] = useState(notifications);
   const [selected, setSelected] = useState<NotificationRow | null>(null);
@@ -126,7 +132,7 @@ export function NotificationFeed({
                     <p className={`truncate text-sm ${unread ? "font-semibold" : "font-medium"}`}>{row.title}</p>
                     {row.body ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{row.body}</p> : null}
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      <time dateTime={row.created_at}>{formatTimestamp(row.created_at)}</time>
+                      <time dateTime={row.created_at}>{formatTimestamp(row.created_at, locale)}</time>
                       {branchName ? ` · ${branchName}` : ""}
                     </p>
                   </div>
@@ -159,7 +165,7 @@ export function NotificationFeed({
               <SheetHeader>
                 <SheetTitle>{selected.title}</SheetTitle>
                 <SheetDescription>
-                  <time dateTime={selected.created_at}>{formatTimestamp(selected.created_at)}</time>
+                  <time dateTime={selected.created_at}>{formatTimestamp(selected.created_at, locale)}</time>
                 </SheetDescription>
               </SheetHeader>
               <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">

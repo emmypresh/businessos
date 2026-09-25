@@ -110,12 +110,12 @@ export const SALES_TREND_METRIC_CONFIG: Record<SalesTrendMetric, { label: string
   [SALES_TREND_METRIC.AOV]: { label: "Average order value", shortLabel: "AOV", description: "Daily completed-sales revenue divided by daily completed sales count." },
 };
 
-/** Compact axis-tick formatting for large amounts (e.g. "₦1.2M"). Display only — never used for tooltip exact values. Phase 1Q-0C: uses the same deterministic product symbol table as formatMoney's "symbol" mode, never the ISO code. */
+/** Compact axis-tick formatting for large amounts (e.g. "₦1.2M"). Display only — never used for tooltip exact values. Phase 1Q-0C: uses the same deterministic product symbol table as formatMoney's "symbol" mode, never the ISO code. "en-US" grouping is fixed deliberately (not business-locale-driven) to match formatMoney's own digit-grouping determinism — this chart renders for every launch country, not just NG. */
 export function formatCompactCurrency(amount: number, currencyCode: string): string {
-  const formatted = new Intl.NumberFormat("en-NG", { notation: "compact", maximumFractionDigits: 1 }).format(amount);
+  const formatted = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(amount);
   return `${getCurrencySymbol(currencyCode)}${formatted}`;
 }
 
 export function formatIntegerTick(value: number): string {
-  return new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(Math.round(value));
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value));
 }

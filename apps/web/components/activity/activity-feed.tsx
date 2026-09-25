@@ -49,8 +49,8 @@ function actorLabel(event: ActivityEventRow): string {
   return event.actor_name_snapshot ?? event.actor_email_snapshot ?? (event.actor_type === "SYSTEM" ? "System" : "Unknown");
 }
 
-function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString("en-NG", {
+function formatTimestamp(value: string, locale: string): string {
+  return new Date(value).toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -59,9 +59,16 @@ function formatTimestamp(value: string): string {
 export function ActivityFeed({
   events,
   branchNames,
+  locale = "en-US",
 }: {
   events: ActivityEventRow[];
   branchNames: Record<string, string>;
+  /** Business display locale (lib/business/country-currency.ts's
+   * getLocaleForCountry) — never the viewer's browser locale, so
+   * server-rendered and client-rendered timestamps stay deterministic
+   * across viewers. Defaults to "en-US" only for callers that don't yet
+   * thread a business locale through. */
+  locale?: string;
 }) {
   const [selected, setSelected] = useState<ActivityEventRow | null>(null);
 
@@ -87,7 +94,7 @@ export function ActivityFeed({
                     {actorLabel(event)} — {normalizeActionLabel(event.action)}
                   </p>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    <time dateTime={event.created_at}>{formatTimestamp(event.created_at)}</time>
+                    <time dateTime={event.created_at}>{formatTimestamp(event.created_at, locale)}</time>
                     {branchName ? ` · ${branchName}` : ""}
                     {event.resource_label_snapshot ? ` · ${event.resource_label_snapshot}` : ""}
                   </p>
@@ -111,7 +118,7 @@ export function ActivityFeed({
               <SheetHeader>
                 <SheetTitle>{normalizeActionLabel(selected.action)}</SheetTitle>
                 <SheetDescription>
-                  <time dateTime={selected.created_at}>{formatTimestamp(selected.created_at)}</time>
+                  <time dateTime={selected.created_at}>{formatTimestamp(selected.created_at, locale)}</time>
                 </SheetDescription>
               </SheetHeader>
               <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">

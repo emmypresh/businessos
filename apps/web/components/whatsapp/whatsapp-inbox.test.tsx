@@ -286,6 +286,63 @@ describe("idempotency key stability and double-submit protection (WAI-001)", () 
   });
 });
 
+describe("chat timestamp hydration safety (WAI-006)", () => {
+  // Regression for a real reproduced React hydration mismatch: the
+  // server (Node's own ICU/OS default locale) and the browser (its own
+  // locale) previously each resolved `Intl.DateTimeFormat(undefined,
+  // ...)`'s "default locale" independently, so SSR HTML and React's
+  // first client render disagreed whenever those locales differed (e.g.
+  // server on en-US, browser on en-NG/en-GB) — confirmed live via
+  // Playwright against a real Next.js SSR+hydration pass in three
+  // browser locales (en-NG, en-GB, en-US); only en-US (matching the
+  // server) avoided a "Hydration failed" pageerror before this fix.
+  // ClientLocalTime now renders the same fixed-locale text on its first
+  // pass as the server does, then swaps to the browser's own locale
+  // only inside a useEffect — which never runs during SSR or React's
+  // hydration comparison, only after it has already succeeded.
+  it("uses the fixed SSR-matching locale on the first render pass, then swaps to the browser's own locale only after mount", () => {
+    const localeCalls: unknown[] = [];
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function (
+      this: unknown,
+      ...args: ConstructorParameters<typeof Intl.DateTimeFormat>
+    ) {
+      localeCalls.push(args[0]);
+      return new RealDateTimeFormat(...args);
+    });
+    try {
+      renderInbox({
+        conversation: makeConversation({ lastMessageAt: "2026-01-01T00:00:00.000Z" }),
+        messages: [
+          { id: "m1", direction: "INBOUND", messageType: "TEXT", bodyText: "hi", status: "DELIVERED", createdAt: "2026-01-01T00:00:00.000Z" },
+        ],
+      });
+      // React Testing Library's render() already flushes effects, so
+      // both the pre-mount (SSR-matching) and post-mount (browser-local)
+      // calls have happened by the time we assert. The pre-mount value
+      // must be the fixed locale, never the ambient default.
+      expect(localeCalls[0]).toBe("en-US");
+      // At least one later call swaps to the browser's real default
+      // locale (`undefined` means "use Intl's own default", exactly the
+      // browser-local behavior product intent calls for).
+      expect(localeCalls).toContain(undefined);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("never leaves a mismatched-text warning for the rendered time regardless of which locale swap already ran", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      renderInbox({ conversation: makeConversation({ lastMessageAt: "2026-01-01T00:00:00.000Z" }) });
+      const hydrationWarning = errorSpy.mock.calls.some((call) => /hydrat|did not match/i.test(String(call[0])));
+      expect(hydrationWarning).toBe(false);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
 describe("keyboard behavior", () => {
   it("Enter submits the composer", async () => {
     sendWhatsAppMessageAction.mockResolvedValue({ error: "Something went wrong. Please try again." });

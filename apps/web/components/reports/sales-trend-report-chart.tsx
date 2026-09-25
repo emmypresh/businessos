@@ -132,11 +132,25 @@ export function SalesTrendReportChart({ points, hasActivity, currencyCode, range
             <path d={areaPath} fill={`url(#${gradientId})`} className="text-primary" />
             <path d={linePath} fill="none" stroke="currentColor" strokeWidth="2" className="text-primary" />
             {coordinates.map((c) => (
-              <circle key={c.point.date} cx={c.x} cy={c.y} r="3" className="fill-primary">
-                <title>
-                  {c.point.label}: {formatMetricValue(metric, c.value, currencyCode)}
-                </title>
-              </circle>
+              // Same SSR/hydration fix as
+              // components/dashboard/sales-trend-chart.tsx: a nested
+              // <title> CHILD ELEMENT is hoisted by React 19's
+              // document-metadata support regardless of SVG namespace,
+              // leaving it empty on the server and mismatched at
+              // hydration (React error #418). A `title` attribute gives
+              // the same native hover tooltip without that hoisting path.
+              <circle
+                key={c.point.date}
+                cx={c.x}
+                cy={c.y}
+                r="3"
+                className="fill-primary"
+                // See components/dashboard/sales-trend-chart.tsx's same
+                // fix: `title` is a valid SVG global attribute but
+                // missing from @types/react's SVGProps, so it's spread in
+                // rather than widening the element's prop type.
+                {...{ title: `${c.point.label}: ${formatMetricValue(metric, c.value, currencyCode)}` }}
+              />
             ))}
             {uniqueTickIndexes.map((index) => {
               const c = coordinates[index];

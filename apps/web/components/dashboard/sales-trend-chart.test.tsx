@@ -29,6 +29,16 @@ describe("SalesTrendChart", () => {
     );
   }
 
+  // The per-point hover tooltip is a `title` ATTRIBUTE on each <circle>
+  // (never a nested <title> child element — that form is hoisted by
+  // React 19's document-metadata support regardless of SVG namespace,
+  // which reproduced as a 100%-reproducible server/client hydration
+  // mismatch; see the fix in sales-trend-chart.tsx). Query it as an
+  // attribute, not as DOM text content.
+  function tooltipCircle(container: HTMLElement, text: string) {
+    return container.querySelector(`circle[title="${text}"]`);
+  }
+
   it("renders an accessible chart with a title and description", () => {
     renderChart();
     const chart = screen.getByRole("img");
@@ -38,9 +48,9 @@ describe("SalesTrendChart", () => {
   });
 
   it("defaults to the revenue metric and shows exact currency-formatted values", () => {
-    renderChart();
-    expect(screen.getByText("Sep 14: ₦1,500.00")).toBeInTheDocument();
-    expect(screen.getByText("Sep 16: ₦900.00")).toBeInTheDocument();
+    const { container } = renderChart();
+    expect(tooltipCircle(container, "Sep 14: ₦1,500.00")).toBeInTheDocument();
+    expect(tooltipCircle(container, "Sep 16: ₦900.00")).toBeInTheDocument();
   });
 
   it("preserves the zero-activity day in the accessible data table rather than dropping it", () => {
@@ -52,25 +62,26 @@ describe("SalesTrendChart", () => {
 
   it("switches to the completed-sales metric on click without changing the points passed in (no new data fetch)", async () => {
     const user = userEvent.setup();
-    renderChart();
+    const { container } = renderChart();
     await user.click(screen.getByRole("button", { name: "Sales" }));
-    expect(screen.getByText("Sep 14: 3")).toBeInTheDocument();
+    expect(tooltipCircle(container, "Sep 14: 3")).toBeInTheDocument();
     expect(screen.getByText(/Completed sales count per day/)).toBeInTheDocument();
   });
 
   it("renders integer sales counts, never decimals", async () => {
     const user = userEvent.setup();
-    renderChart();
+    const { container } = renderChart();
     await user.click(screen.getByRole("button", { name: "Sales" }));
-    expect(screen.queryByText(/Sep 14: 3\.0/)).not.toBeInTheDocument();
+    expect(tooltipCircle(container, "Sep 14: 3")).toBeInTheDocument();
+    expect(tooltipCircle(container, "Sep 14: 3.0")).not.toBeInTheDocument();
   });
 
   it("renders average order value safely as zero on a zero-sales day", async () => {
     const user = userEvent.setup();
-    renderChart();
+    const { container } = renderChart();
     await user.click(screen.getByRole("button", { name: "AOV" }));
-    expect(screen.getByText("Sep 15: ₦0.00")).toBeInTheDocument();
-    expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+    expect(tooltipCircle(container, "Sep 15: ₦0.00")).toBeInTheDocument();
+    expect(container.querySelector('circle[title*="NaN"], circle[title*="Infinity"]')).not.toBeInTheDocument();
   });
 
   it("keyboard-focuses and activates the metric selector buttons", async () => {
@@ -136,13 +147,17 @@ describe("SalesTrendChart", () => {
   // <title>. buildSalesTrendChartModel now normalizes the day key before
   // this component ever sees it, so the rendered label is the plain,
   // stable "Aug 26" form regardless of which shape the aggregate returns.
+  // (Phase 1Q-0D: a second, independent hydration mismatch was later
+  // found and fixed on this same tooltip — see tooltipCircle's own
+  // comment above — the day-key normalization this test covers remains
+  // necessary and unrelated to that fix.)
   it("renders a stable calendar-day label even when fed a full timestamptz day key (hydration regression)", () => {
     const timestamptzModel = buildSalesTrendChartModel([
       { date: "2026-08-26 00:00:00+00", revenue: 500, orderCount: 1, averageOrderValue: 500 },
     ]);
-    renderChart({ points: timestamptzModel.points, hasActivity: timestamptzModel.hasActivity });
-    expect(screen.getByText("Aug 26: ₦500.00")).toBeInTheDocument();
-    expect(screen.queryByText(/00:00:00/)).not.toBeInTheDocument();
+    const { container } = renderChart({ points: timestamptzModel.points, hasActivity: timestamptzModel.hasActivity });
+    expect(tooltipCircle(container, "Aug 26: ₦500.00")).toBeInTheDocument();
+    expect(container.querySelector('circle[title*="00:00:00"]')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -150,9 +165,9 @@ describe("SalesTrendChart", () => {
     ["GH", "GHS", "GH₵"],
     ["US", "USD", "$"],
   ])("shows the correct %s tooltip value in symbol form, never the ISO code", (_country, currencyCode, symbol) => {
-    renderChart({ currencyCode });
-    expect(screen.getByText(`Sep 14: ${symbol}1,500.00`)).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp(`${currencyCode} 1,500`))).not.toBeInTheDocument();
+    const { container } = renderChart({ currencyCode });
+    expect(tooltipCircle(container, `Sep 14: ${symbol}1,500.00`)).toBeInTheDocument();
+    expect(container.querySelector(`circle[title*="${currencyCode} 1,500"]`)).not.toBeInTheDocument();
   });
 
   it("keeps the description aria-labelledby relationship valid and per-instance unique across multiple chart instances", () => {
