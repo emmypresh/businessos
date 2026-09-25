@@ -19,15 +19,29 @@ const CATEGORY_ICONS = {
 // (C3/C4), and a dead link is worse than no link. Each "Coming soon"
 // item states its own status in text, not color alone, so it reads
 // correctly with a screen reader and in dark mode.
-const PLANNED_REPORT_CATEGORIES = [
+// Phase 1N-C3: Customers and Inventory are now real, business-scoped links
+// (same rangeSearch-preserving convention Sales & Revenue already uses) —
+// Branches remains deliberately NOT a link; that is 1N-C4, out of this
+// phase's scope.
+const LINKED_REPORT_CATEGORIES = [
+  {
+    name: "Sales & Revenue",
+    href: "sales",
+    description: "Revenue trends, order volume, and average order value over the selected period.",
+  },
   {
     name: "Customers",
+    href: "customers",
     description: "New, returning, and repeat customer activity over the selected period.",
   },
   {
     name: "Inventory",
-    description: "Low-stock, out-of-stock, and slow-moving product activity.",
+    href: "inventory",
+    description: "Stock position, low/out-of-stock counts, and movement activity for the selected period.",
   },
+] as const;
+
+const PLANNED_REPORT_CATEGORIES = [
   {
     name: "Branches",
     description: "Per-branch revenue and order volume for the selected period.",
@@ -35,30 +49,32 @@ const PLANNED_REPORT_CATEGORIES = [
 ] as const;
 
 export function ReportCategories({ businessId, rangeSearch }: { businessId: string; rangeSearch: string }) {
-  const salesHref = `/${businessId}/reports/sales${rangeSearch ? `?${rangeSearch}` : ""}`;
-
   return (
     <section aria-labelledby="report-categories-heading" className="flex flex-col gap-3">
       <h2 id="report-categories-heading" className="text-lg font-semibold tracking-tight">
         More reports
       </h2>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-xs">
-          <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${CATEGORY_ICONS["Sales & Revenue"].tile}`}>
-            <LineChart className="size-4.5" aria-hidden="true" />
-          </span>
-          <div className="flex flex-col gap-1">
-            <Link
-              href={salesHref}
-              className="flex items-center gap-1 rounded-md text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-            >
-              Sales &amp; Revenue <ArrowUpRight className="size-3.5" aria-hidden="true" />
-            </Link>
-            <p className="text-xs text-muted-foreground">
-              Revenue trends, order volume, and average order value over the selected period.
-            </p>
-          </div>
-        </li>
+        {LINKED_REPORT_CATEGORIES.map((category) => {
+          const { icon: Icon, tile } = CATEGORY_ICONS[category.name];
+          const href = `/${businessId}/reports/${category.href}${rangeSearch ? `?${rangeSearch}` : ""}`;
+          return (
+            <li key={category.name} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-xs">
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${tile}`}>
+                <Icon className="size-4.5" aria-hidden="true" />
+              </span>
+              <div className="flex flex-col gap-1">
+                <Link
+                  href={href}
+                  className="flex items-center gap-1 rounded-md text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                >
+                  {category.name} <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                </Link>
+                <p className="text-xs text-muted-foreground">{category.description}</p>
+              </div>
+            </li>
+          );
+        })}
         {PLANNED_REPORT_CATEGORIES.map((category) => {
           const { icon: Icon, tile } = CATEGORY_ICONS[category.name];
           return (

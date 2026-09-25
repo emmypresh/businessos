@@ -209,8 +209,14 @@ describe("Phase 1G — narrow, exact grants on new columns/tables", () => {
         select column_name from information_schema.role_column_grants
         where grantee = 'private_reports_reader' and table_name = 'sales' and privilege_type = 'SELECT'
       `;
+      // Phase 1N-C3: two more columns, both narrowly justified —
+      // customer_id (get_customer_detail_report's sales -> customers
+      // grouping/join) and id (get_inventory_detail_report's
+      // sale_items -> sales join, to scope units-sold by completed sale).
+      // See 20260926080000_get_customer_detail_report_rpc.sql and
+      // 20260926080100_get_inventory_detail_report_rpc.sql's own grants.
       expect(salesRows.map((r) => r.column_name).sort()).toEqual(
-        ["amount_paid", "branch_id", "business_id", "completed_at", "status", "total"].sort()
+        ["amount_paid", "branch_id", "business_id", "completed_at", "customer_id", "id", "status", "total"].sort()
       );
 
       const branchRows = await sql<{ column_name: string }[]>`

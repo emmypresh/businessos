@@ -2703,11 +2703,39 @@ export type Database = {
           status: string
         }[]
       }
+      get_customer_detail_report: {
+        Args: {
+          p_branch_id?: string
+          p_business_id: string
+          p_direction?: string
+          p_from: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_sort?: string
+          p_to: string
+        }
+        Returns: Json
+      }
       get_financial_summary: {
         Args: {
           p_branch_id?: string
           p_business_id: string
           p_from: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_inventory_detail_report: {
+        Args: {
+          p_branch_id?: string
+          p_business_id: string
+          p_direction?: string
+          p_from: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_sort?: string
           p_to: string
         }
         Returns: Json

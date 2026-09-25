@@ -86,17 +86,18 @@ test.describe("Sales & Revenue detailed report (Phase 1N-C2)", () => {
     await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
   });
 
-  test("Customers/Inventory/Branches stay non-interactive Coming soon categories", async ({ page }) => {
+  test("Customers and Inventory are now real links (Phase 1N-C3); Branches stays a non-interactive Coming soon category", async ({ page }) => {
     const { email, businessId } = await createOwnerAndBusiness("e2e-sales-coming-soon");
     await loginAsInBrowser(page, email, PASSWORD);
 
     await page.goto(`/${businessId}/reports`);
     const categories = page.getByLabel("More reports");
-    for (const name of ["Customers", "Inventory", "Branches"]) {
-      await expect(categories.getByText(name, { exact: true })).toBeVisible();
-      await expect(categories.getByRole("link", { name })).toHaveCount(0);
+    for (const name of ["Customers", "Inventory"]) {
+      await expect(categories.getByRole("link", { name: new RegExp(name) })).toBeVisible();
     }
-    await expect(categories.getByText("Coming soon")).toHaveCount(3);
+    await expect(categories.getByText("Branches", { exact: true })).toBeVisible();
+    await expect(categories.getByRole("link", { name: "Branches" })).toHaveCount(0);
+    await expect(categories.getByText("Coming soon")).toHaveCount(1);
   });
 
   test("zero activity in the selected period shows a truthful zero state, not an error", async ({ page }) => {
