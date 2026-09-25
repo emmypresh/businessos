@@ -132,3 +132,48 @@ export async function createMemberWithCustomPermissions(
   const roleName = await createRoleWithPermissions(permissionKeys);
   return createMemberWithRole(businessId, prefix, roleName);
 }
+
+// Phase 1Q-0C Slice 2: the non-NGN activation gate inside create_business
+// itself stays CLOSED — this never calls it with a non-NG country/currency
+// (create_business would reject it). Instead, a normal NG/NGN business is
+// created through the real RPC first, then its country_code/currency_code
+// are corrected directly via the raw Postgres test client — a
+// service-role-only fixture path, never exercised by any application code
+// path, and never a weakening of create_business's own activation gate.
+// Used ONLY to prove structural currency behavior (sales/payments/returns/
+// reporting correctly follow whatever businesses.currency_code says) for a
+// country create_business itself does not yet allow a real caller to
+// choose.
+// businesses_timezone_country_check (20260923090300_business_timezone_country_check_inline.sql)
+// ties country_code to one specific (for most countries) timezone value —
+// this table must be updated in lockstep with the country/currency change
+// below, or the raw UPDATE itself is rejected by that CHECK.
+const TIMEZONE_FOR_TEST_COUNTRY: Record<string, string> = {
+  NG: "Africa/Lagos",
+  GH: "Africa/Accra",
+  KE: "Africa/Nairobi",
+  ZA: "Africa/Johannesburg",
+  GB: "Europe/London",
+  US: "America/New_York",
+};
+
+export async function setBusinessCountryCurrencyForTest(
+  businessId: string,
+  countryCode: string,
+  currencyCode: string
+) {
+  const timezone = TIMEZONE_FOR_TEST_COUNTRY[countryCode];
+  if (!timezone) {
+    throw new Error(`setBusinessCountryCurrencyForTest: no fixture timezone known for ${countryCode}`);
+  }
+  const sql = createTestDbClient();
+  try {
+    await sql`
+      update public.businesses
+      set country_code = ${countryCode}, currency_code = ${currencyCode}, timezone = ${timezone}
+      where id = ${businessId}
+    `;
+  } finally {
+    await sql.end();
+  }
+}

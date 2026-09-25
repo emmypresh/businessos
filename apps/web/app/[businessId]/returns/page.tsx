@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getPermissions, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listReturns, getReturnsBranchFilterOptions } from "@/lib/returns/dal";
 import { ReturnFilterSchema } from "@/lib/validation/returns";
@@ -42,6 +42,10 @@ export default async function ReturnsPage({
     branchParsed && allBranches.some((b) => b.id === branchParsed) ? branchParsed : undefined;
 
   const { rows, nextCursor } = await listReturns(businessId, { search, branchId, reason, cursor });
+  const business = await getBusinessDetails(businessId);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
 
   const hasFilters = Boolean(search || reason || branchId);
   const baseHref =
@@ -82,7 +86,7 @@ export default async function ReturnsPage({
         />
       ) : (
         <>
-          <ReturnListTable businessId={businessId} returns={rows} />
+          <ReturnListTable businessId={businessId} returns={rows} currencyCode={business.currency_code} />
           <PaginationLink href={baseHref} nextCursor={nextCursor} />
         </>
       )}

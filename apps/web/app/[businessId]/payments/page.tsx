@@ -1,4 +1,4 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listInvoicePaymentsForViewer } from "@/lib/invoices/dal";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -30,7 +30,14 @@ export default async function PaymentsPage({
   await requirePermissionOrNotFound(businessId, PERMISSION.PAYMENTS_VIEW);
 
   const search = typeof query.search === "string" ? query.search : undefined;
-  const payments = await listInvoicePaymentsForViewer(businessId, search);
+  const [payments, business] = await Promise.all([
+    listInvoicePaymentsForViewer(businessId, search),
+    getBusinessDetails(businessId),
+  ]);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
+  const currencyCode = business.currency_code;
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,7 +49,7 @@ export default async function PaymentsPage({
           title={search ? "No payments match your search." : "No payments recorded yet."}
         />
       ) : (
-        <PaymentHistoryListTable payments={payments} />
+        <PaymentHistoryListTable payments={payments} currencyCode={currencyCode} />
       )}
     </div>
   );

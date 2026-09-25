@@ -18,6 +18,7 @@ import type { ProductRow } from "@/lib/products/dal";
 import type { OperationalBranchOption } from "@/lib/branches/dal";
 import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 import { NoActiveBranchState } from "@/components/branches/no-active-branch-state";
+import { getCurrencySymbol } from "@/lib/currency";
 
 type Mode = "create" | "edit";
 
@@ -28,6 +29,7 @@ export function ProductForm({
   canSeeCost,
   branches = [],
   primaryBranchId = null,
+  currencyCode,
 }: {
   mode: Mode;
   businessId: string;
@@ -38,7 +40,20 @@ export function ProductForm({
   // one-time, creation-only concept; see create_product's own comment).
   branches?: OperationalBranchOption[];
   primaryBranchId?: string | null;
+  // Phase 1Q-0C: the owning business's own currency, for the cost/selling
+  // price label's currency indicator only (display-only, mirrors
+  // ExpenseForm's currencyCode prop) — never submitted by this form.
+  // Edit mode falls back to the product's own persisted currency_code
+  // when this isn't explicitly passed.
+  currencyCode?: string;
 }) {
+  // Phase 1Q-0C follow-up: never fabricate a currency. If neither the
+  // authoritative business currency (create mode) nor the product's own
+  // persisted currency_code (edit mode) is available, the label shows no
+  // symbol rather than silently defaulting to NGN for a business that may
+  // not even use NGN — see getCurrencySymbol's own "no fallback" contract.
+  const symbolCurrency = currencyCode ?? product?.currency_code;
+  const currencyLabel = symbolCurrency ? getCurrencySymbol(symbolCurrency) : "—";
   const action = mode === "create" ? createProduct : updateProduct;
   const [state, formAction] = useActionState(action, undefined);
 
@@ -137,7 +152,7 @@ export function ProductForm({
 
         {canSeeCost ? (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="costPrice">Cost price</Label>
+            <Label htmlFor="costPrice">Cost price ({currencyLabel})</Label>
             <Input
               id="costPrice"
               name="costPrice"
@@ -156,7 +171,7 @@ export function ProductForm({
         ) : null}
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="sellingPrice">Selling price</Label>
+          <Label htmlFor="sellingPrice">Selling price ({currencyLabel})</Label>
           <Input
             id="sellingPrice"
             name="sellingPrice"

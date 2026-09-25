@@ -5,7 +5,15 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { RETURN_REASON_LABEL, type ReturnReason } from "@/lib/returns/constants";
 import type { ReturnListRow } from "@/lib/returns/dal";
 
-export function ReturnListTable({ businessId, returns }: { businessId: string; returns: ReturnListRow[] }) {
+export function ReturnListTable({
+  businessId,
+  returns,
+  currencyCode,
+}: {
+  businessId: string;
+  returns: ReturnListRow[];
+  currencyCode: string;
+}) {
   if (returns.length === 0) return null;
 
   return (
@@ -37,7 +45,7 @@ export function ReturnListTable({ businessId, returns }: { businessId: string; r
                   rename never changes what this row shows. */}
               <TableCell className="text-muted-foreground">{row.branch_name_snapshot}</TableCell>
               <TableCell>{row.reason ? RETURN_REASON_LABEL[row.reason as ReturnReason] ?? row.reason : "—"}</TableCell>
-              <TableCell>{formatMoney(row.refund_amount, "NGN")}</TableCell>
+              <TableCell>{formatMoney(row.refund_amount, currencyCode, { display: "symbol" })}</TableCell>
               <TableCell>
                 <StatusBadge status={row.status} label="Completed" tone="success" />
               </TableCell>

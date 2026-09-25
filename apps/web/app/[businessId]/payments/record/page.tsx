@@ -1,4 +1,4 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { PayableInvoicePicker } from "@/components/invoices/payable-invoice-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,6 +28,10 @@ export default async function RecordPaymentPage({
   // lib/invoices/actions.ts) — mirrors /invoices/new's own identical
   // `?created=1` pattern.
   const created = query.created === "1";
+  const business = await getBusinessDetails(businessId);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,7 +41,7 @@ export default async function RecordPaymentPage({
           <AlertDescription>Payment recorded successfully.</AlertDescription>
         </Alert>
       ) : null}
-      <PayableInvoicePicker businessId={businessId} />
+      <PayableInvoicePicker businessId={businessId} currencyCode={business.currency_code} />
     </div>
   );
 }

@@ -80,18 +80,26 @@ export function isInvoiceOverdue(
   // Injectable purely for deterministic testing (see constants.test.ts's
   // own Lagos-boundary cases) — every real call site omits this and gets
   // the actual current instant.
-  now: Date = new Date()
+  now: Date = new Date(),
+  // Phase 1Q-0C: the invoice's OWN business's IANA timezone
+  // (businesses.timezone) — every real call site threads this from the
+  // business-details loader (see InvoiceStatusBadge). Defaults to
+  // businessTodayDateString's own Africa/Lagos default only when no
+  // business timezone is available yet, never silently for a business
+  // that has one.
+  timezone?: string
 ): boolean {
   if (invoice.status === INVOICE_STATUS.VOID || invoice.status === INVOICE_STATUS.PAID) return false;
   if (!invoice.dueDate) return false;
   if (invoice.balance <= 0) return false;
   // Compared as calendar dates, matching due_date's own `date` (not
   // timestamptz) column type — a due date of "today" is not yet overdue.
-  // "Today" is Africa/Lagos's own calendar date (Codex adversarial
-  // review, remediation round 1, Low 4), NOT the server runtime's own
-  // UTC date — see businessTodayDateString's own header comment for why
-  // a plain `new Date().toISOString().slice(0, 10)` here silently flags
-  // the wrong day for part of every 24 hours.
-  const today = businessTodayDateString(now);
+  // "Today" is the OWNING BUSINESS's own calendar date (Codex adversarial
+  // review, remediation round 1, Low 4; threaded per-business since
+  // Phase 1Q-0C), NOT the server runtime's own UTC date — see
+  // businessTodayDateString's own header comment for why a plain
+  // `new Date().toISOString().slice(0, 10)` here silently flags the wrong
+  // day for part of every 24 hours.
+  const today = businessTodayDateString(now, timezone);
   return invoice.dueDate < today;
 }

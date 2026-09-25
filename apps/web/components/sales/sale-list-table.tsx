@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL, type PaymentStatus } from "@/lib/sales/constants";
 import type { SaleRow } from "@/lib/sales/dal";
+import { formatMoney } from "@/lib/currency";
 
 function paymentStatusVariant(status: string) {
   if (status === PAYMENT_STATUS.PAID) return "default" as const;
@@ -48,9 +49,7 @@ export function SaleListTable({
                 query per row (no N+1): the historical label already lives
                 on the sale itself. */}
             <TableCell className="text-muted-foreground">{sale.branch_name_snapshot}</TableCell>
-            <TableCell>
-              {sale.currency_code} {sale.total.toFixed(2)}
-            </TableCell>
+            <TableCell>{formatMoney(sale.total, sale.currency_code, { display: "symbol" })}</TableCell>
             <TableCell>
               <div className="flex flex-col gap-1">
                 <Badge variant={paymentStatusVariant(sale.payment_status)}>

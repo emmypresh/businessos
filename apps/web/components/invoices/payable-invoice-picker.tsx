@@ -20,7 +20,13 @@ import { PaymentForm } from "@/components/invoices/payment-form";
  * PaymentForm the invoice detail page's own PaymentForm uses (no
  * duplicated payment-recording logic).
  */
-export function PayableInvoicePicker({ businessId }: { businessId: string }) {
+export function PayableInvoicePicker({
+  businessId,
+  currencyCode,
+}: {
+  businessId: string;
+  currencyCode: string;
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PayableInvoiceOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,14 +60,14 @@ export function PayableInvoicePicker({ businessId }: { businessId: string }) {
           <div>
             <p className="font-medium">{selected.invoiceNumber}</p>
             <p className="text-muted-foreground">
-              {selected.customerName} — {selected.branchName} — {formatMoney(balance, "NGN")} outstanding
+              {selected.customerName} — {selected.branchName} — {formatMoney(balance, currencyCode, { display: "symbol" })} outstanding
             </p>
           </div>
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Choose a different invoice" onClick={() => setSelected(null)}>
             <X className="size-4" />
           </Button>
         </div>
-        <PaymentForm businessId={businessId} invoiceId={selected.id} balance={balance} />
+        <PaymentForm businessId={businessId} invoiceId={selected.id} balance={balance} currencyCode={currencyCode} />
       </div>
     );
   }
@@ -98,7 +104,7 @@ export function PayableInvoicePicker({ businessId }: { businessId: string }) {
                   <span className="font-medium">{invoice.invoiceNumber}</span> — {invoice.customerName}
                 </span>
                 <span className="text-muted-foreground">
-                  {formatMoney(invoice.totalAmount - invoice.amountPaid, "NGN")} due
+                  {formatMoney(invoice.totalAmount - invoice.amountPaid, currencyCode, { display: "symbol" })} due
                   {" · "}
                   {INVOICE_STATUS_LABEL[invoice.status as keyof typeof INVOICE_STATUS_LABEL] ?? invoice.status}
                 </span>

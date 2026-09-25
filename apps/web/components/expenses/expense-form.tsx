@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { PAYMENT_METHOD, PAYMENT_METHOD_LABEL, type PaymentMethod } from "@/lib/expenses/constants";
 import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
+import { getCurrencySymbol } from "@/lib/currency";
 
 function toLocalDatetimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,6 +34,7 @@ export function ExpenseForm({
   categories,
   branches,
   primaryBranchId,
+  currencyCode,
 }: {
   businessId: string;
   categories: { id: string; name: string }[];
@@ -45,6 +47,11 @@ export function ExpenseForm({
   // restriction the database itself doesn't apply.
   branches: { id: string; name: string }[];
   primaryBranchId: string | null;
+  // Phase 1Q-0C: the owning business's own currency, for display only
+  // (the amount label's currency indicator) — create_expense already
+  // derives the STORED currency_code server-side from this same
+  // business, never from anything submitted by this form.
+  currencyCode: string;
 }) {
   const [state, formAction] = useActionState(createExpense, undefined);
 
@@ -162,7 +169,7 @@ export function ExpenseForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="amount">Amount (NGN)</Label>
+          <Label htmlFor="amount">Amount ({getCurrencySymbol(currencyCode)})</Label>
           <Input
             id="amount"
             name="amount"

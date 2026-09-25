@@ -50,7 +50,7 @@ export function ExpenseListTable({
               {expense.branch_name_snapshot ?? "Company-wide"}
             </TableCell>
             <TableCell className="font-medium">
-              {formatMoney(expense.amount, expense.currency_code)}
+              {formatMoney(expense.amount, expense.currency_code, { display: "symbol" })}
             </TableCell>
             <TableCell>
               {PAYMENT_METHOD_LABEL[expense.payment_method as PaymentMethod] ?? expense.payment_method}

@@ -27,7 +27,7 @@ function KpiIcon({ icon: Icon, tile }: { icon: typeof CircleDollarSign; tile: st
 }
 
 export function FinancialKpiCards({ summary }: { summary: FinancialSummary }) {
-  const money = (amount: number) => formatMoney(amount, summary.currencyCode);
+  const money = (amount: number) => formatMoney(amount, summary.currencyCode, { display: "symbol" });
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

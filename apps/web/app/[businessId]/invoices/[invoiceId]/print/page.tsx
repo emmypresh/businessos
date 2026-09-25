@@ -82,8 +82,8 @@ export default async function InvoicePrintPage({
             <tr key={item.id} className="border-b">
               <td className="py-2">{item.description}</td>
               <td className="py-2">{item.quantity}</td>
-              <td className="py-2">{formatMoney(item.unit_price, "NGN")}</td>
-              <td className="py-2 text-right">{formatMoney(item.line_total, "NGN")}</td>
+              <td className="py-2">{formatMoney(item.unit_price, invoice.currency_code, { display: "symbol" })}</td>
+              <td className="py-2 text-right">{formatMoney(item.line_total, invoice.currency_code, { display: "symbol" })}</td>
             </tr>
           ))}
         </tbody>
@@ -92,15 +92,15 @@ export default async function InvoicePrintPage({
       <div className="ml-auto flex w-56 flex-col gap-1 text-sm">
         <div className="flex justify-between">
           <span className="text-gray-600">Total</span>
-          <span className="font-medium">{formatMoney(invoice.total_amount, "NGN")}</span>
+          <span className="font-medium">{formatMoney(invoice.total_amount, invoice.currency_code, { display: "symbol" })}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Paid</span>
-          <span>{formatMoney(invoice.amount_paid, "NGN")}</span>
+          <span>{formatMoney(invoice.amount_paid, invoice.currency_code, { display: "symbol" })}</span>
         </div>
         <div className="flex justify-between border-t pt-1 font-medium">
           <span>Balance due</span>
-          <span>{formatMoney(balance, "NGN")}</span>
+          <span>{formatMoney(balance, invoice.currency_code, { display: "symbol" })}</span>
         </div>
       </div>
 

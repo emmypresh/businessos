@@ -63,6 +63,15 @@ function symbolFor(currencyCode: string): string {
   return CURRENCY_SYMBOLS[currencyCode as CurrencyCode] ?? currencyCode;
 }
 
+/**
+ * Exported for UI surfaces that need just the symbol (e.g. an "Amount
+ * (₦)" field label) without formatting a number — same deterministic
+ * table `formatMoney`'s "symbol" display mode uses.
+ */
+export function getCurrencySymbol(currencyCode: string): string {
+  return symbolFor(currencyCode);
+}
+
 export function formatMoney(
   amount: number,
   currencyCode: string,

@@ -11,7 +11,13 @@ import type { InvoicePaymentHistoryRow } from "@/lib/invoices/dal";
  * across the business, so invoice number/customer/branch are included as
  * their own columns.
  */
-export function PaymentHistoryListTable({ payments }: { payments: InvoicePaymentHistoryRow[] }) {
+export function PaymentHistoryListTable({
+  payments,
+  currencyCode,
+}: {
+  payments: InvoicePaymentHistoryRow[];
+  currencyCode: string;
+}) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -33,7 +39,7 @@ export function PaymentHistoryListTable({ payments }: { payments: InvoicePayment
               <TableCell className="font-medium">{payment.invoice_number}</TableCell>
               <TableCell>{payment.customer_name_snapshot}</TableCell>
               <TableCell>{payment.branch_name_snapshot}</TableCell>
-              <TableCell className="font-medium">{formatMoney(payment.amount, "NGN")}</TableCell>
+              <TableCell className="font-medium">{formatMoney(payment.amount, currencyCode, { display: "symbol" })}</TableCell>
               <TableCell>{PAYMENT_METHOD_LABEL[payment.payment_method as PaymentMethod] ?? payment.payment_method}</TableCell>
               <TableCell>{payment.reference ?? "—"}</TableCell>
             </TableRow>

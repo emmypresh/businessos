@@ -121,7 +121,7 @@ test.describe("Phase 1I returns + refunds", () => {
 
     await page.getByRole("button", { name: "Create return" }).click();
     await expect(page).toHaveURL(new RegExp(`/${owner.businessId}/returns/[0-9a-f-]{36}$`));
-    await expect(page.getByText("NGN 1,500.00")).toBeVisible();
+    await expect(page.getByText("₦1,500.00")).toBeVisible();
     await expect(page.getByText("Restocked")).toBeVisible();
     await expect(page.getByText("Customer return")).toBeVisible();
   });
@@ -177,7 +177,7 @@ test.describe("Phase 1I returns + refunds", () => {
 
     await page.getByRole("button", { name: "Create return" }).click();
     await expect(page).toHaveURL(new RegExp(`/${owner.businessId}/returns/[0-9a-f-]{36}$`));
-    await expect(page.getByText("NGN 4,000.00").first()).toBeVisible();
+    await expect(page.getByText("₦4,000.00").first()).toBeVisible();
   });
 
   test("D: a quantity exceeding what remains is client-side blocked", async ({ page }) => {
@@ -384,7 +384,7 @@ test.describe("Phase 1I returns + refunds", () => {
     await page.goto(`/${owner.businessId}/returns/${returnId}`);
     await expect(page.getByText(`E2E Ret Detail ${suffix}`)).toBeVisible();
     await expect(page.getByText("Wrong item")).toBeVisible();
-    await expect(page.getByText("NGN 1,000.00").first()).toBeVisible();
+    await expect(page.getByText("₦1,000.00").first()).toBeVisible();
     await expect(page.getByText("Restocked")).toBeVisible();
     // Immutable history — no edit/delete/void affordance anywhere.
     await expect(page.getByRole("button", { name: /^(edit|delete|void)$/i })).toHaveCount(0);

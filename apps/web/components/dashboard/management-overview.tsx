@@ -93,7 +93,7 @@ function ComparisonCard({
 }
 
 export function ManagementOverview({ businessId, businessName, summary, previousSummary, reporting, previousReporting, canViewCustomers, canViewInventory }: Props) {
-  const money = (amount: number) => formatMoney(amount, summary.currencyCode);
+  const money = (amount: number) => formatMoney(amount, summary.currencyCode, { display: "symbol" });
   const currentSales = reportingSales(reporting);
   const priorSales = reportingSales(previousReporting);
   const chartModel = buildSalesTrendChartModel(reporting.salesTrend);

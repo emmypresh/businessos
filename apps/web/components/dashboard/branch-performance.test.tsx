@@ -21,7 +21,7 @@ describe("BranchPerformance", () => {
 
   it("formats completed-sales revenue as currency and completed sales as an integer", () => {
     render(<BranchPerformance branches={branches} currencyCode="NGN" />);
-    expect(screen.getByText("NGN 125,000.50")).toBeInTheDocument();
+    expect(screen.getByText("₦125,000.50")).toBeInTheDocument();
     const row = screen.getByText("Main Branch").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText("8")).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe("BranchPerformance", () => {
     render(<BranchPerformance branches={branches} currencyCode="NGN" />);
     const row = screen.getByText("Annex").closest("tr");
     expect(row).not.toBeNull();
-    expect(within(row as HTMLElement).getByText("NGN 0.00")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("₦0.00")).toBeInTheDocument();
     expect(within(row as HTMLElement).getByText("0")).toBeInTheDocument();
   });
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getPermissions, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getReturn, getReturnItems } from "@/lib/returns/dal";
 import { RETURN_REASON_LABEL, REFUND_METHOD_LABEL, type ReturnReason, type RefundMethod } from "@/lib/returns/constants";
@@ -25,6 +25,11 @@ export default async function ReturnDetailPage({
   // renders identically to a nonexistent one (notFound()).
   const saleReturn = await getReturn(businessId, returnId);
   const items = await getReturnItems(businessId, returnId);
+  const business = await getBusinessDetails(businessId);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
+  const currencyCode = business.currency_code;
 
   return (
     <div className="flex flex-col gap-6" data-testid="return-detail">
@@ -85,7 +90,7 @@ export default async function ReturnDetailPage({
           <CardContent className="text-sm">
             <dl className="grid grid-cols-2 gap-y-1">
               <dt className="text-muted-foreground">Amount</dt>
-              <dd className="font-medium">{formatMoney(saleReturn.refund_amount, "NGN")}</dd>
+              <dd className="font-medium">{formatMoney(saleReturn.refund_amount, currencyCode, { display: "symbol" })}</dd>
               <dt className="text-muted-foreground">Method</dt>
               <dd>
                 {saleReturn.refund_method
@@ -121,8 +126,8 @@ export default async function ReturnDetailPage({
                       {item.sku_snapshot ? <p className="text-xs text-muted-foreground">{item.sku_snapshot}</p> : null}
                     </td>
                     <td className="py-2 pr-4">{item.quantity}</td>
-                    <td className="py-2 pr-4">{formatMoney(item.unit_price_snapshot, "NGN")}</td>
-                    <td className="py-2 pr-4">{formatMoney(item.line_total, "NGN")}</td>
+                    <td className="py-2 pr-4">{formatMoney(item.unit_price_snapshot, currencyCode, { display: "symbol" })}</td>
+                    <td className="py-2 pr-4">{formatMoney(item.line_total, currencyCode, { display: "symbol" })}</td>
                     {/* Historical fact, never an editable toggle — this
                         return's own immutable history has no path to
                         alter a restock decision after creation. */}

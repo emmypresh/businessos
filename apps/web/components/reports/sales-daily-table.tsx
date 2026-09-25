@@ -44,9 +44,9 @@ export function SalesDailyTable({ points, currencyCode }: { points: SalesTrendCh
                     abbreviated label is reserved for the chart's compact
                     axis ticks/tooltips only. */}
                 <TableCell>{point.date}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatMoney(point.revenue, currencyCode)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatMoney(point.revenue, currencyCode, { display: "symbol" })}</TableCell>
                 <TableCell className="text-right tabular-nums">{point.salesCount}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatMoney(point.averageOrderValue, currencyCode)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatMoney(point.averageOrderValue, currencyCode, { display: "symbol" })}</TableCell>
               </TableRow>
             ))}
           </TableBody>

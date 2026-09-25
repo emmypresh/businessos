@@ -129,11 +129,20 @@ describe("get_management_reporting_aggregate", () => {
     const to = "2026-09-11T00:00:00.000Z";
     const utc = await getAggregateInSessionTimezone(owner.userId, owner.businessId, "UTC", from, to);
     const kiritimati = await getAggregateInSessionTimezone(owner.userId, owner.businessId, "Pacific/Kiritimati", from, to);
+    const newYork = await getAggregateInSessionTimezone(owner.userId, owner.businessId, "America/New_York", from, to);
 
+    // Phase 1Q-0C: a positive (Kiritimati, UTC+14) AND a negative
+    // (New_York, UTC-4) offset both previously produced a spurious extra
+    // day and a non-UTC-anchored date string — generate_series(date, date,
+    // interval) has no direct overload, so it resolved to the
+    // session-TimeZone-dependent (timestamptz, timestamptz, interval) one.
+    // Both directions must collapse to the exact same single UTC bucket.
     expect(kiritimati.sales_trend).toEqual(utc.sales_trend);
+    expect(newYork.sales_trend).toEqual(utc.sales_trend);
     expect(utc.sales_trend).toEqual([
-      expect.objectContaining({ date: "2026-09-10 00:00:00+00", revenue: 100, order_count: 1 }),
+      expect.objectContaining({ date: "2026-09-10", revenue: 100, order_count: 1 }),
     ]);
     expect((kiritimati.sales_trend as Array<Record<string, unknown>>).reduce((sum, day) => sum + Number(day.order_count), 0)).toBe(1);
+    expect((newYork.sales_trend as Array<Record<string, unknown>>).reduce((sum, day) => sum + Number(day.order_count), 0)).toBe(1);
   });
 });

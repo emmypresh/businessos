@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getPermissions, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getInvoice, getInvoiceItems, getInvoicePayments, getInvoiceVoidEligibility, invoiceBalance } from "@/lib/invoices/dal";
 import { INVOICE_STATUS } from "@/lib/invoices/constants";
@@ -25,6 +25,11 @@ export default async function InvoiceDetailPage({
   // Scoped by BOTH business_id and invoice_id — a forged/foreign
   // invoiceId renders identically to a nonexistent one (notFound()).
   const invoice = await getInvoice(businessId, invoiceId);
+  // Phase 1Q-0C: the invoice's own business's IANA timezone, for the
+  // OVERDUE badge's calendar-date comparison — see isInvoiceOverdue's
+  // own header comment for why this can no longer default to Africa/
+  // Lagos for every business regardless of where it actually operates.
+  const business = await getBusinessDetails(businessId);
   const items = await getInvoiceItems(businessId, invoiceId);
   const payments = canViewPayments ? await getInvoicePayments(businessId, invoiceId) : [];
   const balance = invoiceBalance(invoice);
@@ -54,12 +59,17 @@ export default async function InvoiceDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <InvoiceStatusBadge status={invoice.status} dueDate={invoice.due_date} balance={balance} />
+          <InvoiceStatusBadge
+            status={invoice.status}
+            dueDate={invoice.due_date}
+            balance={balance}
+            timezone={business?.timezone}
+          />
           <Link href={`/${businessId}/invoices/${invoiceId}/print`} className={buttonVariants({ variant: "outline" })}>
             Print
           </Link>
           {canRecordPayment && !isVoid && !isPaid ? (
-            <PaymentForm businessId={businessId} invoiceId={invoiceId} balance={balance} />
+            <PaymentForm businessId={businessId} invoiceId={invoiceId} balance={balance} currencyCode={invoice.currency_code} />
           ) : null}
           {canVoid ? (
             <VoidInvoiceDialog businessId={businessId} invoiceId={invoiceId} invoiceNumber={invoice.invoice_number} />
@@ -98,11 +108,11 @@ export default async function InvoiceDetailPage({
           <CardContent className="text-sm">
             <dl className="grid grid-cols-2 gap-y-1">
               <dt className="text-muted-foreground">Total</dt>
-              <dd className="font-medium">{formatMoney(invoice.total_amount, "NGN")}</dd>
+              <dd className="font-medium">{formatMoney(invoice.total_amount, invoice.currency_code, { display: "symbol" })}</dd>
               <dt className="text-muted-foreground">Paid</dt>
-              <dd>{formatMoney(invoice.amount_paid, "NGN")}</dd>
+              <dd>{formatMoney(invoice.amount_paid, invoice.currency_code, { display: "symbol" })}</dd>
               <dt className="font-medium">Balance</dt>
-              <dd className="font-medium">{formatMoney(balance, "NGN")}</dd>
+              <dd className="font-medium">{formatMoney(balance, invoice.currency_code, { display: "symbol" })}</dd>
               {isVoid ? (
                 <>
                   <dt className="text-muted-foreground">Voided</dt>
@@ -137,8 +147,8 @@ export default async function InvoiceDetailPage({
                       {item.sku_snapshot ? <p className="text-xs text-muted-foreground">{item.sku_snapshot}</p> : null}
                     </td>
                     <td className="py-2 pr-4">{item.quantity}</td>
-                    <td className="py-2 pr-4">{formatMoney(item.unit_price, "NGN")}</td>
-                    <td className="py-2">{formatMoney(item.line_total, "NGN")}</td>
+                    <td className="py-2 pr-4">{formatMoney(item.unit_price, invoice.currency_code, { display: "symbol" })}</td>
+                    <td className="py-2">{formatMoney(item.line_total, invoice.currency_code, { display: "symbol" })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -162,7 +172,7 @@ export default async function InvoiceDetailPage({
             <CardTitle>Payment history</CardTitle>
           </CardHeader>
           <CardContent>
-            <PaymentHistoryTable payments={payments} />
+            <PaymentHistoryTable payments={payments} currencyCode={invoice.currency_code} />
           </CardContent>
         </Card>
       ) : null}

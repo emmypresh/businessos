@@ -23,6 +23,7 @@ import { isPartialPaymentInvalid } from "@/lib/validation/sales";
 import type { SaleProductOption } from "@/lib/sales/dal";
 import type { OperationalBranchOption } from "@/lib/branches/dal";
 import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
+import { formatMoney } from "@/lib/currency";
 
 type LineItem = {
   productId: string;
@@ -45,11 +46,13 @@ export function SaleForm({
   customers,
   branches,
   primaryBranchId,
+  currencyCode,
 }: {
   businessId: string;
   customers: { id: string; name: string }[];
   branches: OperationalBranchOption[];
   primaryBranchId: string | null;
+  currencyCode: string;
 }) {
   const [state, formAction] = useActionState(createSale, undefined);
 
@@ -188,7 +191,6 @@ export function SaleForm({
   }, 0);
   const discountValue = Number(discount) || 0;
   const totalEstimate = Math.max(0, subtotalEstimate - discountValue);
-  const currencyCode = items[0]?.currencyCode ?? "NGN";
 
   const itemsPayload = JSON.stringify(
     items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
@@ -343,12 +345,8 @@ export function SaleForm({
                         <p className="mt-1 text-xs text-amber-600">Exceeds available stock.</p>
                       ) : null}
                     </TableCell>
-                    <TableCell>
-                      {item.currencyCode} {item.sellingPrice.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {item.currencyCode} {lineTotal.toFixed(2)}
-                    </TableCell>
+                    <TableCell>{formatMoney(item.sellingPrice, currencyCode, { display: "symbol" })}</TableCell>
+                    <TableCell>{formatMoney(lineTotal, currencyCode, { display: "symbol" })}</TableCell>
                     <TableCell>
                       <Button
                         type="button"
@@ -457,7 +455,8 @@ export function SaleForm({
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Must be less than the total (estimated {currencyCode} {totalEstimate.toFixed(2)}).
+                Must be less than the total (estimated{" "}
+                {formatMoney(totalEstimate, currencyCode, { display: "symbol" })}).
               </p>
             )}
             {state?.fieldErrors?.amountPaid ? (
@@ -478,17 +477,11 @@ export function SaleForm({
         <p className="mb-2 font-medium">Review (estimated — the database confirms the exact amounts)</p>
         <dl className="grid grid-cols-2 gap-y-1">
           <dt className="text-muted-foreground">Subtotal</dt>
-          <dd className="text-right">
-            {currencyCode} {subtotalEstimate.toFixed(2)}
-          </dd>
+          <dd className="text-right">{formatMoney(subtotalEstimate, currencyCode, { display: "symbol" })}</dd>
           <dt className="text-muted-foreground">Discount</dt>
-          <dd className="text-right">
-            {currencyCode} {discountValue.toFixed(2)}
-          </dd>
+          <dd className="text-right">{formatMoney(discountValue, currencyCode, { display: "symbol" })}</dd>
           <dt className="font-medium">Total</dt>
-          <dd className="text-right font-medium">
-            {currencyCode} {totalEstimate.toFixed(2)}
-          </dd>
+          <dd className="text-right font-medium">{formatMoney(totalEstimate, currencyCode, { display: "symbol" })}</dd>
         </dl>
       </div>
 
@@ -499,7 +492,9 @@ export function SaleForm({
       ) : null}
 
       <SubmitButton disabled={partialPaymentInvalid || !branchId}>
-        {items.length === 0 || hasInvalidQuantity ? "Complete sale" : `Complete sale · ${currencyCode} ${totalEstimate.toFixed(2)}`}
+        {items.length === 0 || hasInvalidQuantity
+          ? "Complete sale"
+          : `Complete sale · ${formatMoney(totalEstimate, currencyCode, { display: "symbol" })}`}
       </SubmitButton>
     </form>
   );

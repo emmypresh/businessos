@@ -1,4 +1,5 @@
 import type { ManagementReportingAggregate } from "@/lib/reports/dal";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export const SALES_TREND_METRIC = {
   REVENUE: "revenue",
@@ -27,9 +28,35 @@ export type SalesTrendChartModel = {
   hasActivity: boolean;
 };
 
-function formatUtcDayLabel(date: string): string {
-  const parsed = new Date(`${date}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return date;
+const DAY_KEY_PATTERN = /^(\d{4}-\d{2}-\d{2})/;
+
+/**
+ * Normalizes a day key from the frozen aggregate to a plain "YYYY-MM-DD"
+ * calendar day. Phase 1Q-0C hydration fix: the aggregate's `date` field is
+ * documented as a plain UTC calendar day, but the underlying RPC builds it
+ * from `generate_series(p_from::date, ..., interval '1 day')` — Postgres
+ * has no `date`+`interval` series overload, so it resolves to the
+ * `timestamptz` one, and `d.day::text` can come back as a full timestamptz
+ * string (e.g. "2026-08-26 00:00:00+00") rather than "2026-08-26". The
+ * previous `` `${date}T00:00:00Z` `` concatenation assumed the clean form;
+ * fed the full-timestamp form instead, it built a non-standard, doubly-
+ * timestamped string whose Date.parse result is implementation-defined —
+ * Node (SSR) and the browser (hydration) can legitimately disagree on it,
+ * which reproduced as exactly this chart's hydration mismatch. Extracting
+ * the leading YYYY-MM-DD with a strict regex (never Date.parse on the raw
+ * aggregate value) makes both the `date` key and the `label` deterministic
+ * and identical server/client regardless of which form the aggregate
+ * returns — no RPC/query/migration change involved, this is app-layer
+ * normalization only.
+ */
+function normalizeDayKey(date: string): string {
+  const match = DAY_KEY_PATTERN.exec(date);
+  return match ? match[1] : date;
+}
+
+function formatUtcDayLabel(dayKey: string): string {
+  const parsed = new Date(`${dayKey}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return dayKey;
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(parsed);
 }
 
@@ -54,13 +81,16 @@ function safeNonNegativeInteger(value: number): number {
 export function buildSalesTrendChartModel(salesTrend: ManagementReportingAggregate["salesTrend"]): SalesTrendChartModel {
   const points = [...salesTrend]
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-    .map((day) => ({
-      date: day.date,
-      label: formatUtcDayLabel(day.date),
-      revenue: safeNumber(day.revenue),
-      salesCount: safeNonNegativeInteger(day.orderCount),
-      averageOrderValue: safeNumber(day.averageOrderValue),
-    }));
+    .map((day) => {
+      const dayKey = normalizeDayKey(day.date);
+      return {
+        date: dayKey,
+        label: formatUtcDayLabel(dayKey),
+        revenue: safeNumber(day.revenue),
+        salesCount: safeNonNegativeInteger(day.orderCount),
+        averageOrderValue: safeNumber(day.averageOrderValue),
+      };
+    });
 
   return {
     points,
@@ -80,10 +110,10 @@ export const SALES_TREND_METRIC_CONFIG: Record<SalesTrendMetric, { label: string
   [SALES_TREND_METRIC.AOV]: { label: "Average order value", shortLabel: "AOV", description: "Daily completed-sales revenue divided by daily completed sales count." },
 };
 
-/** Compact axis-tick formatting for large Naira amounts (e.g. "NGN 1.2M"). Display only — never used for tooltip exact values. */
+/** Compact axis-tick formatting for large amounts (e.g. "₦1.2M"). Display only — never used for tooltip exact values. Phase 1Q-0C: uses the same deterministic product symbol table as formatMoney's "symbol" mode, never the ISO code. */
 export function formatCompactCurrency(amount: number, currencyCode: string): string {
   const formatted = new Intl.NumberFormat("en-NG", { notation: "compact", maximumFractionDigits: 1 }).format(amount);
-  return `${currencyCode} ${formatted}`;
+  return `${getCurrencySymbol(currencyCode)}${formatted}`;
 }
 
 export function formatIntegerTick(value: number): string {

@@ -27,7 +27,7 @@ const METRIC_ORDER: SalesTrendMetric[] = [SALES_TREND_METRIC.REVENUE, SALES_TREN
 
 function formatMetricValue(metric: SalesTrendMetric, value: number, currencyCode: string): string {
   if (metric === SALES_TREND_METRIC.SALES) return formatIntegerTick(value);
-  return formatMoney(value, currencyCode);
+  return formatMoney(value, currencyCode, { display: "symbol" });
 }
 
 function formatAxisTick(metric: SalesTrendMetric, value: number, currencyCode: string): string {

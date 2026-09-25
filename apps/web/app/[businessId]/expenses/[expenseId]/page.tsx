@@ -53,7 +53,7 @@ export default async function ExpenseDetailPage({
           <CardContent className="text-sm">
             <dl className="grid grid-cols-2 gap-y-1">
               <dt className="text-muted-foreground">Amount</dt>
-              <dd className="font-medium">{formatMoney(expense.amount, expense.currency_code)}</dd>
+              <dd className="font-medium">{formatMoney(expense.amount, expense.currency_code, { display: "symbol" })}</dd>
               {/* Rendered from the expense's OWN historical snapshot —
                   never a join to the live expense_categories row. A
                   later category rename or archive never changes what

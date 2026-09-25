@@ -1,9 +1,10 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listActiveExpenseCategoriesForPicker } from "@/lib/expenses/dal";
 import { listExpenseBranchOptions } from "@/lib/branches/dal";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CurrencyUnavailableState } from "@/components/business/currency-unavailable-state";
 
 export default async function NewExpensePage({
   params,
@@ -17,13 +18,27 @@ export default async function NewExpensePage({
 
   // ACTIVE categories only — an archived category can never be selected
   // for a new expense (§5/§29 of the approved plan).
-  const [categories, { options: branches, primaryBranchId }] = await Promise.all([
+  const [categories, { options: branches, primaryBranchId }, business] = await Promise.all([
     listActiveExpenseCategoriesForPicker(businessId),
     // Every ACTIVE branch of the business, authorized on expenses.manage
     // alone — see expense-form.tsx's own comment on why this is
     // deliberately NOT getOperationalBranchOptions.
     listExpenseBranchOptions(businessId),
+    // Phase 1Q-0C: the amount label's currency indicator is display-only
+    // and reads from this same authoritative loader create_expense's own
+    // server-side currency derivation is built on — never a separate,
+    // independently-drifting source.
+    getBusinessDetails(businessId),
   ]);
+  // Phase 1Q-0C follow-up: fail closed. business.currency_code is never
+  // absent for a real business (see the DB-level NOT NULL/no-default
+  // constraint added in 20260923090400_expense_currency_from_business.sql),
+  // so a missing business record here means the load itself failed — never
+  // a reason to guess NGN for a possibly non-NGN business.
+  if (!business) {
+    return <CurrencyUnavailableState action="record an expense" />;
+  }
+  const currencyCode = business.currency_code;
 
   // A caller with expenses.manage but not expenses.view lands back here
   // after a successful create or void (lib/expenses/actions.ts) instead
@@ -57,6 +72,7 @@ export default async function NewExpensePage({
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         branches={branches}
         primaryBranchId={primaryBranchId}
+        currencyCode={currencyCode}
       />
     </div>
   );

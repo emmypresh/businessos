@@ -1,4 +1,4 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listCustomers } from "@/lib/customers/dal";
 import { getOperationalBranchOptions } from "@/lib/branches/dal";
@@ -25,6 +25,10 @@ export default async function NewSalePage({
   // SMEs at this scale.
   const { rows } = await listCustomers(businessId, { status: "active" });
   const { options: branches, primaryBranchId } = await getOperationalBranchOptions(businessId);
+  const business = await getBusinessDetails(businessId);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
 
   // A caller with sales.create but not sales.view lands back here after a
   // successful sale (lib/sales/actions.ts) instead of the sale detail
@@ -54,6 +58,7 @@ export default async function NewSalePage({
           customers={rows.map((c) => ({ id: c.id, name: c.name }))}
           branches={branches}
           primaryBranchId={primaryBranchId}
+          currencyCode={business.currency_code}
         />
       )}
     </div>

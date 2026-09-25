@@ -96,7 +96,7 @@ test.describe("Phase 1H invoices + payments", () => {
     await expect(page).toHaveURL(new RegExp(`/${owner.businessId}/invoices/[0-9a-f-]{36}$`));
     const statusBadge = page.getByTestId("invoice-status-badge");
     await expect(statusBadge).toContainText("Issued");
-    await expect(page.getByText("NGN 1,000.00").first()).toBeVisible();
+    await expect(page.getByText("₦1,000.00").first()).toBeVisible();
 
     // Partial payment: 400 of 1000.
     await page.getByRole("button", { name: "Record payment" }).click();
@@ -131,8 +131,8 @@ test.describe("Phase 1H invoices + payments", () => {
     await page.reload();
     await expect(page.getByRole("button", { name: "Record payment" })).toHaveCount(0);
     const paymentHistory = page.getByTestId("payment-history");
-    await expect(paymentHistory.getByText("NGN 400.00")).toBeVisible();
-    await expect(paymentHistory.getByText("NGN 600.00")).toBeVisible();
+    await expect(paymentHistory.getByText("₦400.00")).toBeVisible();
+    await expect(paymentHistory.getByText("₦600.00")).toBeVisible();
   });
 
   // Codex adversarial review, remediation round 2, Low 4: clicking "Add
@@ -456,6 +456,6 @@ test.describe("Phase 1H invoices + payments", () => {
 
     await page.goto(`/${owner.businessId}/payments`);
     await expect(page.getByText("Payments View Only Customer")).toBeVisible();
-    await expect(page.getByText("NGN 3,000.00")).toBeVisible();
+    await expect(page.getByText("₦3,000.00")).toBeVisible();
   });
 });

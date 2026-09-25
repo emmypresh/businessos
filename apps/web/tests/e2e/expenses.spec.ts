@@ -34,7 +34,7 @@ async function fillMinimalExpenseForm(page: Page) {
   // Category and payment method default to a valid selection already
   // (ExpenseForm's own useState defaults) — only amount is required to
   // be filled in for a minimal valid submission.
-  await page.getByLabel("Amount (NGN)").fill("1500");
+  await page.getByLabel("Amount (₦)").fill("1500");
 }
 
 test.describe("expenses", () => {
@@ -167,7 +167,7 @@ test.describe("expenses", () => {
     await loginAsInBrowser(page, email, PASSWORD);
 
     await page.goto(`/${businessId}/expenses/new`);
-    const amountInput = page.getByLabel("Amount (NGN)");
+    const amountInput = page.getByLabel("Amount (₦)");
     await amountInput.fill("1.234");
     const isValid = await amountInput.evaluate((el: HTMLInputElement) => el.checkValidity());
     expect(isValid).toBe(false);
@@ -178,7 +178,7 @@ test.describe("expenses", () => {
     await loginAsInBrowser(page, email, PASSWORD);
 
     await page.goto(`/${businessId}/expenses/new`);
-    const amountInput = page.getByLabel("Amount (NGN)");
+    const amountInput = page.getByLabel("Amount (₦)");
     await amountInput.fill("0");
     const isValid = await amountInput.evaluate((el: HTMLInputElement) => el.checkValidity());
     expect(isValid).toBe(false);

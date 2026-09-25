@@ -98,9 +98,9 @@ test.describe("financial overview", () => {
     await loginAsInBrowser(page, owner.email, PASSWORD);
     await page.goto(`/${owner.businessId}/reports?preset=last_30_days`);
 
-    await expect(page.getByText("NGN 5,000.00").first()).toBeVisible();
-    await expect(page.getByText("NGN 1,200.00").first()).toBeVisible();
-    await expect(page.getByText("NGN 3,800.00").first()).toBeVisible(); // net cash flow = 5000 - 1200
+    await expect(page.getByText("₦5,000.00").first()).toBeVisible();
+    await expect(page.getByText("₦1,200.00").first()).toBeVisible();
+    await expect(page.getByText("₦3,800.00").first()).toBeVisible(); // net cash flow = 5000 - 1200
   });
 
   test("a reports-only caller (no sales.view, no expenses.view) can still view the aggregate", async ({ page }) => {
@@ -151,6 +151,6 @@ test.describe("financial overview", () => {
 
     await page.goto(`/${businessId}/reports?preset=custom&dateFrom=1999-01-01&dateTo=1999-01-02`);
     await expect(page.getByText("No sales or expense activity in this range.")).toBeVisible();
-    await expect(page.getByText("NGN 0.00").first()).toBeVisible();
+    await expect(page.getByText("₦0.00").first()).toBeVisible();
   });
 });

@@ -148,9 +148,9 @@ test.describe("Sales & Revenue detailed report (Phase 1N-C2)", () => {
     await loginAsInBrowser(page, owner.email, PASSWORD);
     await page.goto(`/${owner.businessId}/reports/sales?preset=last_30_days`);
 
-    await expect(page.getByTestId("kpi-sales-revenue")).toContainText("NGN 4,000.00");
+    await expect(page.getByTestId("kpi-sales-revenue")).toContainText("₦4,000.00");
     await expect(page.getByTestId("kpi-completed-sales")).toContainText("1");
-    await expect(page.getByTestId("kpi-average-order-value")).toContainText("NGN 4,000.00");
+    await expect(page.getByTestId("kpi-average-order-value")).toContainText("₦4,000.00");
 
     const bodyText = await page.locator("body").innerText();
     expect(bodyText.toLowerCase()).not.toMatch(/\bprofit\b|\bincome\b|\bearnings\b|\bnet sales\b/);

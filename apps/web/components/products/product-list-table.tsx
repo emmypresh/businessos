@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StockStateBadge } from "@/components/inventory/low-stock-badge";
 import type { ProductListRow } from "@/lib/products/dal";
+import { formatMoney } from "@/lib/currency";
 
 export function ProductListTable({
   businessId,
@@ -39,7 +40,7 @@ export function ProductListTable({
               {product.sku ? <p className="text-xs text-muted-foreground">{product.sku}</p> : null}
             </TableCell>
             <TableCell>
-              {product.currency_code} {product.selling_price.toFixed(2)}
+              {formatMoney(product.selling_price, product.currency_code, { display: "symbol" })}
             </TableCell>
             <TableCell>
               <Badge variant={product.status === "active" ? "default" : "outline"}>{product.status}</Badge>

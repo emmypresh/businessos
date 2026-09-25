@@ -1,4 +1,4 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { ReturnForm } from "@/components/returns/return-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,6 +22,10 @@ export default async function NewReturnPage({
   // they get, mirroring /invoices/new's own identical `?created=1`
   // pattern.
   const created = query.created === "1";
+  const business = await getBusinessDetails(businessId);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,7 +35,7 @@ export default async function NewReturnPage({
           <AlertDescription>Return created successfully.</AlertDescription>
         </Alert>
       ) : null}
-      <ReturnForm businessId={businessId} />
+      <ReturnForm businessId={businessId} currencyCode={business.currency_code} />
     </div>
   );
 }

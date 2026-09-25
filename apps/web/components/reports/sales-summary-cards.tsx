@@ -38,7 +38,7 @@ export function SalesSummaryCards({
   averageOrderValue: number;
   currencyCode: string;
 }) {
-  const money = (amount: number) => formatMoney(amount, currencyCode);
+  const money = (amount: number) => formatMoney(amount, currencyCode, { display: "symbol" });
 
   return (
     // UI3: sm:grid-cols-3 let 3 columns activate as early as 640px, which

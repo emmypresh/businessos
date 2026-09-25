@@ -10,6 +10,7 @@ import { StockSummaryCard } from "@/components/products/stock-summary-card";
 import { ArchiveProductDialog } from "@/components/products/archive-product-dialog";
 import { InventoryHistoryTable } from "@/components/inventory/inventory-history-table";
 import { ProductForm } from "@/components/products/product-form";
+import { formatMoney } from "@/lib/currency";
 
 export default async function ProductDetailPage({
   params,
@@ -95,12 +96,16 @@ export default async function ProductDetailPage({
               <dd>{product.unit}</dd>
               <dt className="text-muted-foreground">Selling price</dt>
               <dd>
-                {product.currency_code} {product.selling_price.toFixed(2)}
+                {formatMoney(product.selling_price, product.currency_code, { display: "symbol" })}
               </dd>
               {canSeeCost ? (
                 <>
                   <dt className="text-muted-foreground">Cost price</dt>
-                  <dd>{costPrice !== null ? `${product.currency_code} ${costPrice.toFixed(2)}` : "—"}</dd>
+                  <dd>
+                    {costPrice !== null
+                      ? formatMoney(costPrice, product.currency_code, { display: "symbol" })
+                      : "—"}
+                  </dd>
                 </>
               ) : null}
             </dl>
@@ -143,6 +148,7 @@ export default async function ProductDetailPage({
                   rows={history.rows}
                   showCost={canSeeCost}
                   showProductColumn={false}
+                  currencyCode={product.currency_code}
                 />
                 <Link
                   href={`/${businessId}/inventory/history?productId=${productId}`}

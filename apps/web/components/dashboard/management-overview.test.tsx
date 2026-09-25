@@ -14,7 +14,7 @@ describe("ManagementOverview", () => {
   it("renders truthful KPI definitions, comparisons, responsive grid classes, and the real scoped report link", () => {
     render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={currentSummary} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
     expect(screen.getByRole("heading", { name: "Acme Stores" })).toBeInTheDocument();
-    expect(screen.getAllByText("NGN 1,200.00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("₦1,200.00").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /financial overview/i })).toHaveAttribute("href", "/business-a/reports");
     expect(screen.getAllByText("Completed-sales revenue").length).toBeGreaterThan(0);
     expect(screen.getByText("Up 20% vs previous period")).toBeInTheDocument();
@@ -45,13 +45,13 @@ describe("ManagementOverview", () => {
 
   it("never lets a large currency KPI value break inside its digit groups (no break-words/break-all)", () => {
     render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={{ ...currentSummary, cashCollected: 1_234_567_890 }} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
-    const value = screen.getByText("NGN 1,234,567,890.00");
+    const value = screen.getByText("₦1,234,567,890.00");
     expect(value).not.toHaveClass("break-words");
     expect(value).not.toHaveClass("break-all");
     // Only whitespace (the space between currency code and number) may be a
     // wrap point — never a mid-digit-group break, and never truncated.
     expect(value).not.toHaveClass("truncate");
-    expect(value.textContent).toBe("NGN 1,234,567,890.00");
+    expect(value.textContent).toBe("₦1,234,567,890.00");
   });
 
   // Phase 1N-UI4: lg:grid-cols-4 (activating at 1024px) was measured live
@@ -67,11 +67,11 @@ describe("ManagementOverview", () => {
   });
 
   it.each([
-    ["NGN 1,000.00", 1_000],
-    ["NGN 100,000.00", 100_000],
-    ["NGN 1,000,000.00", 1_000_000],
-    ["NGN 100,000,000.00", 100_000_000],
-    ["NGN 1,234,567,890.00", 1_234_567_890],
+    ["₦1,000.00", 1_000],
+    ["₦100,000.00", 100_000],
+    ["₦1,000,000.00", 1_000_000],
+    ["₦100,000,000.00", 100_000_000],
+    ["₦1,234,567,890.00", 1_234_567_890],
   ])("keeps the exact formatted currency text %s unchanged and free of break-words", (expectedText, cashCollected) => {
     render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={{ ...currentSummary, cashCollected }} previousSummary={priorSummary} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
     const value = screen.getByText(expectedText);
@@ -79,6 +79,22 @@ describe("ManagementOverview", () => {
     expect(value).not.toHaveClass("break-words");
     expect(value).not.toHaveClass("break-all");
     expect(value).toHaveClass("text-2xl", "tabular-nums", "min-w-0");
+  });
+
+  // Phase 1Q-0C: dashboard KPI currency-symbol coverage for all six launch
+  // currencies, not just NGN — mirrors lib/currency.ts's own CURRENCY_SYMBOLS
+  // table exactly.
+  it.each([
+    ["NGN", "₦1,200.00"],
+    ["GHS", "GH₵1,200.00"],
+    ["KES", "KSh1,200.00"],
+    ["ZAR", "R1,200.00"],
+    ["GBP", "£1,200.00"],
+    ["USD", "$1,200.00"],
+  ])("renders the %s KPI value with its product symbol, never the ISO code", (currencyCode, expected) => {
+    render(<ManagementOverview businessId="business-a" businessName="Acme Stores" summary={{ ...currentSummary, currencyCode }} previousSummary={{ ...priorSummary, currencyCode }} reporting={currentReporting} previousReporting={priorReporting} canViewCustomers canViewInventory />);
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+    expect(screen.queryByText(new RegExp(`${currencyCode} 1,200`))).not.toBeInTheDocument();
   });
 
   it("hides customer and inventory drilldown links when the caller lacks those permissions", () => {

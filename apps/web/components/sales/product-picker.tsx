@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { searchProductsForSaleAction } from "@/lib/sales/actions";
 import type { SaleProductOption } from "@/lib/sales/dal";
+import { formatMoney } from "@/lib/currency";
 
 /**
  * Search-as-you-type product picker for the sale-creation flow. Debounced
@@ -84,7 +85,7 @@ export function ProductPicker({
                   </span>
                 </span>
                 <span className="flex items-center gap-2 whitespace-nowrap text-muted-foreground">
-                  {product.currencyCode} {product.sellingPrice.toFixed(2)}
+                  {formatMoney(product.sellingPrice, product.currencyCode, { display: "symbol" })}
                   <Button type="button" size="sm" variant="outline" tabIndex={-1}>
                     Add
                   </Button>

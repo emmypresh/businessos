@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getPermissions, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listInvoices } from "@/lib/invoices/dal";
 import { listInvoiceFilterBranchOptions } from "@/lib/branches/dal";
@@ -44,6 +44,9 @@ export default async function InvoicesPage({
     branchParsed && allBranches.some((b) => b.id === branchParsed) ? branchParsed : undefined;
 
   const { rows, nextCursor } = await listInvoices(businessId, { search, status, branchId, cursor });
+  // Phase 1Q-0C: threaded once for the whole list — see InvoiceListTable's
+  // own comment.
+  const business = await getBusinessDetails(businessId);
 
   const hasFilters = Boolean(search || status || branchId);
   const baseHref =
@@ -84,7 +87,7 @@ export default async function InvoicesPage({
         />
       ) : (
         <>
-          <InvoiceListTable businessId={businessId} invoices={rows} />
+          <InvoiceListTable businessId={businessId} invoices={rows} timezone={business?.timezone} />
           <PaginationLink href={baseHref} nextCursor={nextCursor} />
         </>
       )}

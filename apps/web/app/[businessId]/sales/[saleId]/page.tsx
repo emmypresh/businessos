@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL, type PaymentStatus } from "@/lib/sales/constants";
+import { formatMoney } from "@/lib/currency";
 
 export default async function SaleDetailPage({
   params,
@@ -91,9 +92,7 @@ export default async function SaleDetailPage({
               <dt className="text-muted-foreground">Method</dt>
               <dd>{sale.payment_method ?? "—"}</dd>
               <dt className="text-muted-foreground">Amount paid</dt>
-              <dd>
-                {sale.currency_code} {sale.amount_paid.toFixed(2)}
-              </dd>
+              <dd>{formatMoney(sale.amount_paid, sale.currency_code, { display: "symbol" })}</dd>
               {/* Branch and sold-from location, both from the sale's OWN
                   historical snapshot columns — never a join to the live
                   business_branches/inventory_locations rows. A branch
@@ -137,12 +136,8 @@ export default async function SaleDetailPage({
                     ) : null}
                   </TableCell>
                   <TableCell>{item.quantity}</TableCell>
-                  <TableCell>
-                    {sale.currency_code} {item.unit_price.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    {sale.currency_code} {item.line_total.toFixed(2)}
-                  </TableCell>
+                  <TableCell>{formatMoney(item.unit_price, sale.currency_code, { display: "symbol" })}</TableCell>
+                  <TableCell>{formatMoney(item.line_total, sale.currency_code, { display: "symbol" })}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -150,17 +145,11 @@ export default async function SaleDetailPage({
 
           <dl className="mt-4 ml-auto grid w-fit grid-cols-2 gap-x-6 gap-y-1 text-sm">
             <dt className="text-muted-foreground">Subtotal</dt>
-            <dd className="text-right">
-              {sale.currency_code} {sale.subtotal.toFixed(2)}
-            </dd>
+            <dd className="text-right">{formatMoney(sale.subtotal, sale.currency_code, { display: "symbol" })}</dd>
             <dt className="text-muted-foreground">Discount</dt>
-            <dd className="text-right">
-              {sale.currency_code} {sale.discount.toFixed(2)}
-            </dd>
+            <dd className="text-right">{formatMoney(sale.discount, sale.currency_code, { display: "symbol" })}</dd>
             <dt className="font-medium">Total</dt>
-            <dd className="text-right font-medium">
-              {sale.currency_code} {sale.total.toFixed(2)}
-            </dd>
+            <dd className="text-right font-medium">{formatMoney(sale.total, sale.currency_code, { display: "symbol" })}</dd>
           </dl>
         </CardContent>
       </Card>

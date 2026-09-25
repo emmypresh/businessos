@@ -43,13 +43,6 @@ export const EXPENSE_CATEGORY_STATUS_LABEL: Record<ExpenseCategoryStatus, string
   [EXPENSE_CATEGORY_STATUS.ARCHIVED]: "Archived",
 };
 
-// Phase 1E is explicitly NGN-only — expenses.currency_code is a fixed
-// literal at the database layer (create_expense hardcodes it, and the
-// CHECK constraint on public.expenses.currency_code rejects anything
-// else). Mirrored here only for display; the client never sends a
-// currency to create_expense at all.
-export const EXPENSE_CURRENCY_CODE = "NGN";
-
 // The exact maximum representable value of a numeric(14,2) column
 // (precision 14, scale 2), mirroring create_expense's own v_max_money
 // exactly.

@@ -771,7 +771,7 @@ export type Database = {
           created_at?: string
           created_by: string
           creation_key: string
-          currency_code?: string
+          currency_code: string
           expense_number: string
           id?: string
           incurred_at: string
@@ -1153,6 +1153,7 @@ export type Database = {
           created_at: string
           created_by: string
           creation_key: string
+          currency_code: string
           customer_email_snapshot: string | null
           customer_id: string
           customer_name_snapshot: string
@@ -1176,6 +1177,7 @@ export type Database = {
           created_at?: string
           created_by: string
           creation_key: string
+          currency_code: string
           customer_email_snapshot?: string | null
           customer_id: string
           customer_name_snapshot: string
@@ -1199,6 +1201,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           creation_key?: string
+          currency_code?: string
           customer_email_snapshot?: string | null
           customer_id?: string
           customer_name_snapshot?: string
@@ -1468,7 +1471,7 @@ export type Database = {
           created_at?: string
           created_by: string
           creation_key: string
-          currency_code?: string
+          currency_code: string
           description?: string | null
           id?: string
           low_stock_threshold?: number | null
@@ -1815,7 +1818,7 @@ export type Database = {
           created_at?: string
           created_by: string
           creation_key: string
-          currency_code?: string
+          currency_code: string
           customer_address_snapshot?: string | null
           customer_email_snapshot?: string | null
           customer_id?: string | null
@@ -2709,14 +2712,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_management_reporting_aggregate: {
-        Args: {
-          p_business_id: string
-          p_from: string
-          p_to: string
-        }
-        Returns: Json
-      }
       get_invitation_branch_options: {
         Args: { p_business_id: string }
         Returns: {
@@ -2763,6 +2758,14 @@ export type Database = {
       get_invoice_void_eligibility: {
         Args: { p_business_id: string; p_invoice_id: string }
         Returns: boolean
+      }
+      get_management_reporting_aggregate: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
+      get_management_reporting_aggregate_implementation: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: Json
       }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
       get_notification_branch_options: {

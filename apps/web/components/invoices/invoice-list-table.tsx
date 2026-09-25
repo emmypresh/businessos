@@ -7,9 +7,14 @@ import { invoiceBalance, type InvoiceRow } from "@/lib/invoices/dal";
 export function InvoiceListTable({
   businessId,
   invoices,
+  timezone,
 }: {
   businessId: string;
   invoices: InvoiceRow[];
+  // Phase 1Q-0C: the business's own IANA timezone, threaded once for the
+  // whole list (every row belongs to the same business) rather than
+  // re-queried per row.
+  timezone?: string;
 }) {
   if (invoices.length === 0) return null;
 
@@ -46,11 +51,16 @@ export function InvoiceListTable({
                 <TableCell>{invoice.customer_name_snapshot}</TableCell>
                 <TableCell className="text-muted-foreground">{invoice.branch_name_snapshot}</TableCell>
                 <TableCell>
-                  <InvoiceStatusBadge status={invoice.status} dueDate={invoice.due_date} balance={balance} />
+                  <InvoiceStatusBadge
+                    status={invoice.status}
+                    dueDate={invoice.due_date}
+                    balance={balance}
+                    timezone={timezone}
+                  />
                 </TableCell>
-                <TableCell className="font-medium">{formatMoney(invoice.total_amount, "NGN")}</TableCell>
-                <TableCell>{formatMoney(invoice.amount_paid, "NGN")}</TableCell>
-                <TableCell>{formatMoney(balance, "NGN")}</TableCell>
+                <TableCell className="font-medium">{formatMoney(invoice.total_amount, invoice.currency_code, { display: "symbol" })}</TableCell>
+                <TableCell>{formatMoney(invoice.amount_paid, invoice.currency_code, { display: "symbol" })}</TableCell>
+                <TableCell>{formatMoney(balance, invoice.currency_code, { display: "symbol" })}</TableCell>
                 <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : "—"}</TableCell>
                 <TableCell>{new Date(invoice.issued_at).toLocaleDateString()}</TableCell>
               </TableRow>

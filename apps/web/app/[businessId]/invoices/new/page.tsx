@@ -1,4 +1,4 @@
-import { requirePermissionOrNotFound } from "@/lib/business/dal";
+import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getInvoiceBranchOptions } from "@/lib/invoices/dal";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
@@ -21,6 +21,10 @@ export default async function NewInvoicePage({
   // OR products.manage OR inventory.adjust) — an UNRELATED permission set
   // invoices.manage does not, and must not be made to, imply.
   const { options: branches, primaryBranchId } = await getInvoiceBranchOptions(businessId);
+  const business = await getBusinessDetails(businessId);
+  if (!business) {
+    throw new Error("Failed to load business currency.");
+  }
 
   // A caller with invoices.manage but no invoices.view lands back here
   // (see createInvoice's own redirect logic, lib/invoices/actions.ts) —
@@ -36,7 +40,7 @@ export default async function NewInvoicePage({
           <AlertDescription>Invoice created successfully.</AlertDescription>
         </Alert>
       ) : null}
-      <InvoiceForm businessId={businessId} branches={branches} primaryBranchId={primaryBranchId} />
+      <InvoiceForm businessId={businessId} branches={branches} primaryBranchId={primaryBranchId} currencyCode={business.currency_code} />
     </div>
   );
 }

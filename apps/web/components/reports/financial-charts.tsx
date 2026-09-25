@@ -34,7 +34,7 @@ function ComparisonBar({
       <div className="flex items-baseline justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
         <span className={"font-medium " + (isNegative || tone === "negative" ? "text-destructive" : "")}>
-          {formatMoney(value, currencyCode)}
+          {formatMoney(value, currencyCode, { display: "symbol" })}
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">

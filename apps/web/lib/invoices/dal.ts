@@ -17,7 +17,7 @@ const INVOICE_COLUMNS =
   "id, business_id, invoice_number, customer_id, " +
   "customer_name_snapshot, customer_phone_snapshot, customer_email_snapshot, " +
   "branch_id, branch_name_snapshot, " +
-  "status, issued_at, due_date, total_amount, amount_paid, notes, " +
+  "status, issued_at, due_date, total_amount, amount_paid, currency_code, notes, " +
   "created_by, created_at, updated_at, voided_at, voided_by";
 
 export type InvoiceRow = {
@@ -35,6 +35,10 @@ export type InvoiceRow = {
   due_date: string | null;
   total_amount: number;
   amount_paid: number;
+  // Phase 1Q-0C: the owning business's own base currency at creation
+  // time (public.invoices.currency_code) — always equal to
+  // business.currency_code, never independently editable.
+  currency_code: string;
   notes: string | null;
   created_by: string;
   created_at: string;

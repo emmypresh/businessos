@@ -27,9 +27,9 @@ describe("SalesSummaryCards — tablet responsive grid (Phase 1N-UI3)", () => {
 
   it("preserves exact formatted values", () => {
     render(<SalesSummaryCards {...props} />);
-    expect(screen.getByText("NGN 208,750.50")).toBeInTheDocument();
+    expect(screen.getByText("₦208,750.50")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("NGN 4,970.25")).toBeInTheDocument();
+    expect(screen.getByText("₦4,970.25")).toBeInTheDocument();
   });
 
   it("uses 1 column by default (mobile), 2 at sm, and only 3 at xl — never 3 as early as sm", () => {
@@ -50,8 +50,8 @@ describe("SalesSummaryCards — tablet responsive grid (Phase 1N-UI3)", () => {
 
   it("never truncates, break-alls, break-words, or abbreviates the formatted values", () => {
     render(<SalesSummaryCards {...props} />);
-    const revenueValue = screen.getByText("NGN 208,750.50");
-    const aovValue = screen.getByText("NGN 4,970.25");
+    const revenueValue = screen.getByText("₦208,750.50");
+    const aovValue = screen.getByText("₦4,970.25");
     for (const el of [revenueValue, aovValue]) {
       expect(el.className).not.toMatch(/truncate|break-all|break-words/);
     }
@@ -62,5 +62,20 @@ describe("SalesSummaryCards — tablet responsive grid (Phase 1N-UI3)", () => {
     render(<SalesSummaryCards {...props} />);
     const icons = document.querySelectorAll("svg[aria-hidden='true']");
     expect(icons.length).toBe(3);
+  });
+
+  // Phase 1Q-0C: sales report summary currency-symbol coverage for all six
+  // launch currencies.
+  it.each([
+    ["NGN", "₦"],
+    ["GHS", "GH₵"],
+    ["KES", "KSh"],
+    ["ZAR", "R"],
+    ["GBP", "£"],
+    ["USD", "$"],
+  ])("formats the %s revenue KPI with its product symbol, never the ISO code", (currencyCode, symbol) => {
+    render(<SalesSummaryCards {...props} currencyCode={currencyCode} />);
+    expect(screen.getByText(`${symbol}208,750.50`)).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${currencyCode} 208,750`))).not.toBeInTheDocument();
   });
 });

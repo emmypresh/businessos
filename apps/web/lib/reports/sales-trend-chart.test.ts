@@ -70,6 +70,31 @@ describe("buildSalesTrendChartModel", () => {
     expect(model.points).toEqual([]);
     expect(model.hasActivity).toBe(false);
   });
+
+  // Phase 1Q-0C hydration regression: get_management_reporting_aggregate's
+  // `d.day::text` (generate_series resolving to the timestamptz overload,
+  // never a plain `date`) can come back as a full timestamptz string like
+  // "2026-08-26 00:00:00+00" rather than "2026-08-26" — this reproduced as
+  // a server/client hydration mismatch (implementation-defined Date.parse
+  // of the previous `` `${date}T00:00:00Z` `` concatenation). Both the
+  // `date` key and the `label` must normalize to the plain calendar day
+  // regardless of which form the aggregate returns, deterministically, no
+  // Date.parse on the raw value involved.
+  it("normalizes a full timestamptz day key to a plain YYYY-MM-DD date and a stable label", () => {
+    const model = buildSalesTrendChartModel([
+      { date: "2026-08-26 00:00:00+00", revenue: 100, orderCount: 1, averageOrderValue: 100 },
+    ]);
+    expect(model.points[0].date).toBe("2026-08-26");
+    expect(model.points[0].label).toBe("Aug 26");
+  });
+
+  it("normalizes an ISO timestamp day key (with T/Z) identically to the plain form", () => {
+    const model = buildSalesTrendChartModel([
+      { date: "2026-08-26T00:00:00.000Z", revenue: 0, orderCount: 0, averageOrderValue: 0 },
+    ]);
+    expect(model.points[0].date).toBe("2026-08-26");
+    expect(model.points[0].label).toBe("Aug 26");
+  });
 });
 
 describe("metricValue", () => {
@@ -82,8 +107,21 @@ describe("metricValue", () => {
 });
 
 describe("formatCompactCurrency", () => {
-  it("formats large amounts compactly with the currency code", () => {
-    expect(formatCompactCurrency(1200000, "NGN")).toBe("NGN 1.2M");
+  it("formats large amounts compactly with the currency symbol, not the ISO code", () => {
+    expect(formatCompactCurrency(1200000, "NGN")).toBe("₦1.2M");
+  });
+
+  // Phase 1Q-0C: all six launch currencies' symbols, compact-formatted —
+  // mirrors lib/currency.ts's own CURRENCY_SYMBOLS table exactly.
+  it.each([
+    ["NGN", "₦"],
+    ["GHS", "GH₵"],
+    ["KES", "KSh"],
+    ["ZAR", "R"],
+    ["GBP", "£"],
+    ["USD", "$"],
+  ])("uses the %s symbol (%s) for compact axis ticks", (code, symbol) => {
+    expect(formatCompactCurrency(1200000, code)).toBe(`${symbol}1.2M`);
   });
 });
 

@@ -23,12 +23,14 @@ export function SalePicker({
   onSelect,
   invalid,
   errorId,
+  currencyCode,
 }: {
   businessId: string;
   selected: ReturnableSaleOption | null;
   onSelect: (sale: ReturnableSaleOption | null) => void;
   invalid?: boolean;
   errorId?: string;
+  currencyCode: string;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ReturnableSaleOption[]>([]);
@@ -66,7 +68,7 @@ export function SalePicker({
             {selected.customerName ? ` — ${selected.customerName}` : ""}
           </p>
           <p className="truncate text-muted-foreground">
-            {selected.branchName} · {new Date(selected.completedAt).toLocaleDateString()} · {formatMoney(selected.total, "NGN")}
+            {selected.branchName} · {new Date(selected.completedAt).toLocaleDateString()} · {formatMoney(selected.total, currencyCode, { display: "symbol" })}
           </p>
         </div>
         <Button
@@ -116,7 +118,7 @@ export function SalePicker({
                   <span className="font-medium">{sale.saleNumber}</span>
                   {sale.customerName ? ` — ${sale.customerName}` : ""}
                 </span>
-                <span className="shrink-0 text-muted-foreground">{formatMoney(sale.total, "NGN")}</span>
+                <span className="shrink-0 text-muted-foreground">{formatMoney(sale.total, currencyCode, { display: "symbol" })}</span>
               </button>
             ))
           )}

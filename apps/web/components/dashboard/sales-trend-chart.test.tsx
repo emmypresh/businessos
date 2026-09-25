@@ -39,15 +39,15 @@ describe("SalesTrendChart", () => {
 
   it("defaults to the revenue metric and shows exact currency-formatted values", () => {
     renderChart();
-    expect(screen.getByText("Sep 14: NGN 1,500.00")).toBeInTheDocument();
-    expect(screen.getByText("Sep 16: NGN 900.00")).toBeInTheDocument();
+    expect(screen.getByText("Sep 14: ₦1,500.00")).toBeInTheDocument();
+    expect(screen.getByText("Sep 16: ₦900.00")).toBeInTheDocument();
   });
 
   it("preserves the zero-activity day in the accessible data table rather than dropping it", () => {
     renderChart();
     const table = screen.getByText("Revenue by day, Last 30 days (UTC)").closest("table")!;
     expect(table).toHaveTextContent("Sep 15");
-    expect(table).toHaveTextContent("NGN 0.00");
+    expect(table).toHaveTextContent("₦0.00");
   });
 
   it("switches to the completed-sales metric on click without changing the points passed in (no new data fetch)", async () => {
@@ -69,7 +69,7 @@ describe("SalesTrendChart", () => {
     const user = userEvent.setup();
     renderChart();
     await user.click(screen.getByRole("button", { name: "AOV" }));
-    expect(screen.getByText("Sep 15: NGN 0.00")).toBeInTheDocument();
+    expect(screen.getByText("Sep 15: ₦0.00")).toBeInTheDocument();
     expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
   });
 
@@ -126,6 +126,33 @@ describe("SalesTrendChart", () => {
     const fillB = containerB.querySelector("path.text-primary[fill^='url(#']");
     expect(fillA!.getAttribute("fill")).toBe(`url(#${gradientIdA})`);
     expect(fillB!.getAttribute("fill")).toBe(`url(#${gradientIdB})`);
+  });
+
+  // Phase 1Q-0C hydration regression: the frozen aggregate's `date` field
+  // can arrive as a full timestamptz string (e.g. "2026-08-26 00:00:00+00",
+  // from get_management_reporting_aggregate's generate_series resolving to
+  // its timestamptz overload) rather than "2026-08-26" — this reproduced
+  // as a server/client hydration mismatch on this exact chart's tooltip
+  // <title>. buildSalesTrendChartModel now normalizes the day key before
+  // this component ever sees it, so the rendered label is the plain,
+  // stable "Aug 26" form regardless of which shape the aggregate returns.
+  it("renders a stable calendar-day label even when fed a full timestamptz day key (hydration regression)", () => {
+    const timestamptzModel = buildSalesTrendChartModel([
+      { date: "2026-08-26 00:00:00+00", revenue: 500, orderCount: 1, averageOrderValue: 500 },
+    ]);
+    renderChart({ points: timestamptzModel.points, hasActivity: timestamptzModel.hasActivity });
+    expect(screen.getByText("Aug 26: ₦500.00")).toBeInTheDocument();
+    expect(screen.queryByText(/00:00:00/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["NG", "NGN", "₦"],
+    ["GH", "GHS", "GH₵"],
+    ["US", "USD", "$"],
+  ])("shows the correct %s tooltip value in symbol form, never the ISO code", (_country, currencyCode, symbol) => {
+    renderChart({ currencyCode });
+    expect(screen.getByText(`Sep 14: ${symbol}1,500.00`)).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${currencyCode} 1,500`))).not.toBeInTheDocument();
   });
 
   it("keeps the description aria-labelledby relationship valid and per-instance unique across multiple chart instances", () => {

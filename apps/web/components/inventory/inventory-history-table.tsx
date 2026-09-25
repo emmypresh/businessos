@@ -9,11 +9,15 @@ export function InventoryHistoryTable({
   rows,
   showCost,
   showProductColumn = true,
+  currencyCode,
 }: {
   businessId: string;
   rows: InventoryHistoryRow[];
   showCost: boolean;
   showProductColumn?: boolean;
+  // The owning business's currency — CostCell needs it to render a
+  // revealed cost with currency identity rather than a bare number.
+  currencyCode: string;
 }) {
   if (rows.length === 0) return null;
 
@@ -58,7 +62,7 @@ export function InventoryHistoryTable({
             </TableCell>
             {showCost ? (
               <TableCell>
-                <CostCell businessId={businessId} ledgerId={row.id} />
+                <CostCell businessId={businessId} ledgerId={row.id} currencyCode={currencyCode} />
               </TableCell>
             ) : null}
           </TableRow>

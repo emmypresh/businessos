@@ -36,10 +36,12 @@ export function PaymentForm({
   businessId,
   invoiceId,
   balance,
+  currencyCode,
 }: {
   businessId: string;
   invoiceId: string;
   balance: number;
+  currencyCode: string;
 }) {
   const [state, formAction] = useActionState(recordInvoicePayment, undefined);
   const [creationKey] = useState(() => crypto.randomUUID());
@@ -79,7 +81,7 @@ export function PaymentForm({
         <SheetHeader>
           <SheetTitle>Record payment</SheetTitle>
           <SheetDescription>
-            Outstanding balance: <strong>{formatMoney(balance, "NGN")}</strong>
+            Outstanding balance: <strong>{formatMoney(balance, currencyCode, { display: "symbol" })}</strong>
           </SheetDescription>
         </SheetHeader>
         <form action={formAction} className="flex flex-col gap-4 px-4">
@@ -106,7 +108,7 @@ export function PaymentForm({
               required
             />
             <p id="amount-preview" className="text-xs text-muted-foreground">
-              Balance after this payment: {formatMoney(previewBalance, "NGN")} (estimated)
+              Balance after this payment: {formatMoney(previewBalance, currencyCode, { display: "symbol" })} (estimated)
             </p>
             {state?.fieldErrors?.amount ? (
               <p id="amount-error" role="alert" className="text-sm text-destructive">

@@ -29,7 +29,7 @@ type LineState = {
   restock: boolean;
 };
 
-export function ReturnForm({ businessId }: { businessId: string }) {
+export function ReturnForm({ businessId, currencyCode }: { businessId: string; currencyCode: string }) {
   const [state, formAction] = useActionState(createSaleReturn, undefined);
 
   // Stable across a failed-submission retry, fresh only on a genuine
@@ -168,6 +168,7 @@ export function ReturnForm({ businessId }: { businessId: string }) {
           onSelect={selectSale}
           invalid={!!state?.fieldErrors?.saleId}
           errorId={state?.fieldErrors?.saleId ? "sale-error" : undefined}
+          currencyCode={currencyCode}
         />
         {state?.fieldErrors?.saleId ? (
           <p id="sale-error" role="alert" className="text-sm text-destructive">
@@ -301,7 +302,7 @@ export function ReturnForm({ businessId }: { businessId: string }) {
                 aria-describedby="refund-amount-help"
               />
               <p id="refund-amount-help" className="text-xs text-muted-foreground">
-                Return value (estimate): {formatMoney(returnValueEstimate, "NGN")}. The database confirms the exact
+                Return value (estimate): {formatMoney(returnValueEstimate, currencyCode, { display: "symbol" })}. The database confirms the exact
                 refundable amount.
               </p>
               {state?.fieldErrors?.refundAmount ? (
@@ -388,9 +389,9 @@ export function ReturnForm({ businessId }: { businessId: string }) {
               <dt>Items selected</dt>
               <dd className="text-right">{includedLines.length}</dd>
               <dt>Return value (est.)</dt>
-              <dd className="text-right">{formatMoney(returnValueEstimate, "NGN")}</dd>
+              <dd className="text-right">{formatMoney(returnValueEstimate, currencyCode, { display: "symbol" })}</dd>
               <dt className="font-medium">Refund amount</dt>
-              <dd className="text-right font-medium">{formatMoney(refundAmountNumber || 0, "NGN")}</dd>
+              <dd className="text-right font-medium">{formatMoney(refundAmountNumber || 0, currencyCode, { display: "symbol" })}</dd>
             </dl>
           </div>
         </>

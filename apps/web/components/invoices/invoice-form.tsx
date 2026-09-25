@@ -53,10 +53,12 @@ export function InvoiceForm({
   businessId,
   branches,
   primaryBranchId,
+  currencyCode,
 }: {
   businessId: string;
   branches: InvoiceBranchOption[];
   primaryBranchId: string | null;
+  currencyCode: string;
 }) {
   const [state, formAction] = useActionState(createInvoice, undefined);
 
@@ -295,7 +297,7 @@ export function InvoiceForm({
                   className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
                 >
                   <span>{product.name}</span>
-                  <span className="text-muted-foreground">{formatMoney(product.sellingPrice, "NGN")}</span>
+                  <span className="text-muted-foreground">{formatMoney(product.sellingPrice, currencyCode, { display: "symbol" })}</span>
                 </button>
               ))
             )}
@@ -405,8 +407,8 @@ export function InvoiceForm({
                         </p>
                       ) : null}
                     </TableCell>
-                    <TableCell>{formatMoney(price, "NGN")}</TableCell>
-                    <TableCell>{formatMoney(lineTotal, "NGN")}</TableCell>
+                    <TableCell>{formatMoney(price, currencyCode, { display: "symbol" })}</TableCell>
+                    <TableCell>{formatMoney(lineTotal, currencyCode, { display: "symbol" })}</TableCell>
                     <TableCell>
                       <Button
                         type="button"
@@ -455,7 +457,7 @@ export function InvoiceForm({
         <p className="mb-2 font-medium">Review (estimated — the database confirms the exact total)</p>
         <dl className="grid grid-cols-2 gap-y-1">
           <dt className="font-medium">Total</dt>
-          <dd className="text-right font-medium">{formatMoney(totalEstimate, "NGN")}</dd>
+          <dd className="text-right font-medium">{formatMoney(totalEstimate, currencyCode, { display: "symbol" })}</dd>
         </dl>
       </div>
 
