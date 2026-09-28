@@ -68,7 +68,15 @@ export const getInventoryDetailReport = cache(
     businessId: string,
     from: string,
     to: string,
-    options: { branchId?: string; search?: string; sort?: InventoryReportSortKey; direction?: "asc" | "desc"; page?: number } = {}
+    options: {
+      branchId?: string;
+      search?: string;
+      sort?: InventoryReportSortKey;
+      direction?: "asc" | "desc";
+      page?: number;
+      /** Phase 1N-C5: lets the CSV export path request up to the RPC's own [1,100] server-side clamp instead of the screen's fixed page size. Every other caller omits this and gets the unchanged default. */
+      pageSize?: number;
+    } = {}
   ): Promise<InventoryReport> => {
     await requireUser();
     const supabase = await createClient();
@@ -82,7 +90,7 @@ export const getInventoryDetailReport = cache(
       p_sort: options.sort ?? "units_sold",
       p_direction: options.direction ?? "desc",
       p_page: options.page ?? 1,
-      p_page_size: INVENTORY_REPORT_PAGE_SIZE,
+      p_page_size: options.pageSize ?? INVENTORY_REPORT_PAGE_SIZE,
     });
 
     if (error) {

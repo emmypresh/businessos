@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, LineChart, ArrowUpDown, Building2, ShoppingBag, Users2, Gauge, Boxes, Wallet } from "lucide-react";
+import { ArrowLeft, LineChart, ArrowUpDown, Building2, ShoppingBag, Users2, Gauge, Boxes, Wallet, Download } from "lucide-react";
 import { z } from "zod";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { buildReportRangeSearchParams, parseReportRangeQuery } from "@/lib/reports/report-range-query";
 import { getBranchDetailReport, parseBranchReportQuery, type BranchReportSortKey } from "@/lib/reports/branch-report";
 import { listReportBranchOptions } from "@/lib/branches/dal";
-import { buildReportSortHref, buildReportPageHref, type ReportTableLinkState } from "@/lib/reports/report-table-links";
+import { buildReportSortHref, buildReportPageHref, buildReportExportHref, type ReportTableLinkState } from "@/lib/reports/report-table-links";
 import { DateRangePicker } from "@/components/reports/date-range-picker";
 import { BranchTrendChart } from "@/components/reports/branch-trend-chart";
 import { TopProductsChart } from "@/components/reports/top-products-chart";
@@ -95,6 +95,23 @@ export default async function BranchReportPage({
     page: typeof query.page === "string" ? query.page : undefined,
   });
 
+  // Phase 1N-C5: preserves the exact same period/branch/search/sort state
+  // currently on screen — never just the current page — via the shared
+  // buildReportExportHref helper. Only rendered once the range itself
+  // resolved (an "export" for a pending/error range would 400 anyway).
+  const exportHref =
+    rangeQuery.status === "ok"
+      ? buildReportExportHref(`/${businessId}/reports/branches/export`, {
+          preset: rangeQuery.query.preset,
+          dateFrom: rangeQuery.query.custom?.dateFrom,
+          dateTo: rangeQuery.query.custom?.dateTo,
+          branch: branchId,
+          search: reportQuery.search,
+          sort: reportQuery.sort,
+          direction: reportQuery.direction,
+        })
+      : null;
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -109,6 +126,14 @@ export default async function BranchReportPage({
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" /> Back to Reports
             </Link>
+          }
+          actions={
+            exportHref ? (
+              <a href={exportHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                <Download className="size-4" aria-hidden="true" />
+                Export CSV
+              </a>
+            ) : null
           }
         />
       </div>

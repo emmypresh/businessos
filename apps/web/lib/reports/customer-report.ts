@@ -74,7 +74,15 @@ export const getCustomerDetailReport = cache(
     businessId: string,
     from: string,
     to: string,
-    options: { branchId?: string; search?: string; sort?: CustomerReportSortKey; direction?: "asc" | "desc"; page?: number } = {}
+    options: {
+      branchId?: string;
+      search?: string;
+      sort?: CustomerReportSortKey;
+      direction?: "asc" | "desc";
+      page?: number;
+      /** Phase 1N-C5: lets the CSV export path request up to the RPC's own [1,100] server-side clamp instead of the screen's fixed page size. Every other caller omits this and gets the unchanged default. */
+      pageSize?: number;
+    } = {}
   ): Promise<CustomerReport> => {
     await requireUser();
     const supabase = await createClient();
@@ -88,7 +96,7 @@ export const getCustomerDetailReport = cache(
       p_sort: options.sort ?? "revenue",
       p_direction: options.direction ?? "desc",
       p_page: options.page ?? 1,
-      p_page_size: CUSTOMER_REPORT_PAGE_SIZE,
+      p_page_size: options.pageSize ?? CUSTOMER_REPORT_PAGE_SIZE,
     });
 
     if (error) {

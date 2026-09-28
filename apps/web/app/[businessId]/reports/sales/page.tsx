@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { ArrowLeft, LineChart } from "lucide-react";
+import { ArrowLeft, LineChart, Download } from "lucide-react";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getFinancialSummary, getManagementReportingAggregate } from "@/lib/reports/dal";
 import { buildReportRangeSearchParams, parseReportRangeQuery } from "@/lib/reports/report-range-query";
+import { buildReportExportHref } from "@/lib/reports/report-table-links";
 import { buildSalesTrendChartModel } from "@/lib/reports/sales-trend-chart";
 import { SalesSummaryCards } from "@/components/reports/sales-summary-cards";
 import { SalesTrendReportChart } from "@/components/reports/sales-trend-report-chart";
 import { SalesDailyTable } from "@/components/reports/sales-daily-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/page-header";
 
 // Phase 1N-C2 — Sales & Revenue detailed report.
@@ -51,6 +54,15 @@ export default async function SalesReportPage({
     return search ? `?${search}` : "";
   })()}`;
 
+  const exportHref =
+    rangeQuery.status === "ok"
+      ? buildReportExportHref(`/${businessId}/reports/sales/export`, {
+          preset: rangeQuery.query.preset,
+          dateFrom: rangeQuery.query.custom?.dateFrom,
+          dateTo: rangeQuery.query.custom?.dateTo,
+        })
+      : null;
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -70,6 +82,14 @@ export default async function SalesReportPage({
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" /> Back to Reports
             </Link>
+          }
+          actions={
+            exportHref ? (
+              <a href={exportHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                <Download className="size-4" aria-hidden="true" />
+                Export CSV
+              </a>
+            ) : null
           }
         />
         {rangeQuery.status === "ok" ? (

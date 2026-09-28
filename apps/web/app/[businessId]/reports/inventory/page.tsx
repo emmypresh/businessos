@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, LineChart, ArrowUpDown, Boxes, PackageCheck, PackageMinus, PackageX, TrendingUp, Activity } from "lucide-react";
+import { ArrowLeft, LineChart, ArrowUpDown, Boxes, PackageCheck, PackageMinus, PackageX, TrendingUp, Activity, Download } from "lucide-react";
 import { z } from "zod";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
@@ -13,7 +13,7 @@ import {
   type StockStatus,
 } from "@/lib/reports/inventory-report";
 import { listReportBranchOptions } from "@/lib/branches/dal";
-import { buildReportSortHref, buildReportPageHref, type ReportTableLinkState } from "@/lib/reports/report-table-links";
+import { buildReportSortHref, buildReportPageHref, buildReportExportHref, type ReportTableLinkState } from "@/lib/reports/report-table-links";
 import { DateRangePicker } from "@/components/reports/date-range-picker";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -99,6 +99,19 @@ export default async function InventoryReportPage({
     page: typeof query.page === "string" ? query.page : undefined,
   });
 
+  const exportHref =
+    rangeQuery.status === "ok"
+      ? buildReportExportHref(`/${businessId}/reports/inventory/export`, {
+          preset: rangeQuery.query.preset,
+          dateFrom: rangeQuery.query.custom?.dateFrom,
+          dateTo: rangeQuery.query.custom?.dateTo,
+          branch: branchId,
+          search: reportQuery.search,
+          sort: reportQuery.sort,
+          direction: reportQuery.direction,
+        })
+      : null;
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -113,6 +126,14 @@ export default async function InventoryReportPage({
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" /> Back to Reports
             </Link>
+          }
+          actions={
+            exportHref ? (
+              <a href={exportHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                <Download className="size-4" aria-hidden="true" />
+                Export CSV
+              </a>
+            ) : null
           }
         />
       </div>

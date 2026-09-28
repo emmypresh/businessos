@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReportSortHref, buildReportPageHref, type ReportTableLinkState } from "./report-table-links";
+import { buildReportSortHref, buildReportPageHref, buildReportExportHref, type ReportTableLinkState } from "./report-table-links";
 
 const FULL_STATE: ReportTableLinkState = {
   preset: "custom",
@@ -55,5 +55,35 @@ describe("buildReportPageHref", () => {
     expect(params.get("sort")).toBe("revenue");
     expect(params.get("dir")).toBe("desc");
     expect(params.get("page")).toBe("3");
+  });
+});
+
+describe("buildReportExportHref", () => {
+  it("preserves preset/dateFrom/dateTo/branch/search/sort/direction and never sets page", () => {
+    const href = buildReportExportHref("/biz/reports/branches/export", FULL_STATE);
+    const [path, query] = href.split("?");
+    expect(path).toBe("/biz/reports/branches/export");
+    const params = new URLSearchParams(query);
+    expect(params.get("preset")).toBe("custom");
+    expect(params.get("dateFrom")).toBe("2026-01-01");
+    expect(params.get("dateTo")).toBe("2026-01-31");
+    expect(params.get("branch")).toBe(FULL_STATE.branch);
+    expect(params.get("q")).toBe("ada");
+    expect(params.get("sort")).toBe("revenue");
+    expect(params.get("dir")).toBe("desc");
+    expect(params.has("page")).toBe(false);
+  });
+
+  it("omits sort/dir entirely when the report has no sort surface (e.g. Sales)", () => {
+    const href = buildReportExportHref("/biz/reports/sales/export", {
+      preset: "custom",
+      dateFrom: "2026-01-01",
+      dateTo: "2026-01-31",
+    });
+    expect(href).toBe("/biz/reports/sales/export?preset=custom&dateFrom=2026-01-01&dateTo=2026-01-31");
+  });
+
+  it("returns the bare base path when no state is provided", () => {
+    expect(buildReportExportHref("/biz/reports/sales/export", {})).toBe("/biz/reports/sales/export");
   });
 });

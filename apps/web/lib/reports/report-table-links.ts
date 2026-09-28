@@ -22,7 +22,7 @@ export type ReportTableLinkState = {
   direction: "asc" | "desc";
 };
 
-function baseParams(state: ReportTableLinkState): URLSearchParams {
+function baseParams(state: Pick<ReportTableLinkState, "preset" | "dateFrom" | "dateTo" | "branch" | "search">): URLSearchParams {
   const params = new URLSearchParams();
   if (state.preset) params.set("preset", state.preset);
   if (state.dateFrom) params.set("dateFrom", state.dateFrom);
@@ -55,4 +55,30 @@ export function buildReportPageHref(state: ReportTableLinkState, page: number): 
   params.set("dir", state.direction);
   params.set("page", String(page));
   return `?${params.toString()}`;
+}
+
+/**
+ * Weaker than ReportTableLinkState: sort/direction are optional because
+ * the Sales & Revenue report has no sort/pagination surface at all (see
+ * lib/reports/dal.ts's own header comment) and its export link must not
+ * fabricate a sort param no route on that report ever reads.
+ */
+export type ReportExportLinkState = Omit<ReportTableLinkState, "sort" | "direction"> & {
+  sort?: string | undefined;
+  direction?: "asc" | "desc" | undefined;
+};
+
+/**
+ * Phase 1N-C5: href for a report's "Export CSV" action. Preserves the
+ * exact same preset/dateFrom/dateTo/branch/search/sort/direction state
+ * as the screen currently being viewed, but deliberately omits `page` —
+ * export is never limited to the current page (see the export route's
+ * own row-limit/pagination-bypass documentation).
+ */
+export function buildReportExportHref(basePath: string, state: ReportExportLinkState): string {
+  const params = baseParams(state);
+  if (state.sort) params.set("sort", state.sort);
+  if (state.direction) params.set("dir", state.direction);
+  const search = params.toString();
+  return search ? `${basePath}?${search}` : basePath;
 }

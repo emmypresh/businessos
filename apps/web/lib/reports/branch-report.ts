@@ -104,6 +104,8 @@ export const getBranchDetailReport = cache(
       sort?: BranchReportSortKey;
       direction?: "asc" | "desc";
       page?: number;
+      /** Phase 1N-C5: lets the CSV export path request up to the RPC's own [1,100] server-side clamp instead of the screen's fixed page size, so export can page through fewer, larger requests. Every other caller omits this and gets the unchanged default. */
+      pageSize?: number;
     } = {}
   ): Promise<BranchReport> => {
     await requireUser();
@@ -118,7 +120,7 @@ export const getBranchDetailReport = cache(
       p_sort: options.sort ?? "revenue",
       p_direction: options.direction ?? "desc",
       p_page: options.page ?? 1,
-      p_page_size: BRANCH_REPORT_PAGE_SIZE,
+      p_page_size: options.pageSize ?? BRANCH_REPORT_PAGE_SIZE,
     });
 
     if (error) {
