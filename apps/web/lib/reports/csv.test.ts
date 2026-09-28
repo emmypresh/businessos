@@ -57,6 +57,30 @@ describe("sanitizeSpreadsheetCell", () => {
   it("preserves Unicode text untouched", () => {
     expect(sanitizeSpreadsheetCell("José Chloë Ọlá")).toBe("José Chloë Ọlá");
   });
+
+  const leadingWhitespaceBypasses = [
+    " =SUM(A1:A2)",
+    "  =SUM(A1:A2)",
+    "\t=SUM(A1:A2)",
+    "\v=SUM(A1:A2)",
+    "\f=SUM(A1:A2)",
+    " =SUM(A1:A2)",
+    " +1+1",
+    " -2+3",
+    " @cmd",
+  ];
+
+  it.each(leadingWhitespaceBypasses)("neutralizes a leading-whitespace formula bypass %j", (raw) => {
+    expect(sanitizeSpreadsheetCell(raw)).toBe(`'${raw}`);
+  });
+
+  it("does not neutralize ordinary text with leading spaces", () => {
+    expect(sanitizeSpreadsheetCell("  Ada Lovelace")).toBe("  Ada Lovelace");
+  });
+
+  it("neutralizes a bare leading carriage return with no formula marker after it", () => {
+    expect(sanitizeSpreadsheetCell("\rSomething")).toBe("'\rSomething");
+  });
 });
 
 type Row = { name: string; amount: number; nullable: string | null };
@@ -175,6 +199,110 @@ describe("collectAllReportRows", () => {
       pageSize: REPORT_EXPORT_ROW_LIMIT,
     }));
     expect(rows).toHaveLength(REPORT_EXPORT_ROW_LIMIT);
+  });
+
+  it("terminates on an exact multiple of the page size without an extra empty page fetch", async () => {
+    const pages = [
+      { rows: [1, 2], totalCount: 4, pageSize: 2 },
+      { rows: [3, 4], totalCount: 4, pageSize: 2 },
+    ];
+    const calls: number[] = [];
+    const rows = await collectAllReportRows(async (page) => {
+      calls.push(page);
+      return pages[page - 1];
+    });
+    expect(rows).toEqual([1, 2, 3, 4]);
+    expect(calls).toEqual([1, 2]);
+  });
+
+  // (A) Exactly 10,000 rows at the standard 100-row page size is the
+  // largest export this system supports, and must still succeed — the
+  // fail-closed guard below must never reject an honest totalCount/
+  // pageSize pair that exactly fills the ceiling.
+  it("succeeds for exactly 10,000 rows at the standard page size (100 required pages)", async () => {
+    let fetchCount = 0;
+    const rows = await collectAllReportRows(async () => {
+      fetchCount += 1;
+      return { rows: new Array(100).fill(0), totalCount: REPORT_EXPORT_ROW_LIMIT, pageSize: 100 };
+    });
+    expect(fetchCount).toBe(100);
+    expect(rows).toHaveLength(REPORT_EXPORT_ROW_LIMIT);
+  });
+
+  // (B) An inconsistent totalCount/pageSize pair that would require more
+  // pages than the fixed ceiling allows must throw — never silently
+  // truncate to whatever the ceiling could fetch.
+  it("throws (never silently truncates) when totalCount at the limit implies more pages than the ceiling allows", async () => {
+    let fetchCount = 0;
+    const fetchPage = async () => {
+      fetchCount += 1;
+      // pageSize of 1 with totalCount at the limit implies 10,000 required
+      // pages — far past the 100-page ceiling.
+      return { rows: [0], totalCount: REPORT_EXPORT_ROW_LIMIT, pageSize: 1 };
+    };
+    await expect(collectAllReportRows(fetchPage)).rejects.toBeInstanceOf(ReportExportTooLargeError);
+    // Rejected on page-1 metadata alone — never pages further while
+    // trying to "make progress" toward an unsafe page count.
+    expect(fetchCount).toBe(1);
+  });
+
+  // (C) Same failure mode, but well under the row limit — proves the
+  // guard is about required *pages*, not just totalCount vs. the row
+  // ceiling.
+  it("throws when a below-row-limit totalCount still implies more than 100 required pages", async () => {
+    let fetchCount = 0;
+    const fetchPage = async () => {
+      fetchCount += 1;
+      return { rows: [0], totalCount: 5_000, pageSize: 1 };
+    };
+    await expect(collectAllReportRows(fetchPage)).rejects.toBeInstanceOf(ReportExportTooLargeError);
+    expect(fetchCount).toBe(1);
+  });
+
+  // (D) No fetch ever goes beyond the maximum permitted page count, even
+  // right at the boundary that is allowed to succeed.
+  it("fetches no more than the maximum permitted page count on a valid full export", async () => {
+    const pageCalls: number[] = [];
+    await collectAllReportRows(async (page) => {
+      pageCalls.push(page);
+      return { rows: new Array(100).fill(0), totalCount: REPORT_EXPORT_ROW_LIMIT, pageSize: 100 };
+    });
+    expect(Math.max(...pageCalls)).toBe(100);
+    expect(pageCalls).toHaveLength(100);
+  });
+
+  // (E) A normal, well-under-ceiling multi-page export still succeeds
+  // exactly as before this remediation.
+  it("still succeeds for a normal multi-page export", async () => {
+    const pages = [
+      { rows: [1, 2], totalCount: 5, pageSize: 2 },
+      { rows: [3, 4], totalCount: 5, pageSize: 2 },
+      { rows: [5], totalCount: 5, pageSize: 2 },
+    ];
+    const rows = await collectAllReportRows(async (page) => pages[page - 1]);
+    expect(rows).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  // (F) No silent partial result: even when the required-pages check
+  // passes, a backend that stops returning rows before the declared
+  // total is reached must still fail closed rather than hand back a
+  // short CSV as if it were complete.
+  it("throws rather than returning an incomplete row set when paging ends short of the declared totalCount", async () => {
+    const pages = [
+      { rows: [1, 2], totalCount: 6, pageSize: 2 },
+      { rows: [3, 4], totalCount: 6, pageSize: 2 },
+      { rows: [], totalCount: 6, pageSize: 2 }, // page 3 comes back empty instead of [5, 6]
+    ];
+    const fetchPage = async (page: number) => pages[page - 1];
+    await expect(collectAllReportRows(fetchPage)).rejects.toBeInstanceOf(ReportExportTooLargeError);
+  });
+
+  it("falls back to the standard page size (never divides by zero/NaN/negative) when the upstream pageSize is unusable", async () => {
+    const unusablePageSizes = [0, -1, Number.NaN, -Infinity];
+    for (const badPageSize of unusablePageSizes) {
+      const rows = await collectAllReportRows(async () => ({ rows: [1, 2, 3], totalCount: 3, pageSize: badPageSize }));
+      expect(rows).toEqual([1, 2, 3]);
+    }
   });
 });
 

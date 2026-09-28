@@ -18,12 +18,22 @@ export const REPORT_EXPORT_ROW_LIMIT = 10_000;
  */
 export const REPORT_EXPORT_FETCH_PAGE_SIZE = 100;
 
-/** Thrown when a validated report/filter combination matches more rows than REPORT_EXPORT_ROW_LIMIT allows. Callers map this to a controlled 4xx response — never a partial CSV. */
+/**
+ * Thrown whenever an export cannot be proven safe/complete within
+ * REPORT_EXPORT_ROW_LIMIT — either because the declared row count itself
+ * exceeds the limit, or because collectAllReportRows could not safely
+ * page through to a complete result within its fixed page-count ceiling
+ * (an inconsistent/malformed upstream totalCount+pageSize pair, or a
+ * paging run that came back short of the declared total). Callers map
+ * this to a single controlled 4xx response — never a partial CSV. The
+ * user-facing message is deliberately the same generic, filter-narrowing
+ * guidance in every case; no internal RPC/paging detail is ever exposed.
+ */
 export class ReportExportTooLargeError extends Error {
   readonly totalCount: number;
   constructor(totalCount: number) {
     super(
-      `Export contains too many rows (${totalCount}, limit ${REPORT_EXPORT_ROW_LIMIT}). Narrow the date range or filters and try again.`
+      `Export cannot be completed safely (${totalCount} rows, limit ${REPORT_EXPORT_ROW_LIMIT}). Narrow the date range or filters and try again.`
     );
     this.name = "ReportExportTooLargeError";
     this.totalCount = totalCount;
@@ -43,21 +53,32 @@ export function escapeCsvCell(raw: string): string {
   return `"${raw.replace(/"/g, '""')}"`;
 }
 
-const DANGEROUS_LEADING_CHAR = /^[=+\-@\t\r]/;
+const DANGEROUS_CONTROL_PREFIX = /^[\t\r]/;
+const LEADING_WHITESPACE_OR_CONTROL = /^[ \t\v\f ]+/;
+const DANGEROUS_LEADING_CHAR = /^[=+\-@]/;
 
 /**
- * Baseline spreadsheet-formula-injection neutralization (full hardening
- * is deferred to C6 per the approved plan): a value that would be
+ * Spreadsheet-formula-injection neutralization: a value that would be
  * interpreted as a formula by Excel/Sheets/LibreOffice when it starts
- * with =, +, -, @, or a leading tab/carriage-return control character is
- * prefixed with a single quote so it opens as inert text. Only ever
- * applied to string/user-controlled text fields — callers must not run
- * this over already-numeric values, so a genuine negative number (e.g.
- * -123.45) formatted as a number is never passed through this function.
+ * with =, +, -, or @ — including after leading spaces/tabs/vertical-tabs/
+ * form-feeds/NBSP that some spreadsheet CSV importers skip over before
+ * looking for a formula marker — is prefixed with a single quote so it
+ * opens as inert text. A leading tab or carriage-return control
+ * character is itself always neutralized (both are already
+ * formula-adjacent risk characters independent of what follows). Only
+ * the leading whitespace run is inspected to decide whether to
+ * neutralize; the original raw value (whitespace included) is what
+ * actually gets the quote prefix, so legitimate leading-space text is
+ * never otherwise altered. Only ever applied to string/user-controlled
+ * text fields — callers must not run this over already-numeric values,
+ * so a genuine negative number (e.g. -123.45) formatted as a number is
+ * never passed through this function.
  */
 export function sanitizeSpreadsheetCell(raw: string): string {
   if (raw === "") return raw;
-  return DANGEROUS_LEADING_CHAR.test(raw) ? `'${raw}` : raw;
+  if (DANGEROUS_CONTROL_PREFIX.test(raw)) return `'${raw}`;
+  const stripped = raw.replace(LEADING_WHITESPACE_OR_CONTROL, "");
+  return DANGEROUS_LEADING_CHAR.test(stripped) ? `'${raw}` : raw;
 }
 
 export type CsvCellValue = string | number | boolean | null | undefined;
@@ -160,12 +181,42 @@ export async function collectAllReportRows<Row>(
   }
 
   const rows: Row[] = [...first.rows];
-  const pageSize = first.pageSize > 0 ? first.pageSize : REPORT_EXPORT_FETCH_PAGE_SIZE;
-  const totalPages = Math.max(1, Math.ceil(first.totalCount / pageSize));
+  // Guards against a runtime pageSize of 0, negative, NaN, or Infinity —
+  // none of which the DAL's own typing should ever produce, but paging
+  // math below must never divide by (or ceil against) an unsafe value.
+  const pageSize = Number.isFinite(first.pageSize) && first.pageSize > 0 ? first.pageSize : REPORT_EXPORT_FETCH_PAGE_SIZE;
 
-  for (let page = 2; page <= totalPages; page += 1) {
+  // Fixed, fail-closed ceiling: the maximum number of pages this export
+  // path will ever fetch, independent of what any single RPC call
+  // reports. REPORT_EXPORT_ROW_LIMIT/REPORT_EXPORT_FETCH_PAGE_SIZE = 100
+  // pages — exactly enough to reach the row limit at the page size every
+  // export route actually requests, and never more.
+  const maxPages = Math.ceil(REPORT_EXPORT_ROW_LIMIT / REPORT_EXPORT_FETCH_PAGE_SIZE);
+  const requiredPages = Math.max(1, Math.ceil(first.totalCount / pageSize));
+
+  // Fail closed rather than silently truncate: if satisfying the
+  // declared totalCount at the declared pageSize would take more pages
+  // than this export path can safely fetch, completeness can't be
+  // proven — never return a partial CSV presented as a full one. An
+  // honest totalCount/pageSize pair within REPORT_EXPORT_ROW_LIMIT can
+  // never trigger this (requiredPages tops out at exactly maxPages for
+  // 10,000 rows at the standard 100-row page size).
+  if (requiredPages > maxPages) {
+    throw new ReportExportTooLargeError(first.totalCount);
+  }
+
+  for (let page = 2; page <= requiredPages; page += 1) {
     const next = await fetchPage(page);
     rows.push(...next.rows);
+  }
+
+  // Final completeness check, independent of the page-count math above:
+  // even a page count that looked safe can still under-deliver rows (an
+  // upstream page returned short/empty before the declared total was
+  // reached, or totalCount itself was unreliable). Never present a
+  // shorter-than-declared row set as a complete export.
+  if (rows.length < first.totalCount) {
+    throw new ReportExportTooLargeError(first.totalCount);
   }
 
   return rows;
