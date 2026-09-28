@@ -2907,6 +2907,10 @@ export type Database = {
           provider_subscription_code: string
         }[]
       }
+      get_platform_business_detail: {
+        Args: { p_business_id: string }
+        Returns: Json
+      }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       get_returnable_sale_items: {
         Args: { p_business_id: string; p_sale_id: string }
@@ -3043,6 +3047,40 @@ export type Database = {
           paid_at: string
           payment_method: string
           reference: string
+        }[]
+      }
+      list_platform_businesses: {
+        Args: {
+          p_country_code?: string
+          p_currency_code?: string
+          p_dir?: string
+          p_page?: number
+          p_page_size?: number
+          p_plan_code?: string
+          p_search?: string
+          p_sort?: string
+          p_subscription_status?: string
+        }
+        Returns: {
+          active_branch_count: number
+          branch_count: number
+          business_id: string
+          business_name: string
+          cancel_at_period_end: boolean
+          country_code: string
+          created_at: string
+          currency_code: string
+          current_period_ends_at: string
+          member_count: number
+          owner_email: string
+          plan_code: string
+          plan_name: string
+          slug: string
+          status: string
+          subscription_status: string
+          timezone: string
+          total_count: number
+          trial_ends_at: string
         }[]
       }
       list_returns_for_viewer: {
