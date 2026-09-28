@@ -42,7 +42,19 @@ export const ResetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+// TOTP codes are exactly 6 digits. Trimmed so a pasted code with
+// surrounding whitespace (common on mobile authenticator apps' copy
+// buttons) doesn't fail validation before ever reaching Supabase.
+export const MfaVerifySchema = z.object({
+  factorId: z.uuid({ error: "Invalid MFA factor." }),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, { error: "Enter the 6-digit code from your authenticator app." }),
+});
+
 export type SignUpInput = z.infer<typeof SignUpSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+export type MfaVerifyInput = z.infer<typeof MfaVerifySchema>;

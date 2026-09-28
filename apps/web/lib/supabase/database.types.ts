@@ -1442,6 +1442,74 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_permissions: {
+        Row: {
+          description: string
+          key: string
+        }
+        Insert: {
+          description: string
+          key: string
+        }
+        Update: {
+          description?: string
+          key?: string
+        }
+        Relationships: []
+      }
+      platform_role_permissions: {
+        Row: {
+          permission_key: string
+          role: string
+        }
+        Insert: {
+          permission_key: string
+          role: string
+        }
+        Update: {
+          permission_key?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "platform_permissions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
@@ -2810,6 +2878,7 @@ export type Database = {
         Returns: Json
       }
       get_movement_unit_cost: { Args: { p_ledger_id: string }; Returns: Json }
+      get_my_platform_role: { Args: never; Returns: string }
       get_notification_branch_options: {
         Args: { p_business_id: string }
         Returns: {
@@ -2887,6 +2956,10 @@ export type Database = {
       }
       has_permission: {
         Args: { p_business_id: string; p_permission_key: string }
+        Returns: boolean
+      }
+      has_platform_permission: {
+        Args: { p_permission_key: string }
         Returns: boolean
       }
       ingest_and_process_whatsapp_inbound_message: {

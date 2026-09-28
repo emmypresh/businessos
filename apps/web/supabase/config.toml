@@ -320,9 +320,18 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# Enabled for Phase 1O-A: platform-admin routes require a verified AAL2
+# session (see lib/platform/dal.ts requirePlatformPermission and
+# supabase/migrations/20260928090000_platform_admin_require_aal2.sql).
+# TOTP is the only enrollment path this phase supports — see the phase
+# brief for why WebAuthn/passkeys are out of scope. This same setting must
+# be enabled on every deployed environment (local, staging, production)
+# for platform-admin access to be reachable at all — it is a hosted-
+# project Auth setting on Supabase Cloud, not something this config.toml
+# alone controls remotely; see the build brief's production prerequisite.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

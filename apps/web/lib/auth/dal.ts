@@ -23,3 +23,23 @@ export async function requireUser(): Promise<User> {
   }
   return user;
 }
+
+export type AssuranceLevel = "aal1" | "aal2";
+
+// getClaims() (not getUser(), not a manual JWT decode): it verifies the
+// access token's signature every call — the same mechanism proxy.ts's
+// session check already relies on — and returns Supabase's standard claim
+// set, which includes `aal`. A raw decode of the token payload would trust
+// an unverified string; this trusts only what signature verification
+// confirmed. Identity itself still goes through getUser()/requireUser()
+// above — this is purely the assurance-level signal layered on top.
+export const getAssuranceLevel = cache(
+  async (): Promise<AssuranceLevel | null> => {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) return null;
+
+    const aal = (data.claims as { aal?: unknown }).aal;
+    return aal === "aal1" || aal === "aal2" ? aal : null;
+  }
+);
