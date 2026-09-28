@@ -2911,6 +2911,10 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: Json
       }
+      get_platform_business_overview: {
+        Args: { p_business_id: string }
+        Returns: Json
+      }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       get_returnable_sale_items: {
         Args: { p_business_id: string; p_sale_id: string }
@@ -3047,6 +3051,53 @@ export type Database = {
           paid_at: string
           payment_method: string
           reference: string
+        }[]
+      }
+      list_platform_business_activity: {
+        Args: { p_business_id: string; p_page?: number; p_page_size?: number }
+        Returns: {
+          actor_email: string
+          branch_name: string
+          category: string
+          occurred_at: string
+          reference_id: string
+          summary: string
+          total_count: number
+        }[]
+      }
+      list_platform_business_audit: {
+        Args: { p_business_id: string; p_page?: number; p_page_size?: number }
+        Returns: {
+          action: string
+          actor_email: string
+          entity_ref: string
+          entity_type: string
+          occurred_at: string
+          summary: string
+          total_count: number
+        }[]
+      }
+      list_platform_business_members: {
+        Args: {
+          p_branch_id?: string
+          p_business_id: string
+          p_dir?: string
+          p_page?: number
+          p_page_size?: number
+          p_role?: string
+          p_search?: string
+          p_sort?: string
+          p_status?: string
+        }
+        Returns: {
+          created_at: string
+          email: string
+          member_id: string
+          primary_branch_id: string
+          primary_branch_name: string
+          role: string
+          status: string
+          total_count: number
         }[]
       }
       list_platform_businesses: {
