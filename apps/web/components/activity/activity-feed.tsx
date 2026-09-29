@@ -13,7 +13,7 @@ import {
   IdCard,
   Package,
   Activity as ActivityIcon,
-} from "lucide-react";
+} from "@/components/ui/icon";
 import {
   Sheet,
   SheetContent,

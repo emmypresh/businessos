@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Building2, CircleDollarSign, Receipt, Gauge, Wallet, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Building2, CircleDollarSign, Receipt, Gauge, Wallet, TrendingUp } from "@/components/ui/icon";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { formatMoney } from "@/lib/currency";

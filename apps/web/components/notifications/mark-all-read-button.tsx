@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCheck, Loader2 } from "lucide-react";
+import { CheckCheck, Loader2 } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { markAllNotificationsReadAction } from "@/lib/notifications/actions";
 

@@ -10,7 +10,7 @@ import { FinancialCharts } from "@/components/reports/financial-charts";
 import { ReportCategories } from "@/components/reports/report-categories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { LineChart } from "lucide-react";
+import { LineChart } from "@/components/ui/icon";
 import { z } from "zod";
 
 const BranchParamSchema = z.uuid();

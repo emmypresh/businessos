@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, LineChart, Download } from "lucide-react";
+import { ArrowLeft, LineChart, Download } from "@/components/ui/icon";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getFinancialSummary, getManagementReportingAggregate } from "@/lib/reports/dal";

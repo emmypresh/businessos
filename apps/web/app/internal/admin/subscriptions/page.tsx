@@ -14,7 +14,7 @@ import {
   PlatformStatusBadge,
   PlatformPagination,
 } from "@/components/platform/platform-primitives";
-import { CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, XCircle } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
   title: "Subscriptions — Internal Administration",

@@ -13,7 +13,7 @@ import { NotificationFeed } from "@/components/notifications/notification-feed";
 import { MarkAllReadButton } from "@/components/notifications/mark-all-read-button";
 import { PaginationLink } from "@/components/pagination-link";
 import { buttonVariants } from "@/components/ui/button";
-import { Bell, Settings } from "lucide-react";
+import { Bell, Settings } from "@/components/ui/icon";
 
 export default async function NotificationsPage({
   params,

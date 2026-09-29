@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { InvoiceFilters } from "@/components/invoices/invoice-filters";
 import { InvoiceListTable } from "@/components/invoices/invoice-list-table";
 import { PaginationLink } from "@/components/pagination-link";
-import { FileText } from "lucide-react";
+import { FileText } from "@/components/ui/icon";
 
 export default async function InvoicesPage({
   params,

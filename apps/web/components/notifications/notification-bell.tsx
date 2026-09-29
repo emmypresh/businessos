@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2 } from "@/components/ui/icon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,

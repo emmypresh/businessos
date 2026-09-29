@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Mail } from "@/components/ui/icon";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listInvitations } from "@/lib/staff/dal";

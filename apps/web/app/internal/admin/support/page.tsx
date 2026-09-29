@@ -12,7 +12,7 @@ import {
   PlatformEmptyState,
   PlatformPagination,
 } from "@/components/platform/platform-primitives";
-import { AlertTriangle, Info, Building2, MessageCircleWarning } from "lucide-react";
+import { AlertTriangle, Info, Building2, MessageCircleWarning } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
   title: "Support — Internal Administration",

@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/ui/icon";
 
 export default function OnboardingLoading() {
   return (

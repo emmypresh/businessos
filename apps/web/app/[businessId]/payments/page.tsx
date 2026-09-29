@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { PaymentHistorySearch } from "@/components/invoices/payment-history-search";
 import { PaymentHistoryListTable } from "@/components/invoices/payment-history-list-table";
-import { Wallet } from "lucide-react";
+import { Wallet } from "@/components/ui/icon";
 
 /**
  * Codex adversarial review, remediation round 1, Medium 4: a

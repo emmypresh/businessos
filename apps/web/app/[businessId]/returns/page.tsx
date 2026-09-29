@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { ReturnFilters } from "@/components/returns/return-filters";
 import { ReturnListTable } from "@/components/returns/return-list-table";
 import { PaginationLink } from "@/components/pagination-link";
-import { Undo2 } from "lucide-react";
+import { Undo2 } from "@/components/ui/icon";
 
 export default async function ReturnsPage({
   params,

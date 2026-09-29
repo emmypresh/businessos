@@ -1,4 +1,4 @@
-import { MapPinOff } from "lucide-react";
+import { MapPinOff } from "@/components/ui/icon";
 import { EmptyState } from "@/components/dashboard/empty-state";
 
 /**

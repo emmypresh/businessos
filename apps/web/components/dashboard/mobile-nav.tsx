@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarNav, type NavSection } from "@/components/dashboard/sidebar-nav";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/ui/icon";
 import { createSale, getSaleProductAvailabilityAction } from "@/lib/sales/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

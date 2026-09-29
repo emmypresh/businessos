@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IdCard, Mail } from "lucide-react";
+import { IdCard, Mail } from "@/components/ui/icon";
 import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
 import { PERMISSION, MEMBERSHIP_STATUS } from "@/lib/business/constants";
 import { listStaffMembers, listInvitations } from "@/lib/staff/dal";

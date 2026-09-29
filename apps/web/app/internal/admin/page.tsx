@@ -15,7 +15,7 @@ import {
   PlatformEmptyState,
   PlatformStatusBadge,
 } from "@/components/platform/platform-primitives";
-import { Building2, CheckCircle2, PauseCircle, CreditCard, TrendingUp } from "lucide-react";
+import { Building2, CheckCircle2, PauseCircle, CreditCard, TrendingUp } from "@/components/ui/icon";
 import Link from "next/link";
 
 function formatDate(value: string) {

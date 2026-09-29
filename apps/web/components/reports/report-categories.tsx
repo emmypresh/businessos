@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, LineChart, Users, Boxes, Building2 } from "lucide-react";
+import { ArrowUpRight, LineChart, Users, Boxes, Building2 } from "@/components/ui/icon";
 
 // One icon/accent per category, same --kpi-*-bg/-fg token convention as
 // the rest of this pass (management-overview.tsx, financial-kpi-cards.tsx)

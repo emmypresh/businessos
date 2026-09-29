@@ -1,4 +1,4 @@
-import { CircleDollarSign, Wallet, Clock, Receipt as ReceiptIcon, TrendingUp, Activity } from "lucide-react";
+import { CircleDollarSign, Wallet, Clock, Receipt as ReceiptIcon, TrendingUp, Activity } from "@/components/ui/icon";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/currency";
 import type { FinancialSummary } from "@/lib/reports/dal";

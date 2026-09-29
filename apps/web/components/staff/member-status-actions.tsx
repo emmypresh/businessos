@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/ui/icon";
 import { suspendMember, reactivateMember } from "@/lib/staff/actions";
 import {
   Dialog,

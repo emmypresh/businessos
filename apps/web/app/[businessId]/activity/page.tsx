@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { ActivityFilters } from "@/components/activity/activity-filters";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { PaginationLink } from "@/components/pagination-link";
-import { Activity } from "lucide-react";
+import { Activity } from "@/components/ui/icon";
 
 export default async function ActivityPage({
   params,

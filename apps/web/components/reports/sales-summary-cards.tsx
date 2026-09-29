@@ -1,4 +1,4 @@
-import { CircleDollarSign, Receipt, Gauge } from "lucide-react";
+import { CircleDollarSign, Receipt, Gauge } from "@/components/ui/icon";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/currency";
 

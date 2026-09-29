@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@/components/ui/icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatComparison } from "@/lib/reports/comparison";
 import type { ManagementReportingAggregate } from "@/lib/reports/dal";

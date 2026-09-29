@@ -16,7 +16,7 @@ import {
   Activity,
   CreditCard,
   MessageCircle,
-} from "lucide-react";
+} from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
 import { getPermissions } from "@/lib/business/dal";

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, LineChart, ArrowUpDown, Download } from "lucide-react";
+import { ArrowLeft, LineChart, ArrowUpDown, Download } from "@/components/ui/icon";
 import { z } from "zod";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
@@ -37,7 +37,7 @@ function PaginationLink({ href, disabled, children }: { href: string; disabled: 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { formatMoney } from "@/lib/currency";
 import { TopCustomersChart } from "@/components/reports/top-customers-chart";
-import { Users, ShoppingBag, UserPlus, Repeat, Gauge } from "lucide-react";
+import { Users, ShoppingBag, UserPlus, Repeat, Gauge } from "@/components/ui/icon";
 
 const BranchParamSchema = z.uuid();
 

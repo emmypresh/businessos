@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { AppIcon } from "@/components/ui/icon";
 
 /**
  * The one consistent "nothing here yet" / "no results" surface for
@@ -14,7 +14,7 @@ export function EmptyState({
   description,
   action,
 }: {
-  icon?: LucideIcon;
+  icon?: AppIcon;
   title: string;
   description?: string;
   action?: ReactNode;

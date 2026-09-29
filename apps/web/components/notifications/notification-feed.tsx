@@ -9,7 +9,7 @@ import {
   IdCard,
   Building2,
   Bell as BellIcon,
-} from "lucide-react";
+} from "@/components/ui/icon";
 import {
   Sheet,
   SheetContent,

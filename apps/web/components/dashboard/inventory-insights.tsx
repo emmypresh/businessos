@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, AlertTriangle, PackageSearch } from "lucide-react";
+import { ArrowUpRight, AlertTriangle, PackageSearch } from "@/components/ui/icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ManagementReportingAggregate } from "@/lib/reports/dal";
 

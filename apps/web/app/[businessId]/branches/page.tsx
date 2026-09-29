@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { Building2 } from "@/components/ui/icon";
 import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { listBranches } from "@/lib/branches/dal";

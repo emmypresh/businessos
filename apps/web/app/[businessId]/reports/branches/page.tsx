@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, LineChart, ArrowUpDown, Building2, ShoppingBag, Users2, Gauge, Boxes, Wallet, Download } from "lucide-react";
+import { ArrowLeft, LineChart, ArrowUpDown, Building2, ShoppingBag, Users2, Gauge, Boxes, Wallet, Download } from "@/components/ui/icon";
 import { z } from "zod";
 import { requirePermissionOrNotFound } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";

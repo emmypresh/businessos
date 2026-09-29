@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, MessageCircle } from "lucide-react";
+import { ArrowUpRight, MessageCircle } from "@/components/ui/icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Props = {

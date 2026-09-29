@@ -1,4 +1,4 @@
-import { CircleAlert } from "lucide-react";
+import { CircleAlert } from "@/components/ui/icon";
 import { EmptyState } from "@/components/dashboard/empty-state";
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X } from "@/components/ui/icon";
 import {
   createInvoice,
   searchProductsForInvoiceAction,

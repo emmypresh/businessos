@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Building2, ShieldCheck, LogOut, LifeBuoy, CreditCard, FileClock } from "lucide-react";
+import { LayoutDashboard, Building2, ShieldCheck, LogOut, LifeBuoy, CreditCard, FileClock } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/auth/actions";
 import { SidebarNav, type NavSection } from "@/components/dashboard/sidebar-nav";

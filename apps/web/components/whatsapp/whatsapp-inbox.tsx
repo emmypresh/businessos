@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, useMemo } from "react";
 import type { KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCheck, MessageCircle, Search, Send, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, MessageCircle, Search, Send, ShieldAlert } from "@/components/ui/icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
