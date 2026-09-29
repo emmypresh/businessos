@@ -241,6 +241,7 @@ describe("SECURITY DEFINER functions: search_path is locked, ownership is narrow
           "private_product_creator",
           "private_sale_return_writer",
           "private_sale_writer",
+          "private_business_category_writer",
         ].sort()
       );
     } finally {
