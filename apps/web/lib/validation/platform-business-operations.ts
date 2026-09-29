@@ -18,6 +18,10 @@ export const SUPPORT_TAB = {
   ACTIVITY: "activity",
   DIAGNOSTICS: "diagnostics",
   AUDIT: "audit",
+  // Phase 1O-D — kept as its own tab, deliberately never merged into
+  // Overview (phase instructions §30: "Do not mix destructive actions
+  // into ordinary Overview cards").
+  ACTIONS: "actions",
 } as const;
 
 export const SUPPORT_TAB_VALUES = [
@@ -28,6 +32,7 @@ export const SUPPORT_TAB_VALUES = [
   SUPPORT_TAB.ACTIVITY,
   SUPPORT_TAB.DIAGNOSTICS,
   SUPPORT_TAB.AUDIT,
+  SUPPORT_TAB.ACTIONS,
 ] as const;
 
 export type SupportTab = (typeof SUPPORT_TAB_VALUES)[number];
@@ -106,3 +111,23 @@ export function parsePageParam(raw: string | string[] | undefined): number {
 }
 
 export const IdSchema = z.uuid();
+
+// Phase 1O-D remediation — the search box on the minimal
+// /internal/admin/actions lookup (the smallest safe navigation mechanism
+// for a caller, e.g. BILLING, who holds a controlled-action permission but
+// not platform.businesses.view). Mirrors
+// list_platform_action_eligible_businesses' own server-side bounds exactly
+// (20261002090000_harden_platform_billing_action_lookup.sql): a non-blank
+// search below 3 characters is discarded here (treated the same as no
+// search at all) rather than forwarded to the RPC, so the UI never shows a
+// raw INVALID_SEARCH database error for a caller who is simply still
+// typing.
+export const PLATFORM_ACTION_SEARCH_MIN_LENGTH = 3;
+const ActionSearchSchema = z.string().trim().max(200).optional();
+
+export function parseActionSearch(raw: string | string[] | undefined): string | undefined {
+  const value = typeof raw === "string" ? raw : undefined;
+  const parsed = ActionSearchSchema.safeParse(value);
+  if (!parsed.success || !parsed.data) return undefined;
+  return parsed.data.length >= PLATFORM_ACTION_SEARCH_MIN_LENGTH ? parsed.data : undefined;
+}

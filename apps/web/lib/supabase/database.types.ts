@@ -1442,6 +1442,63 @@ export type Database = {
           },
         ]
       }
+      platform_action_audit: {
+        Row: {
+          action_type: string
+          actor_platform_admin_id: string
+          actor_user_id: string
+          after_state: Json
+          before_state: Json
+          created_at: string
+          id: string
+          idempotency_key: string
+          params_hash: string
+          reason: string
+          target_business_id: string
+        }
+        Insert: {
+          action_type: string
+          actor_platform_admin_id: string
+          actor_user_id: string
+          after_state: Json
+          before_state: Json
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          params_hash: string
+          reason: string
+          target_business_id: string
+        }
+        Update: {
+          action_type?: string
+          actor_platform_admin_id?: string
+          actor_user_id?: string
+          after_state?: Json
+          before_state?: Json
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          params_hash?: string
+          reason?: string
+          target_business_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_action_audit_actor_platform_admin_id_fkey"
+            columns: ["actor_platform_admin_id"]
+            isOneToOne: false
+            referencedRelation: "platform_admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_action_audit_target_business_id_fkey"
+            columns: ["target_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_admins: {
         Row: {
           created_at: string
@@ -2907,6 +2964,10 @@ export type Database = {
           provider_subscription_code: string
         }[]
       }
+      get_platform_business_action_context: {
+        Args: { p_business_id: string }
+        Returns: Json
+      }
       get_platform_business_detail: {
         Args: { p_business_id: string }
         Returns: Json
@@ -3053,6 +3114,30 @@ export type Database = {
           reference: string
         }[]
       }
+      list_platform_action_eligible_businesses: {
+        Args: { p_page?: number; p_page_size?: number; p_search?: string }
+        Returns: {
+          business_id: string
+          business_name: string
+          business_status: string
+          subscription_status: string
+          total_count: number
+          trial_ends_at: string
+        }[]
+      }
+      list_platform_business_actions: {
+        Args: { p_business_id: string; p_page?: number; p_page_size?: number }
+        Returns: {
+          action_id: string
+          action_type: string
+          actor_email: string
+          after_state: Json
+          before_state: Json
+          occurred_at: string
+          reason: string
+          total_count: number
+        }[]
+      }
       list_platform_business_activity: {
         Args: { p_business_id: string; p_page?: number; p_page_size?: number }
         Returns: {
@@ -3160,6 +3245,31 @@ export type Database = {
       mark_paystack_subscription_payment_failed: {
         Args: { p_business_id: string }
         Returns: string
+      }
+      platform_extend_trial: {
+        Args: {
+          p_business_id: string
+          p_days: number
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      platform_reactivate_business: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      platform_suspend_business: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
       }
       reactivate_business_branch: {
         Args: { p_branch_id: string; p_business_id: string }

@@ -597,6 +597,36 @@ export function mapDatabaseError(
     return { message: "No subscription is available for this business." };
   }
 
+  // Phase 1O-D — controlled platform actions. Codes verified against the
+  // exact `raise exception` strings in
+  // supabase/migrations/20261001080000_platform_controlled_actions.sql —
+  // not guessed. IDEMPOTENCY_KEY_CONFLICT is checked before nothing else
+  // here since no other code in this file is its substring.
+  if (message.includes("BUSINESS_NOT_FOUND")) {
+    // Same non-disclosure reasoning as PRODUCT_NOT_FOUND above: a forged/
+    // foreign business id and a genuinely nonexistent one are
+    // indistinguishable to the caller.
+    return { message: "This business is not available." };
+  }
+  if (message.includes("INVALID_BUSINESS_STATE")) {
+    return { message: "This action isn't available for this business's current status." };
+  }
+  if (message.includes("INVALID_REASON")) {
+    return { message: "Enter a reason (10–500 characters).", field: "reason" };
+  }
+  if (message.includes("INVALID_IDEMPOTENCY_KEY") || message.includes("INVALID_BUSINESS_ID")) {
+    return GENERIC_ERROR;
+  }
+  if (message.includes("IDEMPOTENCY_KEY_CONFLICT")) {
+    return { message: "This action may already be in progress with different details. Please refresh and try again." };
+  }
+  if (message.includes("INVALID_TRIAL_DAYS")) {
+    return { message: "Enter a number of days between 1 and 30.", field: "days" };
+  }
+  if (message.includes("TRIAL_EXTENSION_NOT_SUPPORTED")) {
+    return { message: "This business's subscription isn't currently eligible for a trial extension." };
+  }
+
   if (error.code === "42501" || message.includes("insufficient_privilege")) {
     return PERMISSION_DENIED_ERROR;
   }

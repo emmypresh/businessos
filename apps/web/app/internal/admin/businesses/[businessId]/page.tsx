@@ -13,6 +13,7 @@ import { DiagnosticsTab } from "@/components/platform/diagnostics-tab";
 import { MembersTab } from "@/components/platform/members-tab";
 import { ActivityTab } from "@/components/platform/activity-tab";
 import { AuditTab } from "@/components/platform/audit-tab";
+import { ActionsTab } from "@/components/platform/actions-tab";
 
 export const metadata: Metadata = {
   title: "Business detail — Internal Administration",
@@ -55,6 +56,10 @@ export default async function PlatformBusinessDetailPage({
   const urlSearchParams = toSearchParams(rawSearchParams);
 
   const canViewAudit = await hasPlatformPermission(PLATFORM_PERMISSION.AUDIT_VIEW);
+  const canSuspend = await hasPlatformPermission(PLATFORM_PERMISSION.BUSINESSES_SUSPEND);
+  const canReactivate = await hasPlatformPermission(PLATFORM_PERMISSION.BUSINESSES_REACTIVATE);
+  const canExtendTrial = await hasPlatformPermission(PLATFORM_PERMISSION.SUBSCRIPTIONS_EXTEND_TRIAL);
+  const canViewActions = canSuspend || canReactivate || canExtendTrial || canViewAudit;
 
   const overview = await getPlatformBusinessOverview(parsedId.data);
 
@@ -95,6 +100,27 @@ export default async function PlatformBusinessDetailPage({
       );
       break;
     }
+    case SUPPORT_TAB.ACTIONS: {
+      // Defense in depth: even a tampered ?tab=actions URL from a caller
+      // with none of the underlying permissions renders ActionsTab, which
+      // independently re-checks each permission before rendering any
+      // control or history — mirrors AuditTab's own convention exactly.
+      const page = parsePageParam(rawSearchParams.page);
+      tabContent = (
+        <ActionsTab
+          businessId={parsedId.data}
+          overview={overview}
+          page={page}
+          searchParams={urlSearchParams}
+          canSuspend={canSuspend}
+          canReactivate={canReactivate}
+          canExtendTrial={canExtendTrial}
+          canViewHistory={canViewAudit}
+          showDedicatedRouteLink
+        />
+      );
+      break;
+    }
     case SUPPORT_TAB.OVERVIEW:
     default:
       tabContent = <OverviewTab overview={overview} />;
@@ -118,6 +144,7 @@ export default async function PlatformBusinessDetailPage({
         businessId={parsedId.data}
         activeTab={activeTab}
         canViewAudit={canViewAudit}
+        canViewActions={canViewActions}
       />
 
       {tabContent}

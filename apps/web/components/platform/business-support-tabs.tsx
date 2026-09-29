@@ -10,6 +10,7 @@ const TAB_LABELS: Record<SupportTab, string> = {
   [SUPPORT_TAB.ACTIVITY]: "Activity",
   [SUPPORT_TAB.DIAGNOSTICS]: "Diagnostics",
   [SUPPORT_TAB.AUDIT]: "Audit",
+  [SUPPORT_TAB.ACTIONS]: "Platform Actions",
 };
 
 const TAB_ORDER: SupportTab[] = [
@@ -33,17 +34,27 @@ const TAB_ORDER: SupportTab[] = [
  * convenience only: list_platform_business_audit independently re-checks
  * platform.audit.view at the database layer regardless of what this
  * component renders.
+ *
+ * Phase 1O-D: the Platform Actions tab only renders when `canViewActions`
+ * is true (the caller holds at least one of the three mutation
+ * permissions, or platform.audit.view for read-only history) — same UI-
+ * convenience-only convention: every mutation form and the history RPC
+ * both independently re-check their own specific permission regardless.
  */
 export function BusinessSupportTabs({
   businessId,
   activeTab,
   canViewAudit,
+  canViewActions,
 }: {
   businessId: string;
   activeTab: SupportTab;
   canViewAudit: boolean;
+  canViewActions: boolean;
 }) {
-  const tabs = canViewAudit ? [...TAB_ORDER, SUPPORT_TAB.AUDIT] : TAB_ORDER;
+  let tabs: SupportTab[] = TAB_ORDER;
+  if (canViewAudit) tabs = [...tabs, SUPPORT_TAB.AUDIT];
+  if (canViewActions) tabs = [...tabs, SUPPORT_TAB.ACTIONS];
 
   return (
     <nav aria-label="Business support sections" className="flex flex-wrap gap-1 border-b">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requirePlatformAdmin } from "@/lib/platform/dal";
+import { requirePlatformAdmin, hasPlatformPermission } from "@/lib/platform/dal";
+import { PLATFORM_PERMISSION } from "@/lib/platform/constants";
 
 export const metadata: Metadata = {
   title: "Internal Administration",
@@ -28,6 +29,20 @@ export default async function InternalAdminLayout({
 }: LayoutProps<"/internal/admin">) {
   await requirePlatformAdmin();
 
+  // Phase 1O-D remediation — shown only when the caller holds at least one
+  // controlled-action permission, independent of platform.businesses.view.
+  // This is the nav-visibility convenience for BILLING (which holds
+  // platform.subscriptions.extend_trial but not businesses.view, and
+  // therefore never sees "Businesses" lead anywhere useful): the actual
+  // authorization boundary is requireAnyPlatformPermission on the
+  // /internal/admin/actions route itself, not this link's visibility.
+  const [canSuspend, canReactivate, canExtendTrial] = await Promise.all([
+    hasPlatformPermission(PLATFORM_PERMISSION.BUSINESSES_SUSPEND),
+    hasPlatformPermission(PLATFORM_PERMISSION.BUSINESSES_REACTIVATE),
+    hasPlatformPermission(PLATFORM_PERMISSION.SUBSCRIPTIONS_EXTEND_TRIAL),
+  ]);
+  const canReachActions = canSuspend || canReactivate || canExtendTrial;
+
   return (
     <div className="min-h-full flex flex-col">
       <header className="border-b bg-muted/40">
@@ -54,6 +69,14 @@ export default async function InternalAdminLayout({
             >
               Businesses
             </Link>
+            {canReachActions ? (
+              <Link
+                href="/internal/admin/actions"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Actions
+              </Link>
+            ) : null}
           </nav>
         </div>
       </header>

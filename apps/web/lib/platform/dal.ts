@@ -132,3 +132,35 @@ export async function requirePlatformPermission(
     notFound();
   }
 }
+
+// Phase 1O-D remediation — the OR-permission variant of
+// requirePlatformPermission above, for a route that must admit a caller
+// holding ANY ONE of several permissions rather than one specific
+// permission. Introduced because BILLING holds
+// platform.subscriptions.extend_trial but not platform.businesses.view,
+// and the only pre-existing Platform Actions surface lived behind a page
+// shell gated on the latter — BILLING had no route that would ever admit
+// it despite holding a permission it should be able to exercise. This
+// helper is the single centralized fix (never duplicated per-route): same
+// ordering as requirePlatformPermission (admin -> AAL2 -> permission), same
+// fail-closed default (notFound() unless at least one permission matches),
+// and no tenant-role fallback of any kind. Route ADMISSION here is
+// deliberately not a substitute for per-mutation authorization — each
+// mutation RPC (platform_suspend_business/platform_reactivate_business/
+// platform_extend_trial) independently re-checks its own single, exact
+// permission regardless of how the caller reached the page.
+export async function requireAnyPlatformPermission(
+  permissions: PlatformPermissionKey[]
+): Promise<void> {
+  await requirePlatformAdmin();
+
+  const aal = await getAssuranceLevel();
+  if (aal !== "aal2") {
+    redirect("/internal/admin/mfa");
+  }
+
+  const results = await Promise.all(permissions.map((permission) => hasPlatformPermission(permission)));
+  if (!results.some(Boolean)) {
+    notFound();
+  }
+}
