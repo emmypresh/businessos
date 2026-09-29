@@ -19,15 +19,18 @@ describe("CreateProductSchema", () => {
     ).toBe(false);
   });
 
-  it("requires sku when trackInventory is true (default)", () => {
+  // Phase 1Q-B: this schema no longer requires a caller-supplied sku when
+  // trackInventory is true — create_product itself now resolves a missing
+  // sku per the business's own sku_mode (generating one for
+  // SMART_AUTO/SIMPLE_SEQUENTIAL businesses; still required server-side,
+  // as SKU_REQUIRED, only for a MANUAL-mode business) — see
+  // lib/validation/products.ts's own header comment on this schema.
+  it("accepts an omitted sku even when trackInventory is true (default) — resolved server-side", () => {
     const result = CreateProductSchema.safeParse({
       creationKey: validKey,
       name: "No SKU Tracked",
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.flatten().fieldErrors.sku).toBeDefined();
-    }
+    expect(result.success).toBe(true);
   });
 
   it("does not require sku when trackInventory is false", () => {

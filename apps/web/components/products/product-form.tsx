@@ -56,6 +56,12 @@ export function ProductForm({
   const currencyLabel = symbolCurrency ? getCurrencySymbol(symbolCurrency) : "—";
   const action = mode === "create" ? createProduct : updateProduct;
   const [state, formAction] = useActionState(action, undefined);
+  // Server Action validation failures re-render this client component. Keep
+  // the last submitted scalar values locally so that a recoverable failure
+  // never turns a carefully completed product form back into a blank form.
+  // A confirmed success redirects away, so this draft is naturally discarded.
+  const [submittedValues, setSubmittedValues] = useState<Record<string, string>>({});
+  const submittedValue = (name: string, initial = "") => submittedValues[name] ?? initial;
 
   // Generated ONCE, at mount — never regenerated on re-render. Stable
   // across a failed submission (the component stays mounted, so a
@@ -67,6 +73,12 @@ export function ProductForm({
   const [creationKey] = useState(() => crypto.randomUUID());
 
   const [trackInventory, setTrackInventory] = useState(product?.track_inventory ?? true);
+  // Phase 1Q-B: create-mode-only UI state — which mode is purely a
+  // client-side rendering choice (whether the sku <Input> exists in the
+  // DOM at all), never sent to the server itself. See the sku field's own
+  // block below for why removing name="sku" from the DOM, rather than
+  // submitting an empty string, is what triggers server-side generation.
+  const [skuEntryMode, setSkuEntryMode] = useState<"auto" | "manual">("auto");
   // Phase 1G: opening stock is branch-aware — the branch selector only
   // ever appears once a POSITIVE quantity is entered (a zero/empty opening
   // quantity requires no branch/location at all, matching create_product's
@@ -80,7 +92,23 @@ export function ProductForm({
   const needsBranch = trackInventory && Number(openingQuantity) > 0;
 
   return (
-    <form action={formAction} data-testid="product-form" className="flex flex-col gap-6 max-w-2xl">
+    <form
+      action={formAction}
+      data-testid="product-form"
+      className="flex flex-col gap-6 max-w-2xl"
+      onSubmit={(event) => {
+        const formData = new FormData(event.currentTarget);
+        const nextValues: Record<string, string> = {};
+        for (const [key, value] of formData.entries()) {
+          if (typeof value === "string") nextValues[key] = value;
+        }
+        setSubmittedValues(nextValues);
+        // A manual value must remain visible after its validation error;
+        // switching the radio back to auto would hide both the error and
+        // the value the user needs to correct.
+        if (formData.has("sku")) setSkuEntryMode("manual");
+      }}
+    >
       <input type="hidden" name="businessId" value={businessId} />
       {mode === "create" ? (
         <input type="hidden" name="creationKey" value={creationKey} />
@@ -94,7 +122,7 @@ export function ProductForm({
           <Input
             id="name"
             name="name"
-            defaultValue={product?.name}
+            defaultValue={submittedValue("name", product?.name ?? "")}
             aria-invalid={!!state?.fieldErrors?.name}
             required
           />
@@ -107,17 +135,84 @@ export function ProductForm({
 
         <div className="flex flex-col gap-2 sm:col-span-2">
           <Label htmlFor="description">Description</Label>
-          <Textarea id="description" name="description" defaultValue={product?.description ?? ""} rows={3} />
+          <Textarea
+            id="description"
+            name="description"
+            defaultValue={submittedValue("description", product?.description ?? "")}
+            rows={3}
+          />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="sku">SKU {trackInventory ? <span className="text-destructive">*</span> : null}</Label>
-          <Input
-            id="sku"
-            name="sku"
-            defaultValue={product?.sku ?? ""}
-            aria-invalid={!!state?.fieldErrors?.sku}
-          />
+          <Label htmlFor="sku">SKU</Label>
+          {mode === "create" ? (
+            <>
+              {/* Phase 1Q-B: low-tech default — a fresh product starts in
+                  "auto" mode with no visible sku input at all, so the
+                  field can be ignored entirely (phase instruction §25).
+                  Switching to "I'll enter my own" reveals a plain input;
+                  switching back removes name="sku" from the form again,
+                  so the server never receives an empty string and falls
+                  through to server-side generation exactly as if the
+                  field had never existed. */}
+              <div className="flex items-center gap-4 text-sm">
+                <label className="flex items-center gap-1.5 font-normal">
+                  <input
+                    type="radio"
+                    name="skuEntryMode"
+                    value="auto"
+                    checked={skuEntryMode === "auto"}
+                    onChange={() => setSkuEntryMode("auto")}
+                  />
+                  Auto-generate
+                </label>
+                <label className="flex items-center gap-1.5 font-normal">
+                  <input
+                    type="radio"
+                    name="skuEntryMode"
+                    value="manual"
+                    checked={skuEntryMode === "manual"}
+                    onChange={() => setSkuEntryMode("manual")}
+                  />
+                  I&apos;ll enter my own
+                </label>
+              </div>
+              {skuEntryMode === "manual" ? (
+                <Input
+                  id="sku"
+                  name="sku"
+                  defaultValue={submittedValue("sku")}
+                  aria-invalid={!!state?.fieldErrors?.sku}
+                  autoFocus
+                />
+              ) : trackInventory ? (
+                <p className="text-xs text-muted-foreground">
+                  A SKU will be generated automatically when this product is created.
+                </p>
+              ) : (
+                // Phase 1Q-B remediation (Codex low finding): create_product
+                // only ever generates a sku for a TRACKED product with an
+                // omitted one (see 20261010080100_product_sku_generation.sql)
+                // — a non-tracked (service) product's sku stays null
+                // regardless of the business's sku_mode. The auto-generation
+                // promise above would be false for this case; this copy
+                // matches actual server behavior instead.
+                <p className="text-xs text-muted-foreground">
+                  SKU is optional for service items — leave it blank if you don&apos;t need one.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <Input
+                id="sku"
+                name="sku"
+                defaultValue={submittedValue("sku", product?.sku ?? "")}
+                aria-invalid={!!state?.fieldErrors?.sku}
+              />
+              <p className="text-xs text-muted-foreground">Changing the SKU is recorded in the audit trail.</p>
+            </>
+          )}
           {state?.fieldErrors?.sku ? (
             <p role="alert" className="text-sm text-destructive">
               {state.fieldErrors.sku[0]}
@@ -130,7 +225,7 @@ export function ProductForm({
           <Input
             id="barcode"
             name="barcode"
-            defaultValue={product?.barcode ?? ""}
+            defaultValue={submittedValue("barcode", product?.barcode ?? "")}
             aria-invalid={!!state?.fieldErrors?.barcode}
           />
           {state?.fieldErrors?.barcode ? (
@@ -142,12 +237,12 @@ export function ProductForm({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="category">Category</Label>
-          <Input id="category" name="category" defaultValue={product?.category ?? ""} />
+          <Input id="category" name="category" defaultValue={submittedValue("category", product?.category ?? "")} />
         </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="unit">Unit</Label>
-          <Input id="unit" name="unit" defaultValue={product?.unit ?? "unit"} />
+          <Input id="unit" name="unit" defaultValue={submittedValue("unit", product?.unit ?? "unit")} />
         </div>
 
         {canSeeCost ? (
@@ -159,7 +254,7 @@ export function ProductForm({
               type="number"
               step="0.01"
               min="0"
-              defaultValue={product ? undefined : undefined}
+              defaultValue={submittedValue("costPrice")}
               aria-invalid={!!state?.fieldErrors?.costPrice}
             />
             {state?.fieldErrors?.costPrice ? (
@@ -178,7 +273,7 @@ export function ProductForm({
             type="number"
             step="0.01"
             min="0"
-            defaultValue={product?.selling_price ?? 0}
+            defaultValue={submittedValue("sellingPrice", String(product?.selling_price ?? 0))}
             aria-invalid={!!state?.fieldErrors?.sellingPrice}
           />
           {state?.fieldErrors?.sellingPrice ? (
@@ -196,7 +291,7 @@ export function ProductForm({
             type="number"
             step="0.001"
             min="0"
-            defaultValue={product?.low_stock_threshold ?? ""}
+            defaultValue={submittedValue("lowStockThreshold", String(product?.low_stock_threshold ?? ""))}
           />
         </div>
 

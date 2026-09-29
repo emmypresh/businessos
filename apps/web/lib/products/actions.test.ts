@@ -163,6 +163,10 @@ describe("createProduct — RPC response sanitization (rule 3)", () => {
 describe("updateProduct — cost write permission (rule 2)", () => {
   it("does not include cost_price in the update payload when inventory.view_cost is absent — the key is absent, not null", async () => {
     getPermissions.mockResolvedValue(new Set(["products.manage"]));
+    // Phase 1Q-B remediation: updateProduct now calls update_product_sku
+    // FIRST (see lib/products/actions.ts) before the plain-fields
+    // .from("products").update(...) this test asserts on.
+    rpc.mockResolvedValue({ data: null, error: null });
     const chain = createChain({ error: null });
     fromMock.mockReturnValue(chain);
 
@@ -186,6 +190,7 @@ describe("updateProduct — cost write permission (rule 2)", () => {
 
   it("includes cost_price in the update payload when inventory.view_cost is present", async () => {
     getPermissions.mockResolvedValue(new Set(["products.manage", "inventory.view_cost"]));
+    rpc.mockResolvedValue({ data: null, error: null });
     const chain = createChain({ error: null });
     fromMock.mockReturnValue(chain);
 
@@ -214,6 +219,85 @@ describe("updateProduct — cost write permission (rule 2)", () => {
       formData({ businessId: "biz-1", productId: "prod-1", name: "X", unit: "unit", sellingPrice: "1" })
     );
     expect(result?.error).toBe("You don't have permission to do this.");
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+});
+
+// Phase 1Q-B remediation (Codex rejection, blocking finding 2): sku is no
+// longer part of the plain products UPDATE payload at all — it is routed
+// through the dedicated update_product_sku RPC instead. See
+// supabase/migrations/20261010080400_product_identifier_concurrency_and_
+// sku_update_rpc.sql for the server-side mutation this exercises the
+// Server Action's OWN calling contract against.
+describe("updateProduct — SKU edits route through update_product_sku, not the plain products UPDATE", () => {
+  it("never includes sku in the plain .from('products').update(...) payload", async () => {
+    getPermissions.mockResolvedValue(new Set(["products.manage"]));
+    rpc.mockResolvedValue({ data: "NEW-SKU", error: null });
+    const chain = createChain({ error: null });
+    fromMock.mockReturnValue(chain);
+
+    await expect(
+      updateProduct(
+        undefined,
+        formData({
+          businessId: "biz-1",
+          productId: "prod-1",
+          name: "Renamed",
+          unit: "unit",
+          sellingPrice: "100",
+          sku: "new sku",
+        })
+      )
+    ).rejects.toThrow("REDIRECT:");
+
+    expect(rpc).toHaveBeenCalledWith("update_product_sku", {
+      p_business_id: "biz-1",
+      p_product_id: "prod-1",
+      p_sku: "new sku",
+    });
+    const updatePayload = (chain.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(updatePayload).not.toHaveProperty("sku");
+  });
+
+  it("calls update_product_sku with p_sku left undefined when the sku field is omitted/blank — the RPC's own `default null` treats that identically to an explicit NULL", async () => {
+    getPermissions.mockResolvedValue(new Set(["products.manage"]));
+    rpc.mockResolvedValue({ data: null, error: null });
+    const chain = createChain({ error: null });
+    fromMock.mockReturnValue(chain);
+
+    await expect(
+      updateProduct(
+        undefined,
+        formData({ businessId: "biz-1", productId: "prod-1", name: "Renamed", unit: "unit", sellingPrice: "100" })
+      )
+    ).rejects.toThrow("REDIRECT:");
+
+    expect(rpc).toHaveBeenCalledWith("update_product_sku", {
+      p_business_id: "biz-1",
+      p_product_id: "prod-1",
+      p_sku: undefined,
+    });
+  });
+
+  it("returns the mapped SKU error and never touches the plain products UPDATE when update_product_sku fails", async () => {
+    getPermissions.mockResolvedValue(new Set(["products.manage"]));
+    rpc.mockResolvedValue({ data: null, error: { message: "SKU_ALREADY_EXISTS", code: "23505" } });
+    const chain = createChain({ error: null });
+    fromMock.mockReturnValue(chain);
+
+    const result = await updateProduct(
+      undefined,
+      formData({
+        businessId: "biz-1",
+        productId: "prod-1",
+        name: "Renamed",
+        unit: "unit",
+        sellingPrice: "100",
+        sku: "taken",
+      })
+    );
+
+    expect(result?.fieldErrors?.sku).toEqual(["This SKU is already in use."]);
     expect(fromMock).not.toHaveBeenCalled();
   });
 });

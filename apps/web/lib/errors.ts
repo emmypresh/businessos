@@ -148,8 +148,58 @@ export function mapDatabaseError(
   if (message.includes("SKU_UNAVAILABLE")) {
     return { message: "This SKU is already in use.", field: "sku" };
   }
+  // Phase 1Q-B remediation — public.update_product_sku's own duplicate
+  // code (see supabase/migrations/20261010080400_product_identifier_
+  // concurrency_and_sku_update_rpc.sql). Deliberately the SAME user-facing
+  // message as SKU_UNAVAILABLE (both mean "this SKU is already taken in
+  // this business"), kept as a distinct code so the create and edit paths
+  // never share an ambiguous error string in the database layer itself.
+  if (message.includes("SKU_ALREADY_EXISTS")) {
+    return { message: "This SKU is already in use.", field: "sku" };
+  }
   if (message.includes("BARCODE_UNAVAILABLE")) {
     return { message: "This barcode is already in use.", field: "barcode" };
+  }
+  // Phase 1Q-B — product identifier + auto-SKU foundation. Codes verified
+  // against the exact `raise exception` strings in
+  // supabase/migrations/20261010080100_product_sku_generation.sql and
+  // supabase/migrations/20261010080200_create_product_identifiers.sql —
+  // not guessed. SKU_REQUIRED/INVALID_SKU are checked before nothing else
+  // here since neither is a substring of any other mapped code above.
+  if (message.includes("SKU_REQUIRED")) {
+    return {
+      message: "Enter a SKU, or switch this business to automatic SKU generation.",
+      field: "sku",
+    };
+  }
+  if (message.includes("INVALID_SKU")) {
+    return { message: "Enter a valid SKU (letters, numbers, - and _ only).", field: "sku" };
+  }
+  if (message.includes("INVALID_IDENTIFIER_TYPE")) {
+    return { message: "Choose a valid identifier type.", field: "identifierType" };
+  }
+  // Must be checked before the shorter INVALID_IDENTIFIER fallback below
+  // — INVALID_IDENTIFIER is a substring of INVALID_IDENTIFIER_CHECK_DIGIT.
+  if (message.includes("INVALID_IDENTIFIER_CHECK_DIGIT")) {
+    return {
+      message: "This code's check digit doesn't match — double-check the number.",
+      field: "identifierValue",
+    };
+  }
+  if (message.includes("INVALID_IDENTIFIER")) {
+    return { message: "Enter a valid code for the selected type.", field: "identifierValue" };
+  }
+  if (message.includes("IDENTIFIER_ALREADY_EXISTS")) {
+    return {
+      message: "This code is already assigned to a product in this business.",
+      field: "identifierValue",
+    };
+  }
+  if (message.includes("IDENTIFIER_NOT_FOUND")) {
+    // Same non-disclosure reasoning as PRODUCT_NOT_FOUND: a forged/
+    // foreign identifier id and a genuinely nonexistent one are
+    // indistinguishable to the caller.
+    return { message: "This identifier is not available." };
   }
   if (message.includes("CANNOT_ARCHIVE_WITH_STOCK")) {
     return {

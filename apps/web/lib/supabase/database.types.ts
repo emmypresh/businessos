@@ -465,6 +465,35 @@ export type Database = {
           },
         ];
       };
+      business_sku_settings: {
+        Row: {
+          business_id: string;
+          created_at: string;
+          sku_mode: string;
+          updated_at: string;
+        };
+        Insert: {
+          business_id: string;
+          created_at?: string;
+          sku_mode?: string;
+          updated_at?: string;
+        };
+        Update: {
+          business_id?: string;
+          created_at?: string;
+          sku_mode?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_sku_settings_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: true;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       business_subscriptions: {
         Row: {
           amount_minor: number | null;
@@ -1603,6 +1632,60 @@ export type Database = {
           },
         ];
       };
+      product_identifiers: {
+        Row: {
+          business_id: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          identifier_type: string;
+          identifier_value: string;
+          is_primary: boolean;
+          normalized_value: string;
+          product_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          business_id: string;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          identifier_type: string;
+          identifier_value: string;
+          is_primary?: boolean;
+          normalized_value: string;
+          product_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          business_id?: string;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          identifier_type?: string;
+          identifier_value?: string;
+          is_primary?: boolean;
+          normalized_value?: string;
+          product_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_identifiers_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_identifiers_product_id_business_id_fkey";
+            columns: ["product_id", "business_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "business_id"];
+          },
+        ];
+      };
       products: {
         Row: {
           barcode: string | null;
@@ -2586,6 +2669,33 @@ export type Database = {
         };
         Returns: string;
       };
+      add_product_identifier: {
+        Args: {
+          p_business_id: string;
+          p_identifier_type: string;
+          p_identifier_value: string;
+          p_is_primary?: boolean;
+          p_product_id: string;
+        };
+        Returns: {
+          business_id: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          identifier_type: string;
+          identifier_value: string;
+          is_primary: boolean;
+          normalized_value: string;
+          product_id: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "product_identifiers";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       begin_paystack_checkout_intent: {
         Args: { p_business_id: string; p_price_id: string; p_provider_reference: string };
         Returns: string;
@@ -3444,6 +3554,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      remove_product_identifier: {
+        Args: { p_business_id: string; p_identifier_id: string };
+        Returns: undefined;
+      };
       renew_paystack_subscription: {
         Args: { p_business_id: string; p_period_end: string; p_period_start: string };
         Returns: string;
@@ -3535,6 +3649,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      update_product_sku: {
+        Args: { p_business_id: string; p_product_id: string; p_sku?: string };
+        Returns: string;
       };
       upsert_meta_whatsapp_account: {
         Args: {

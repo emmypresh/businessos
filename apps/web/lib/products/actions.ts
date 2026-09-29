@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/dal";
 import { getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
-import { CreateProductSchema, UpdateProductSchema } from "@/lib/validation/products";
+import { CreateProductSchema, UpdateProductSchema, AddProductIdentifierSchema } from "@/lib/validation/products";
 import { mapDatabaseError, toActionState } from "@/lib/errors";
 import { getBranchCanonicalLocation } from "@/lib/inventory/dal";
 import type { ActionState } from "@/lib/auth/actions";
@@ -168,12 +168,40 @@ export async function updateProduct(
   // preserving the old value. An absent key in a Postgres UPDATE simply
   // never touches that column, leaving the stored value untouched.
   const supabase = await createClient();
+
+  // Phase 1Q-B remediation: sku is deliberately EXCLUDED from the plain
+  // `.from("products").update(...)` below and routed through the
+  // dedicated public.update_product_sku mutation instead — the only path
+  // capable of writing this column now that `authenticated`'s direct
+  // column UPDATE privilege on products.sku has been revoked (see
+  // supabase/migrations/20261010080400_product_identifier_concurrency_
+  // and_sku_update_rpc.sql). This closes the normalization bypass a raw
+  // client-side edit ("  sh0e ") previously reached the database with
+  // unnormalized, unlike every value create_product itself ever stores.
+  // Called BEFORE the other-fields update so an invalid/duplicate SKU is
+  // rejected without partially applying the rest of the edit.
+  const skuResult = await supabase.rpc("update_product_sku", {
+    p_business_id: businessId,
+    p_product_id: productId,
+    // An omitted/blank sku field parses to `undefined` (see
+    // lib/validation/products.ts's optionalTrimmed) — left unset here
+    // rather than coerced to `null`, since update_product_sku's own
+    // `p_sku text default null` treats an omitted argument identically
+    // to an explicit SQL NULL (both clear the column), and this matches
+    // every other optional-parameter call site in this file (e.g.
+    // create_product's own p_sku above).
+    p_sku: parsed.data.sku,
+  });
+
+  if (skuResult.error) {
+    return toActionState(mapDatabaseError(skuResult.error));
+  }
+
   const { error } = await supabase
     .from("products")
     .update({
       name: parsed.data.name,
       description: parsed.data.description ?? null,
-      sku: parsed.data.sku ?? null,
       barcode: parsed.data.barcode ?? null,
       category: parsed.data.category ?? null,
       unit: parsed.data.unit,
@@ -193,6 +221,92 @@ export async function updateProduct(
   revalidatePath(`/${businessId}/products`);
   revalidatePath(`/${businessId}/products/${productId}`);
   redirect(`/${businessId}/products/${productId}`);
+}
+
+// Phase 1Q-B — external product identifiers (GTIN/UPC/EAN/OTHER). Both
+// actions independently re-check products.manage, exactly like every
+// other mutation in this file — the RPCs themselves ALSO re-check it
+// server-side (defense in depth, not the only gate).
+export async function addProductIdentifier(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireUser();
+
+  const businessId = formData.get("businessId");
+  if (typeof businessId !== "string" || !businessId) {
+    return { error: "Something went wrong. Please try again." };
+  }
+
+  const permissions = await getPermissions(businessId);
+  if (!permissions.has(PERMISSION.PRODUCTS_MANAGE)) {
+    return PERMISSION_DENIED;
+  }
+
+  const parsed = AddProductIdentifierSchema.safeParse({
+    productId: formData.get("productId"),
+    identifierType: formData.get("identifierType"),
+    identifierValue: formData.get("identifierValue"),
+    isPrimary: formData.get("isPrimary") ?? false,
+  });
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("add_product_identifier", {
+    p_business_id: businessId,
+    p_product_id: parsed.data.productId,
+    p_identifier_type: parsed.data.identifierType,
+    p_identifier_value: parsed.data.identifierValue,
+    p_is_primary: parsed.data.isPrimary,
+  });
+
+  if (error) {
+    return toActionState(mapDatabaseError(error));
+  }
+
+  revalidatePath(`/${businessId}/products/${parsed.data.productId}`);
+  return {};
+}
+
+export async function removeProductIdentifier(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireUser();
+
+  const businessId = formData.get("businessId");
+  const productId = formData.get("productId");
+  const identifierId = formData.get("identifierId");
+  if (
+    typeof businessId !== "string" ||
+    !businessId ||
+    typeof productId !== "string" ||
+    !productId ||
+    typeof identifierId !== "string" ||
+    !identifierId
+  ) {
+    return { error: "Something went wrong. Please try again." };
+  }
+
+  const permissions = await getPermissions(businessId);
+  if (!permissions.has(PERMISSION.PRODUCTS_MANAGE)) {
+    return PERMISSION_DENIED;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_product_identifier", {
+    p_business_id: businessId,
+    p_identifier_id: identifierId,
+  });
+
+  if (error) {
+    return toActionState(mapDatabaseError(error));
+  }
+
+  revalidatePath(`/${businessId}/products/${productId}`);
+  return {};
 }
 
 export async function archiveProduct(

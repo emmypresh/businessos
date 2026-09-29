@@ -28,7 +28,10 @@ describe("public.create_product", () => {
 
     expect(error).toBeNull();
     expect(data?.name).toBe("T-Shirt"); // trimmed
-    expect(data?.sku).toBe("tshirt-001"); // trimmed
+    // Phase 1Q-B: every stored sku (manual or generated) now goes through
+    // private.normalize_sku — trimmed, uppercased, whitespace collapsed to
+    // '-'. See lib/validation/products.ts / the Phase 1Q-B build brief.
+    expect(data?.sku).toBe("TSHIRT-001");
     expect(data?.status).toBe("active");
     expect(data?.business_id).toBe(businessId);
   });
@@ -67,7 +70,13 @@ describe("public.create_product", () => {
     }
   });
 
-  it("requires a SKU when track_inventory is true, but allows omitting it when false", async () => {
+  // Phase 1Q-B: a tracked product with an omitted sku is NO LONGER an
+  // error by default — create_product now auto-generates one, per the
+  // business's own sku_mode (no business_sku_settings row => SMART_AUTO,
+  // the recommended default; see 20261010080000_create_business_sku_
+  // settings.sql / 20261010080100_product_sku_generation.sql). A
+  // non-tracked (service) product still simply omits one, unaffected.
+  it("auto-generates a SKU for a tracked product when one is omitted (SMART_AUTO default), but still allows omitting it when track_inventory is false", async () => {
     const { client, businessId, userId } = await createOwnerAndBusiness("prod-sku-required");
     cleanupUserIds.push(userId);
 
@@ -77,7 +86,8 @@ describe("public.create_product", () => {
       p_name: "Tracked no SKU",
       p_track_inventory: true,
     });
-    expect(tracked.error).not.toBeNull();
+    expect(tracked.error).toBeNull();
+    expect(tracked.data?.sku).toEqual(expect.any(String));
 
     const service = await client.rpc("create_product", {
       p_business_id: businessId,
@@ -87,6 +97,20 @@ describe("public.create_product", () => {
     });
     expect(service.error).toBeNull();
     expect(service.data?.sku).toBeNull();
+  });
+
+  it("rejects an omitted SKU on a tracked product when the business is set to MANUAL mode", async () => {
+    const { client, businessId, userId } = await createOwnerAndBusiness("prod-sku-manual-required");
+    cleanupUserIds.push(userId);
+    await client.from("business_sku_settings").upsert({ business_id: businessId, sku_mode: "MANUAL" });
+
+    const { error } = await client.rpc("create_product", {
+      p_business_id: businessId,
+      p_creation_key: randomUuid(),
+      p_name: "Tracked no SKU",
+      p_track_inventory: true,
+    });
+    expect(error?.message).toContain("SKU_REQUIRED");
   });
 
   it("rejects a duplicate SKU (case/whitespace-normalized) within the same business", async () => {

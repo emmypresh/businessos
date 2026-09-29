@@ -591,7 +591,9 @@ describe("Phase 1J instrumentation — product.created", () => {
     expect(events[0].resource_label_snapshot).toBe("Audit Product");
     // No cost anywhere in the metadata.
     expect(JSON.stringify(events[0].metadata)).not.toContain("250");
-    expect(events[0].metadata).toEqual({});
+    // Phase 1Q-B: metadata now carries exactly one key, sku_generated —
+    // false here since this call supplied its own p_sku explicitly.
+    expect(events[0].metadata).toEqual({ sku_generated: false });
 
     const replay = await owner.client.rpc("create_product", {
       p_business_id: owner.businessId,

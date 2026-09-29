@@ -64,11 +64,17 @@ export const CreateProductSchema = z
     // that exact fallback, not be rejected here before the RPC ever
     // runs. Codex adversarial review, application-layer round 2, Blocker 5.
     branchId: z.uuid().optional(),
-  })
-  .refine((data) => !data.trackInventory || Boolean(data.sku), {
-    error: "SKU is required when inventory tracking is enabled.",
-    path: ["sku"],
   });
+// Phase 1Q-B: the old "trackInventory requires a caller-supplied sku"
+// .refine() is REMOVED — an omitted sku is no longer necessarily an
+// error. create_product itself now resolves a missing sku per the
+// business's own sku_mode (SMART_AUTO/SIMPLE_SEQUENTIAL generate one;
+// MANUAL still requires one when trackInventory is true, enforced
+// server-side as SKU_REQUIRED — see lib/errors.ts). Requiring it HERE,
+// client-side, would block the new default "leave it blank, one is
+// generated" flow (components/products/product-form.tsx) for the common
+// case, since this schema has no way to know the business's configured
+// mode.
 
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
 
@@ -102,3 +108,24 @@ export const ProductFilterSchema = z.object({
 });
 
 export type ProductFilterInput = z.infer<typeof ProductFilterSchema>;
+
+// Phase 1Q-B — client-side feedback only, mirroring this file's own
+// established philosophy: add_product_identifier's own server-side
+// normalization, length, and check-digit validation remain the actual
+// authority (lib/products/actions.ts never trusts this schema's success
+// as proof the value will be accepted).
+export const AddProductIdentifierSchema = z.object({
+  productId: z.uuid(),
+  identifierType: z.enum(["GTIN", "UPC_A", "EAN_13", "EAN_8", "OTHER"]),
+  identifierValue: z
+    .string()
+    .trim()
+    .min(1, { error: "Enter a value." })
+    .max(64, { error: "Value must be 64 characters or fewer." }),
+  isPrimary: z
+    .union([z.literal("on"), z.literal("true"), z.boolean()])
+    .transform((v) => v === "on" || v === "true" || v === true)
+    .default(false),
+});
+
+export type AddProductIdentifierInput = z.infer<typeof AddProductIdentifierSchema>;

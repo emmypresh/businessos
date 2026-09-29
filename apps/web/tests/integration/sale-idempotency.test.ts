@@ -94,9 +94,22 @@ describe("create_sale idempotency and replay ordering", () => {
 
     const { error: renameErr } = await client
       .from("products")
-      .update({ name: "Renamed After Sale", sku: `renamed-${randomUuid()}`, selling_price: 999999 })
+      .update({ name: "Renamed After Sale", selling_price: 999999 })
       .eq("id", product.id);
     expect(renameErr).toBeNull();
+
+    // Phase 1Q-B remediation: products.sku is no longer directly
+    // UPDATE-able by `authenticated` at all (see supabase/migrations/
+    // 20261010080400_product_identifier_concurrency_and_sku_update_rpc.sql)
+    // — every sku edit, including this fixture's own "mutate the product
+    // before retrying the sale" setup, now goes through the dedicated
+    // update_product_sku RPC.
+    const { error: skuErr } = await client.rpc("update_product_sku", {
+      p_business_id: businessId,
+      p_product_id: product.id,
+      p_sku: `renamed-${randomUuid()}`,
+    });
+    expect(skuErr).toBeNull();
 
     // Zero the remaining stock (18) before archiving — Phase 1C's own
     // enforce_zero_stock_before_archive trigger correctly blocks

@@ -11,6 +11,10 @@ async function loginAsInBrowser(page: Page, email: string, password: string) {
   await expect(page).not.toHaveURL(/\/login/);
 }
 
+async function chooseManualSku(page: Page) {
+  await page.getByRole("radio", { name: "I'll enter my own" }).check();
+}
+
 async function createOwnerBusiness(prefix: string) {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `${prefix}-${suffix}@example.test`;
@@ -32,6 +36,7 @@ test.describe("products", () => {
 
     await page.goto(`/${businessId}/products/new`);
     await page.getByLabel("Name").fill("Basic Product");
+    await chooseManualSku(page);
     await page.getByLabel("SKU", { exact: false }).fill(`basic-${Date.now()}`);
     await page.getByRole("button", { name: "Create product" }).click();
 
@@ -45,6 +50,7 @@ test.describe("products", () => {
 
     await page.goto(`/${businessId}/products/new`);
     await page.getByLabel("Name").fill("Opening Stock Product");
+    await chooseManualSku(page);
     await page.getByLabel("SKU", { exact: false }).fill(`opening-${Date.now()}`);
     await page.getByLabel("Opening stock").fill("15");
     await page.getByRole("button", { name: "Create product" }).click();
@@ -65,6 +71,7 @@ test.describe("products", () => {
     await page.goto(`/${businessId}/products/new`);
     const sku = `dup-${Date.now()}`;
     await page.getByLabel("Name").fill("Duplicate Click Product");
+    await chooseManualSku(page);
     await page.getByLabel("SKU", { exact: false }).fill(sku);
 
     // The SubmitButton correctly disables itself while a submission is
@@ -94,6 +101,7 @@ test.describe("products", () => {
 
     await page.goto(`/${businessId}/products/new`);
     await page.getByLabel("Name").fill("Original Name");
+    await chooseManualSku(page);
     await page.getByLabel("SKU", { exact: false }).fill(`edit-${Date.now()}`);
     await page.getByRole("button", { name: "Create product" }).click();
     await expect(page).toHaveURL(new RegExp(`/${businessId}/products/[0-9a-f-]{36}$`));
@@ -112,6 +120,7 @@ test.describe("products", () => {
     // Zero-stock: no opening quantity given.
     await page.goto(`/${businessId}/products/new`);
     await page.getByLabel("Name").fill("Zero Stock Product");
+    await chooseManualSku(page);
     await page.getByLabel("SKU", { exact: false }).fill(`archive-zero-${Date.now()}`);
     await page.getByRole("button", { name: "Create product" }).click();
     await expect(page).toHaveURL(new RegExp(`/${businessId}/products/[0-9a-f-]{36}$`));
@@ -123,6 +132,7 @@ test.describe("products", () => {
     // Stocked: opening quantity > 0.
     await page.goto(`/${businessId}/products/new`);
     await page.getByLabel("Name").fill("Stocked Product");
+    await chooseManualSku(page);
     await page.getByLabel("SKU", { exact: false }).fill(`archive-stocked-${Date.now()}`);
     await page.getByLabel("Opening stock").fill("5");
     await page.getByRole("button", { name: "Create product" }).click();

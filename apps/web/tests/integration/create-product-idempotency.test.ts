@@ -33,7 +33,9 @@ describe("public.create_product idempotency", () => {
     expect(second.error).toBeNull();
     expect(second.data?.id).toBe(first.data!.id);
 
-    const { data: all } = await client.from("products").select("id").eq("sku", "replay-sku");
+    // Phase 1Q-B: the stored sku is normalized (uppercased) — see
+    // private.normalize_sku, 20261010080100_product_sku_generation.sql.
+    const { data: all } = await client.from("products").select("id").eq("sku", "REPLAY-SKU");
     expect(all).toHaveLength(1);
   });
 
@@ -289,7 +291,8 @@ describe("public.create_product idempotency", () => {
       expect(b.error).toBeNull();
       expect(a.data?.id).toBe(b.data?.id);
 
-      const { data: products } = await client.from("products").select("id").eq("sku", "conc-identical-sku");
+      // Phase 1Q-B: the stored sku is normalized (uppercased).
+      const { data: products } = await client.from("products").select("id").eq("sku", "CONC-IDENTICAL-SKU");
       expect(products).toHaveLength(1);
 
       const { data: movements } = await client
@@ -335,7 +338,7 @@ describe("public.create_product idempotency", () => {
         expect(successes, `trial ${i}: success count`).toHaveLength(1);
         expect(conflicts, `trial ${i}: conflict count`).toHaveLength(1);
 
-        const { data: products } = await client.from("products").select("id").eq("sku", sku);
+        const { data: products } = await client.from("products").select("id").eq("sku", sku.toUpperCase()); // Phase 1Q-B: stored sku is normalized (uppercased)
         expect(products, `trial ${i}: product count`).toHaveLength(1);
 
         const { data: ledgerRows } = await client
@@ -412,7 +415,7 @@ describe("public.create_product idempotency", () => {
         expect(successes, `trial ${i}: success count`).toHaveLength(1);
         expect(conflicts, `trial ${i}: conflict count`).toHaveLength(1);
 
-        const { data: products } = await client.from("products").select("id").eq("sku", sku);
+        const { data: products } = await client.from("products").select("id").eq("sku", sku.toUpperCase()); // Phase 1Q-B: stored sku is normalized (uppercased)
         expect(products, `trial ${i}: product count`).toHaveLength(1);
 
         const { data: ledgerRows } = await client
@@ -457,7 +460,7 @@ describe("public.create_product idempotency", () => {
         expect(successes, `trial ${i}: success count`).toHaveLength(1);
         expect(conflicts, `trial ${i}: conflict count`).toHaveLength(1);
 
-        const { data: products } = await client.from("products").select("id").eq("sku", sku);
+        const { data: products } = await client.from("products").select("id").eq("sku", sku.toUpperCase()); // Phase 1Q-B: stored sku is normalized (uppercased)
         expect(products, `trial ${i}: product count`).toHaveLength(1);
 
         const { data: ledgerRows } = await client
@@ -501,7 +504,7 @@ describe("public.create_product idempotency", () => {
       const { data: products } = await client
         .from("products")
         .select("id")
-        .in("sku", ["meta-sku-a", "meta-sku-b"]);
+        .in("sku", ["META-SKU-A", "META-SKU-B"]); // Phase 1Q-B: stored sku is normalized (uppercased)
       expect(products).toHaveLength(1);
     });
   });

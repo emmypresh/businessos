@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requirePermissionOrNotFound, getPermissions } from "@/lib/business/dal";
 import { PERMISSION } from "@/lib/business/constants";
 import { getProduct, getProductCostIfAllowed } from "@/lib/products/dal";
+import { listProductIdentifiers } from "@/lib/products/identifiers-dal";
+import { ProductIdentifiers } from "@/components/products/product-identifiers";
 import { getProductStock, getInventoryHistory } from "@/lib/inventory/dal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,12 +43,13 @@ export default async function ProductDetailPage({
     );
   }
 
-  const [costPrice, stock, history] = await Promise.all([
+  const [costPrice, stock, history, identifiers] = await Promise.all([
     getProductCostIfAllowed(businessId, productId),
     product.track_inventory ? getProductStock(businessId, productId) : null,
     canViewInventory
       ? getInventoryHistory(businessId, { productId, limit: 5 })
       : { rows: [], nextCursor: null },
+    listProductIdentifiers(businessId, productId),
   ]);
 
   return (
@@ -132,6 +135,13 @@ export default async function ProductDetailPage({
           />
         )}
       </div>
+
+      <ProductIdentifiers
+        businessId={businessId}
+        productId={productId}
+        identifiers={identifiers}
+        canManage={canManage}
+      />
 
       {canViewInventory && product.track_inventory ? (
         <Card>

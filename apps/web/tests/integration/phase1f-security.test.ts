@@ -227,6 +227,22 @@ describe("SECURITY DEFINER functions: search_path is locked, ownership is narrow
       expect(grantees).not.toContain("authenticated");
       expect(grantees).not.toContain("anon");
       expect(grantees).not.toContain("PUBLIC");
+      // Phase 1L application round: two more narrow consumers —
+      // private_business_creator (create_business's own trial-issuance
+      // audit event) and private_billing_action_writer (the owner-facing
+      // cancellation/checkout-started audit events) — each derives its
+      // own actor_email_snapshot the identical, already-audited way.
+      // Phase 1Q-A: private_business_category_writer (update_business_
+      // category's own business.category_updated audit event) joins the
+      // same narrow allow-list, for the identical reason.
+      // private_billing_provider_writer is NOT a consumer: every audit
+      // event it records is a SYSTEM-actor event (a provider webhook has
+      // no user session to attribute), so it never calls this function.
+      // Phase 1Q-B: private_product_identifier_writer joins the same
+      // narrow allow-list — add_product_identifier/remove_product_
+      // identifier's own product.identifier_added/removed audit events
+      // derive their actor_email_snapshot the identical, already-audited
+      // way (20261010080200_create_product_identifiers.sql).
       expect(grantees.sort()).toEqual(
         [
           "postgres",
@@ -239,8 +255,11 @@ describe("SECURITY DEFINER functions: search_path is locked, ownership is narrow
           "private_invoice_payment_writer",
           "private_invoice_writer",
           "private_product_creator",
+          "private_product_identifier_writer",
           "private_sale_return_writer",
           "private_sale_writer",
+          "private_business_creator",
+          "private_billing_action_writer",
           "private_business_category_writer",
         ].sort()
       );

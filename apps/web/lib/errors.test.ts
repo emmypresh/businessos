@@ -16,6 +16,28 @@ describe("mapDatabaseError", () => {
     expect(mapDatabaseError({ message: "BARCODE_UNAVAILABLE" }).field).toBe("barcode");
   });
 
+  describe("Phase 1Q-B codes (product identifiers + auto-SKU)", () => {
+    it("maps SKU_REQUIRED and INVALID_SKU with a sku field", () => {
+      expect(mapDatabaseError({ message: "SKU_REQUIRED" }).field).toBe("sku");
+      expect(mapDatabaseError({ message: "INVALID_SKU" }).field).toBe("sku");
+    });
+
+    it("maps INVALID_IDENTIFIER_CHECK_DIGIT distinctly from the shorter INVALID_IDENTIFIER", () => {
+      expect(mapDatabaseError({ message: "INVALID_IDENTIFIER_CHECK_DIGIT" }).message).toContain(
+        "check digit"
+      );
+      expect(mapDatabaseError({ message: "INVALID_IDENTIFIER" }).message).not.toContain(
+        "check digit"
+      );
+    });
+
+    it("maps INVALID_IDENTIFIER_TYPE, IDENTIFIER_ALREADY_EXISTS, and IDENTIFIER_NOT_FOUND", () => {
+      expect(mapDatabaseError({ message: "INVALID_IDENTIFIER_TYPE" }).field).toBe("identifierType");
+      expect(mapDatabaseError({ message: "IDENTIFIER_ALREADY_EXISTS" }).field).toBe("identifierValue");
+      expect(mapDatabaseError({ message: "IDENTIFIER_NOT_FOUND" }).field).toBeUndefined();
+    });
+  });
+
   it("maps CANNOT_ARCHIVE_WITH_STOCK", () => {
     expect(mapDatabaseError({ message: "CANNOT_ARCHIVE_WITH_STOCK" }).message).toContain(
       "still has stock recorded"

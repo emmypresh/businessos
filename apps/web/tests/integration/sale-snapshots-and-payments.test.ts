@@ -51,7 +51,25 @@ describe("sale historical snapshots", () => {
     });
     expect(sale.error).toBeNull();
 
-    await client.from("products").update({ name: "Edited Product", selling_price: 99999, sku: `edited-${randomUuid()}` }).eq("id", product.id);
+    // Phase 1Q-B remediation: products.sku is no longer directly
+    // UPDATE-able by `authenticated` — see supabase/migrations/
+    // 20261010080400_product_identifier_concurrency_and_sku_update_rpc.sql.
+    // Split so BOTH edits genuinely succeed (a combined statement
+    // including sku would now fail entirely with permission denied,
+    // silently leaving name/selling_price unchanged too and defeating
+    // this test's own "even a real edit doesn't change historical
+    // snapshots" intent).
+    const rename = await client
+      .from("products")
+      .update({ name: "Edited Product", selling_price: 99999 })
+      .eq("id", product.id);
+    expect(rename.error).toBeNull();
+    const skuEdit = await client.rpc("update_product_sku", {
+      p_business_id: businessId,
+      p_product_id: product.id,
+      p_sku: `edited-${randomUuid()}`,
+    });
+    expect(skuEdit.error).toBeNull();
 
     const { data: item } = await client
       .from("sale_items")
