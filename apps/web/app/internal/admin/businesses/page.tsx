@@ -41,7 +41,11 @@ export default async function PlatformBusinessesPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Businesses</h2>
+        {/* h1 — matches the rest of the app's own convention (every route's
+            top-level heading is an h1); flagged by the 1O-E automated
+            accessibility smoke pass as a pre-existing heading-hierarchy
+            defect on this route. */}
+        <h1 className="text-2xl font-semibold tracking-tight">Businesses</h1>
         <p className="text-sm text-muted-foreground">
           Read-only directory of every tenant business on BusinessOS.
         </p>

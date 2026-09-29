@@ -316,3 +316,98 @@ body {
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Phase 1O-E — Internal Admin (Super Admin) platform console tokens.
+   Scoped entirely to `.platform-shell` (wraps app/internal/admin/layout.tsx
+   only) — every tenant-facing page keeps the unmodified navy/blue
+   BusinessOS tokens defined above. This is a deliberate visual signal that
+   "tenant authority != platform authority" (the phase's own non-negotiable
+   rule): a platform admin should never be able to mistake this console for
+   a tenant workspace, and vice versa. Only the accent (violet/indigo,
+   blue secondary) and the sidebar shell change; --destructive/--success/
+   --warning/--info keep their existing global semantics (section 35 of the
+   brief: never invent new status-color meaning). The sidebar itself is
+   fixed dark charcoal in BOTH light and dark page mode — an intentional
+   "always-on operations console" identity distinct from the tenant
+   sidebar's own light/dark-following behavior — while the canvas/cards
+   underneath still fully honor light vs. dark. */
+.platform-shell {
+  --primary: oklch(0.52 0.22 293);
+  --primary-foreground: #ffffff;
+  --primary-soft: #ede9fe;
+  --primary-soft-foreground: #4c1d95;
+  --accent: #ede9fe;
+  --accent-foreground: #4c1d95;
+  --ring: oklch(0.52 0.22 293 / 45%);
+  --chart-1: oklch(0.52 0.22 293);
+  --chart-2: #2563eb;
+  --chart-3: #a78bfa;
+  --chart-4: #60a5fa;
+  --chart-5: #8890a6;
+
+  /* Fixed dark-charcoal shell, independent of light/dark page mode. */
+  --sidebar: #0c0c12;
+  --sidebar-foreground: #e7e5f5;
+  --sidebar-primary: oklch(0.64 0.2 293);
+  --sidebar-primary-foreground: #0c0c12;
+  --sidebar-accent: #221c3d;
+  --sidebar-accent-foreground: #ede9fe;
+  --sidebar-border: rgb(255 255 255 / 8%);
+  --sidebar-ring: oklch(0.64 0.2 293 / 55%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .platform-shell {
+    --background: #0a0a0e;
+    --foreground: #ede9fe;
+    --card: #131318;
+    --card-foreground: #ede9fe;
+    --popover: #17171e;
+    --popover-foreground: #ede9fe;
+    --primary: oklch(0.68 0.19 293);
+    --primary-foreground: #0a0a0e;
+    --primary-soft: #211b3d;
+    --primary-soft-foreground: #d9cffb;
+    --secondary: #18181f;
+    --secondary-foreground: #ede9fe;
+    --muted: #131318;
+    --muted-foreground: #a3a1b8;
+    --accent: #211b3d;
+    --accent-foreground: #ede9fe;
+    --border: rgb(255 255 255 / 8%);
+    --input: rgb(255 255 255 / 12%);
+    --ring: oklch(0.68 0.19 293 / 55%);
+    --chart-1: oklch(0.68 0.19 293);
+    --chart-2: #60a5fa;
+    --chart-3: #c4b5fd;
+    --chart-4: #3b82f6;
+    --chart-5: #83839c;
+  }
+}
+
+.dark .platform-shell {
+  --background: #0a0a0e;
+  --foreground: #ede9fe;
+  --card: #131318;
+  --card-foreground: #ede9fe;
+  --popover: #17171e;
+  --popover-foreground: #ede9fe;
+  --primary: oklch(0.68 0.19 293);
+  --primary-foreground: #0a0a0e;
+  --primary-soft: #211b3d;
+  --primary-soft-foreground: #d9cffb;
+  --secondary: #18181f;
+  --secondary-foreground: #ede9fe;
+  --muted: #131318;
+  --muted-foreground: #a3a1b8;
+  --accent: #211b3d;
+  --accent-foreground: #ede9fe;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: oklch(0.68 0.19 293 / 55%);
+  --chart-1: oklch(0.68 0.19 293);
+  --chart-2: #60a5fa;
+  --chart-3: #c4b5fd;
+  --chart-4: #3b82f6;
+  --chart-5: #83839c;
+}

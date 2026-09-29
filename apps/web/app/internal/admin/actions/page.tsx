@@ -56,7 +56,7 @@ export default async function PlatformActionsLookupPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Find a business</h2>
+        <h1 className="text-2xl font-semibold tracking-tight">Find a business</h1>
         <p className="text-sm text-muted-foreground">
           Search by business name to reach its platform actions ({PLATFORM_ACTION_SEARCH_MIN_LENGTH}{" "}
           characters minimum). Only businesses you can currently act on are shown — this search

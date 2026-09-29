@@ -136,7 +136,7 @@ export default async function PlatformBusinessDetailPage({
         >
           &larr; Businesses
         </Link>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight">{overview.business_name}</h2>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{overview.business_name}</h1>
         <p className="text-sm text-muted-foreground">{overview.slug}</p>
       </div>
 

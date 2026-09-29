@@ -2976,6 +2976,14 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: Json
       }
+      get_platform_dashboard_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_platform_support_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_product_cost: { Args: { p_product_id: string }; Returns: Json }
       get_returnable_sale_items: {
         Args: { p_business_id: string; p_sale_id: string }
@@ -3114,6 +3122,27 @@ export type Database = {
           reference: string
         }[]
       }
+      list_platform_audit: {
+        Args: {
+          p_action_type?: string
+          p_business_search?: string
+          p_date_from?: string
+          p_date_to?: string
+          p_page?: number
+          p_page_size?: number
+        }
+        Returns: {
+          action_id: string
+          action_type: string
+          actor_email: string
+          change_summary: string
+          occurred_at: string
+          reason: string
+          target_business_id: string
+          target_business_name: string
+          total_count: number
+        }[]
+      }
       list_platform_action_eligible_businesses: {
         Args: { p_page?: number; p_page_size?: number; p_search?: string }
         Returns: {
@@ -3159,6 +3188,17 @@ export type Database = {
           entity_type: string
           occurred_at: string
           summary: string
+          total_count: number
+        }[]
+      }
+      list_platform_business_diagnostics: {
+        Args: { p_page?: number; p_page_size?: number; p_search?: string; p_severity?: string }
+        Returns: {
+          business_id: string
+          business_name: string
+          code: string
+          message: string
+          severity: string
           total_count: number
         }[]
       }
@@ -3215,6 +3255,33 @@ export type Database = {
           status: string
           subscription_status: string
           timezone: string
+          total_count: number
+          trial_ends_at: string
+        }[]
+      }
+      list_platform_recent_actions: {
+        Args: { p_page?: number; p_page_size?: number }
+        Returns: {
+          action_id: string
+          action_type: string
+          actor_user_id: string
+          occurred_at: string
+          reason: string
+          target_business_id: string
+          target_business_name: string
+          total_count: number
+        }[]
+      }
+      list_platform_subscriptions: {
+        Args: { p_page?: number; p_page_size?: number; p_search?: string; p_status?: string }
+        Returns: {
+          business_id: string
+          business_name: string
+          cancel_at_period_end: boolean
+          current_period_ends_at: string
+          plan_code: string
+          plan_name: string
+          status: string
           total_count: number
           trial_ends_at: string
         }[]

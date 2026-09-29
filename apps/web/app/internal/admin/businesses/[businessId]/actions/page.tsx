@@ -100,7 +100,7 @@ export default async function PlatformBusinessActionsPage({
         >
           &larr; {canViewSupportConsole ? "Business detail" : "Find a business"}
         </Link>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight">{context.business_name}</h2>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{context.business_name}</h1>
         <p className="text-sm text-muted-foreground">Platform actions</p>
       </div>
 
