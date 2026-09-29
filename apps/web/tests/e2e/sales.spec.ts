@@ -23,6 +23,7 @@ async function createOwnerBusinessWithProduct(
   const { data: business } = await client.rpc("create_business", {
     p_name: prefix,
     p_slug: `${prefix}-${suffix}`,
+    p_category_code: "GENERAL_TRADING",
   });
   const productName = `E2E Sale Product ${suffix}`;
   const { data: product } = await client.rpc("create_product", {

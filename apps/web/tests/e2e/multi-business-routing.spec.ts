@@ -10,8 +10,12 @@ test("a user with 2+ memberships sees a deterministic selection list, not an arb
   const client = createUserClient();
   await client.auth.signInWithPassword({ email, password });
 
-  const first = await client.rpc("create_business", { p_name: "First Co", p_slug: `first-${Date.now()}` });
-  const second = await client.rpc("create_business", { p_name: "Second Co", p_slug: `second-${Date.now()}` });
+  const first = await client.rpc("create_business", { p_name: "First Co", p_slug: `first-${Date.now()}`,
+ p_category_code: "GENERAL_TRADING",
+});
+  const second = await client.rpc("create_business", { p_name: "Second Co", p_slug: `second-${Date.now()}`,
+ p_category_code: "GENERAL_TRADING",
+});
 
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);

@@ -95,6 +95,7 @@ describe("Trial issuance — automatic, transactional, exactly once per new busi
     const { error } = await owner.client.rpc("create_business", {
       p_name: "Duplicate slug attempt",
       p_slug: (await getBusinessSlug(owner.businessId)) ?? "",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });
@@ -110,7 +111,9 @@ describe("Trial issuance — automatic, transactional, exactly once per new busi
     // create_business raises BEFORE ever reaching the INSERT, so this
     // proves the ENTIRE function (business insert AND trial issuance)
     // never partially applies.
-    const { error } = await client.rpc("create_business", { p_name: "A", p_slug: `rollback-${crypto.randomUUID()}` });
+    const { error } = await client.rpc("create_business", { p_name: "A", p_slug: `rollback-${crypto.randomUUID()}`,
+ p_category_code: "GENERAL_TRADING",
+});
     expect(error).not.toBeNull();
 
     const sql = createTestDbClient();

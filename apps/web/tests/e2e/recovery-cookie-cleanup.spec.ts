@@ -176,6 +176,7 @@ test.describe("recovery-grant cookie cleanup", () => {
     const { data: business, error } = await client.rpc("create_business", {
       p_name: "Cookie Logout Co",
       p_slug: `cookie-logout-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     if (error || !business) {
       throw new Error(`Failed to create business: ${error?.message}`);

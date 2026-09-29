@@ -53,6 +53,31 @@ export const TimezoneSchema = z
 // country's own selectable options (isTimezoneValidForCountry) -- e.g. a
 // GB submission of "America/Chicago" is rejected here, before
 // create_business is ever called.
+// Phase 1Q-A. Shape-only: a well-formed stable category code
+// (uppercase, letters/underscore, matching business_categories.code's own
+// CHECK). This schema does NOT know which codes actually exist or are
+// active -- that authority is the database (business_categories, read via
+// listActiveBusinessCategories) and, ultimately, the create_business /
+// update_business_category RPCs, which re-validate against the live
+// registry regardless of what this schema accepts. Mirrors
+// CountryCodeSchema's own "shape here, catalog membership elsewhere"
+// split.
+export const BusinessCategoryCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .min(1, { error: "Select a business category." })
+  .max(40, { error: "Invalid category." })
+  .regex(/^[A-Z][A-Z_]*$/, { error: "Invalid category." });
+
+// Bound matches business_categories_columns.sql's own
+// businesses.custom_category_label CHECK (2-100 chars, after trimming).
+export const CustomCategoryLabelSchema = z
+  .string()
+  .trim()
+  .min(2, { error: "Describe your business in at least 2 characters." })
+  .max(100, { error: "Keep this to 100 characters or fewer." });
+
 export const CreateBusinessSchema = z
   .object({
     name: z
@@ -79,13 +104,42 @@ export const CreateBusinessSchema = z
       error: "Select a supported country.",
     }),
     timezone: TimezoneSchema,
+    categoryCode: BusinessCategoryCodeSchema,
+    // Required only when categoryCode === "OTHER" -- enforced by the
+    // cross-field .refine() below (client-side feedback only; the RPC is
+    // the actual authority, and ignores/nulls this field for every
+    // non-OTHER category regardless of what is submitted here).
+    customCategoryLabel: z.string().trim().max(100).optional().default(""),
   })
   .refine((value) => isTimezoneValidForCountry(value.countryCode, value.timezone), {
     error: "Select a timezone supported for this country.",
     path: ["timezone"],
-  });
+  })
+  .refine(
+    (value) => value.categoryCode !== "OTHER" || value.customCategoryLabel.trim().length >= 2,
+    {
+      error: "Describe your business in at least 2 characters.",
+      path: ["customCategoryLabel"],
+    }
+  );
 
 export type CreateBusinessInput = z.infer<typeof CreateBusinessSchema>;
+
+// Phase 1Q-A. Settings page category change -- same field shape as
+// creation's categoryCode/customCategoryLabel pair, standalone (no
+// name/slug/country fields since those are not part of this mutation).
+export const UpdateBusinessCategorySchema = z
+  .object({
+    categoryCode: BusinessCategoryCodeSchema,
+    customCategoryLabel: z.string().trim().max(100).optional().default(""),
+  })
+  .refine(
+    (value) => value.categoryCode !== "OTHER" || value.customCategoryLabel.trim().length >= 2,
+    {
+      error: "Describe your business in at least 2 characters.",
+      path: ["customCategoryLabel"],
+    }
+  );
 
 // Business Settings (Phase 1Q-0B): the ONLY business field this phase
 // makes editable post-creation. Reuses TimezoneSchema's shape check --

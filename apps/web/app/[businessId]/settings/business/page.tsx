@@ -3,8 +3,10 @@ import { requirePermissionOrNotFound, getBusinessDetails } from "@/lib/business/
 import { PERMISSION } from "@/lib/business/constants";
 import { getCountryMetadata, getCurrencyDisplayName } from "@/lib/business/country-currency";
 import { getTimezoneOptionsForCountry } from "@/lib/business/timezone-catalog";
+import { listActiveBusinessCategories, listBusinessCategories } from "@/lib/business/categories-dal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BusinessTimezoneForm } from "@/components/settings/business-timezone-form";
+import { BusinessCategoryForm } from "@/components/settings/business-category-form";
 
 // business.manage (OWNER/ADMIN, per the seeded Phase 1 matrix — see
 // lib/business/constants.ts's own PERMISSION.BUSINESS_MANAGE comment)
@@ -33,6 +35,19 @@ export default async function BusinessSettingsPage({ params }: PageProps<"/[busi
 
   const countryMetadata = getCountryMetadata(business.country_code);
   const timezoneOptions = getTimezoneOptionsForCountry(business.country_code);
+  // Selectable options must be active-only (phase instruction §31); the
+  // business's CURRENT category (which may since have been deactivated)
+  // is still resolved for display via the full, unfiltered list so its
+  // label always renders, matching listBusinessCategories' own
+  // active-and-inactive contract. An inactive current category is passed
+  // to the form separately (not merged into the active list) so it can
+  // render as a disabled, clearly-labeled historical option rather than
+  // an enabled selectable one — see BusinessCategoryForm.
+  const [activeCategories, allCategories] = await Promise.all([
+    listActiveBusinessCategories(),
+    listBusinessCategories(),
+  ]);
+  const currentCategory = allCategories.find((c) => c.id === business.primary_category_id) ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +78,22 @@ export default async function BusinessSettingsPage({ params }: PageProps<"/[busi
           <p className="text-muted-foreground">
             Base currency is set when the business is created.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Category</CardTitle>
+          <CardDescription>What best describes this business. Used for future defaults only.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BusinessCategoryForm
+            businessId={businessId}
+            currentCategoryCode={currentCategory?.code ?? null}
+            currentCustomLabel={business.custom_category_label}
+            categories={activeCategories}
+            inactiveCurrentCategory={currentCategory && !currentCategory.is_active ? currentCategory : null}
+          />
         </CardContent>
       </Card>
 

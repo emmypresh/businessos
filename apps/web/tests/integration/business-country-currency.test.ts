@@ -51,6 +51,7 @@ describe("create_business country/currency", () => {
       p_name: "Accra Traders",
       p_slug: `accra-traders-${Date.now()}`,
       p_country_code: "gh",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(data).toBeNull();
     expect(error).not.toBeNull();
@@ -65,6 +66,7 @@ describe("create_business country/currency", () => {
       p_slug: `gh-usd-${Date.now()}`,
       p_country_code: "gh",
       p_currency_code: "usd",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(data).toBeNull();
     expect(error).not.toBeNull();
@@ -78,6 +80,7 @@ describe("create_business country/currency", () => {
       p_name: "Bad Country",
       p_slug: `bad-country-${Date.now()}`,
       p_country_code: "Nigeria",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });
@@ -90,6 +93,7 @@ describe("create_business country/currency", () => {
       p_name: "Bad Currency",
       p_slug: `bad-currency-${Date.now()}`,
       p_currency_code: "₦",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });
@@ -102,6 +106,7 @@ describe("create_business country/currency", () => {
       p_name: "Unlisted Country",
       p_slug: `unlisted-country-${Date.now()}`,
       p_country_code: "FR",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });

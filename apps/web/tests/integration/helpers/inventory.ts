@@ -23,6 +23,7 @@ export async function createOwnerAndBusiness(prefix: string) {
   const { data: business, error } = await client.rpc("create_business", {
     p_name: prefix,
     p_slug: unique(prefix),
+    p_category_code: "GENERAL_TRADING",
   });
   if (error || !business) throw new Error(`create_business failed: ${error?.message}`);
 

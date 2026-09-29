@@ -40,6 +40,7 @@ async function createOwnerAndBusiness(prefix: string) {
   const { data: business } = await client.rpc("create_business", {
     p_name: prefix,
     p_slug: `${prefix}-${suffix}`,
+    p_category_code: "GENERAL_TRADING",
   });
   return { email, businessId: business!.id as string, client };
 }

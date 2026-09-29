@@ -124,6 +124,8 @@ export type BusinessDetails = {
   country_code: string;
   currency_code: string;
   timezone: string;
+  primary_category_id: string | null;
+  custom_category_label: string | null;
 };
 
 // Phase 1Q-0B. A separate cached call (not a modification of
@@ -139,7 +141,9 @@ export const getBusinessDetails = cache(
 
     const { data, error } = await supabase
       .from("businesses")
-      .select("id, name, slug, country_code, currency_code, timezone")
+      .select(
+        "id, name, slug, country_code, currency_code, timezone, primary_category_id, custom_category_label"
+      )
       .eq("id", businessId)
       .maybeSingle();
 

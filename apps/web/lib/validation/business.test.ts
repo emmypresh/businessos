@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { CountryCodeSchema, CreateBusinessSchema, CurrencyCodeSchema, UpdateBusinessTimezoneSchema } from "./business";
+import {
+  CountryCodeSchema,
+  CreateBusinessSchema,
+  CurrencyCodeSchema,
+  UpdateBusinessTimezoneSchema,
+  UpdateBusinessCategorySchema,
+} from "./business";
 
 const VALID = {
   name: "Acme Hardware",
   slug: "acme-hardware",
   countryCode: "NG",
   timezone: "Africa/Lagos",
+  categoryCode: "RETAIL",
 };
 
 describe("CreateBusinessSchema", () => {
@@ -85,6 +92,43 @@ describe("CreateBusinessSchema", () => {
   it("rejects a malformed timezone string", () => {
     expect(CreateBusinessSchema.safeParse({ ...VALID, timezone: "Not/A/Zone" }).success).toBe(false);
   });
+
+  it("requires categoryCode", () => {
+    const withoutCategory: Record<string, string> = { ...VALID };
+    delete withoutCategory.categoryCode;
+    expect(CreateBusinessSchema.safeParse(withoutCategory).success).toBe(false);
+  });
+
+  it("uppercases a lowercase categoryCode", () => {
+    const result = CreateBusinessSchema.safeParse({ ...VALID, categoryCode: "retail" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.categoryCode).toBe("RETAIL");
+    }
+  });
+
+  it("rejects OTHER without a customCategoryLabel", () => {
+    const result = CreateBusinessSchema.safeParse({ ...VALID, categoryCode: "OTHER" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts OTHER with a valid customCategoryLabel", () => {
+    const result = CreateBusinessSchema.safeParse({
+      ...VALID,
+      categoryCode: "OTHER",
+      customCategoryLabel: "Artisan cheese subscriptions",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a customCategoryLabel over 100 characters", () => {
+    const result = CreateBusinessSchema.safeParse({
+      ...VALID,
+      categoryCode: "OTHER",
+      customCategoryLabel: "a".repeat(101),
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("CountryCodeSchema", () => {
@@ -122,6 +166,23 @@ describe("CurrencyCodeSchema", () => {
   it("rejects the wrong length", () => {
     expect(CurrencyCodeSchema.safeParse("NG").success).toBe(false);
     expect(CurrencyCodeSchema.safeParse("NGNX").success).toBe(false);
+  });
+});
+
+describe("UpdateBusinessCategorySchema", () => {
+  it("accepts a plain category code", () => {
+    expect(UpdateBusinessCategorySchema.safeParse({ categoryCode: "SERVICES" }).success).toBe(true);
+  });
+
+  it("rejects OTHER without a customCategoryLabel", () => {
+    expect(UpdateBusinessCategorySchema.safeParse({ categoryCode: "OTHER" }).success).toBe(false);
+  });
+
+  it("accepts OTHER with a customCategoryLabel", () => {
+    expect(
+      UpdateBusinessCategorySchema.safeParse({ categoryCode: "OTHER", customCategoryLabel: "Artisan goods" })
+        .success
+    ).toBe(true);
   });
 });
 

@@ -28,6 +28,7 @@ test.describe("cross-tenant product/inventory protection", () => {
     const { data: businessA, error: businessAError } = await clientA.rpc("create_business", {
       p_name: "XTenant A",
       p_slug: `xtenant-a-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     if (businessAError || !businessA) {
       throw new Error(`Failed to create XTenant A: ${businessAError?.message}`);
@@ -50,6 +51,7 @@ test.describe("cross-tenant product/inventory protection", () => {
     const { error: businessBError } = await clientB.rpc("create_business", {
       p_name: "XTenant B",
       p_slug: `xtenant-b-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     if (businessBError) {
       throw new Error(`Failed to create XTenant B: ${businessBError.message}`);

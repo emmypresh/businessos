@@ -21,6 +21,9 @@ test("signup -> verify -> login -> create business -> dashboard -> logout", asyn
 
   await page.getByLabel("Business name").fill("Acme Hardware");
   await page.getByLabel("URL slug").fill(`acme-${Date.now()}`);
+  // Phase 1Q-A: category is now required before Create business enables.
+  await page.getByLabel("Business category").click();
+  await page.getByRole("option", { name: "Retail" }).click();
   await page.getByRole("button", { name: "Create business" }).click();
 
   // The origin is derived from E2E_BASE_URL (tests/e2e/e2e-target.mjs),

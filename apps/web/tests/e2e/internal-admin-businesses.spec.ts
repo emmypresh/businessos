@@ -65,6 +65,7 @@ test.describe("/internal/admin/businesses", () => {
     const { error } = await ownerClient.rpc("create_business", {
       p_name: uniqueName,
       p_slug: `e2e-directory-target-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
 
@@ -97,6 +98,7 @@ test.describe("/internal/admin/businesses", () => {
     const { error } = await client.rpc("create_business", {
       p_name: "Denied Owner Co",
       p_slug: `dir-e2e-denied-owner-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
 
@@ -115,6 +117,7 @@ test.describe("/internal/admin/businesses", () => {
     const { data: business, error } = await ownerClient.rpc("create_business", {
       p_name: "Denied Admin Co",
       p_slug: `dir-e2e-denied-admin-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
 

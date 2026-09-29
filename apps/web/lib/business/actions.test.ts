@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({ rpc, from })),
 }));
 
-import { createBusiness, updateBusinessTimezone } from "@/lib/business/actions";
+import { createBusiness, updateBusinessTimezone, updateBusinessCategory } from "@/lib/business/actions";
 
 function formData(entries: Record<string, string>): FormData {
   const fd = new FormData();
@@ -33,7 +33,13 @@ describe("createBusiness — non-NGN activation gate", () => {
   it("rejects a well-formed, catalog-supported non-NG country BEFORE calling create_business", async () => {
     const result = await createBusiness(
       undefined,
-      formData({ name: "Accra Traders", slug: "accra-traders", countryCode: "GH", timezone: "Africa/Accra" })
+      formData({
+        name: "Accra Traders",
+        slug: "accra-traders",
+        countryCode: "GH",
+        timezone: "Africa/Accra",
+        categoryCode: "RETAIL",
+      })
     );
     expect(result?.error).toMatch(/Nigerian Naira/);
     // The actual server boundary: the RPC that would create the tenant is
@@ -51,7 +57,13 @@ describe("createBusiness — non-NGN activation gate", () => {
     };
     const result = await createBusiness(
       undefined,
-      formData({ name: "Test Co", slug: `test-co-${country.toLowerCase()}`, countryCode: country, timezone: tzByCountry[country] })
+      formData({
+        name: "Test Co",
+        slug: `test-co-${country.toLowerCase()}`,
+        countryCode: country,
+        timezone: tzByCountry[country],
+        categoryCode: "RETAIL",
+      })
     );
     expect(result?.error).toBeTruthy();
     expect(rpc).not.toHaveBeenCalled();
@@ -61,7 +73,13 @@ describe("createBusiness — non-NGN activation gate", () => {
     rpc.mockResolvedValue({ data: { id: "biz-1" }, error: null });
     await createBusiness(
       undefined,
-      formData({ name: "Lagos Traders", slug: "lagos-traders", countryCode: "NG", timezone: "Africa/Lagos" })
+      formData({
+        name: "Lagos Traders",
+        slug: "lagos-traders",
+        countryCode: "NG",
+        timezone: "Africa/Lagos",
+        categoryCode: "RETAIL",
+      })
     );
     expect(rpc).toHaveBeenCalledWith(
       "create_business",
@@ -69,6 +87,7 @@ describe("createBusiness — non-NGN activation gate", () => {
         p_country_code: "NG",
         p_currency_code: "NGN",
         p_timezone: "Africa/Lagos",
+        p_category_code: "RETAIL",
       })
     );
   });
@@ -76,9 +95,57 @@ describe("createBusiness — non-NGN activation gate", () => {
   it("rejects a shape-valid but unsupported country before it ever reaches create_business (1Q-0A low finding)", async () => {
     const result = await createBusiness(
       undefined,
-      formData({ name: "Paris Co", slug: "paris-co", countryCode: "FR", timezone: "Europe/Paris" })
+      formData({
+        name: "Paris Co",
+        slug: "paris-co",
+        countryCode: "FR",
+        timezone: "Europe/Paris",
+        categoryCode: "RETAIL",
+      })
     );
     expect(result?.fieldErrors?.countryCode).toBeTruthy();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects a submission missing categoryCode before ever calling create_business (Phase 1Q-A)", async () => {
+    const result = await createBusiness(
+      undefined,
+      formData({ name: "No Category Co", slug: "no-category-co", countryCode: "NG", timezone: "Africa/Lagos" })
+    );
+    expect(result?.fieldErrors?.categoryCode).toBeTruthy();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateBusinessCategory", () => {
+  it("delegates to the update_business_category RPC and returns success", async () => {
+    rpc.mockResolvedValue({ data: { id: BUSINESS_ID }, error: null });
+    const result = await updateBusinessCategory(
+      undefined,
+      formData({ businessId: BUSINESS_ID, categoryCode: "SERVICES" })
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      "update_business_category",
+      expect.objectContaining({ p_business_id: BUSINESS_ID, p_category_code: "SERVICES" })
+    );
+    expect(result?.success).toBe(true);
+  });
+
+  it("surfaces an RPC permission-denied error as a structured message", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "insufficient permission", code: "42501" } });
+    const result = await updateBusinessCategory(
+      undefined,
+      formData({ businessId: BUSINESS_ID, categoryCode: "SERVICES" })
+    );
+    expect(result?.error).toMatch(/permission/i);
+  });
+
+  it("rejects OTHER without a customCategoryLabel before ever calling the RPC", async () => {
+    const result = await updateBusinessCategory(
+      undefined,
+      formData({ businessId: BUSINESS_ID, categoryCode: "OTHER" })
+    );
+    expect(result?.fieldErrors?.customCategoryLabel).toBeTruthy();
     expect(rpc).not.toHaveBeenCalled();
   });
 });

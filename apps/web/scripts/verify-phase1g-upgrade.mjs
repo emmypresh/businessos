@@ -167,6 +167,7 @@ async function main() {
     const { data: business, error: businessError } = await client.rpc("create_business", {
       p_name: "Phase1G Upgrade Test Co",
       p_slug: `phase1g-upgrade-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     if (businessError || !business) throw new Error(`create_business failed: ${businessError?.message}`);
     businessId = business.id;

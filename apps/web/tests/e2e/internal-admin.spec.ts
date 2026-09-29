@@ -53,6 +53,7 @@ test.describe("/internal/admin authorization", () => {
     const { error } = await client.rpc("create_business", {
       p_name: "Owner Co",
       p_slug: `owner-co-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
 
@@ -74,6 +75,7 @@ test.describe("/internal/admin authorization", () => {
     const { data: business, error } = await ownerClient.rpc("create_business", {
       p_name: "Admin Co",
       p_slug: `admin-co-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
 
@@ -107,6 +109,7 @@ test.describe("/internal/admin authorization", () => {
     const { error } = await client.rpc("create_business", {
       p_name: "Owner Co",
       p_slug: `mfa-owner-co-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
 
@@ -166,6 +169,7 @@ test.describe("/internal/admin authorization", () => {
     const { data: warningBusiness, error: warningError } = await warningClient.rpc("create_business", {
       p_name: `Support Warning Co ${suffix}`,
       p_slug: `support-warn-co-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(warningError).toBeNull();
 
@@ -176,6 +180,7 @@ test.describe("/internal/admin authorization", () => {
     const { data: infoBusiness, error: infoError } = await infoClient.rpc("create_business", {
       p_name: `Support Info Co ${suffix}`,
       p_slug: `support-info-co-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(infoError).toBeNull();
 

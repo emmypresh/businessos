@@ -3,7 +3,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/dal";
-import { CreateBusinessSchema, UpdateBusinessTimezoneSchema } from "@/lib/validation/business";
+import {
+  CreateBusinessSchema,
+  UpdateBusinessTimezoneSchema,
+  UpdateBusinessCategorySchema,
+} from "@/lib/validation/business";
 import { getDefaultCurrencyForCountry, isFullyOperationalCountry } from "@/lib/business/country-currency";
 import { isTimezoneValidForCountry } from "@/lib/business/timezone-catalog";
 import { hasPermission } from "@/lib/business/dal";
@@ -21,6 +25,8 @@ export async function createBusiness(
     slug: formData.get("slug"),
     countryCode: formData.get("countryCode"),
     timezone: formData.get("timezone"),
+    categoryCode: formData.get("categoryCode"),
+    customCategoryLabel: formData.get("customCategoryLabel") ?? "",
   });
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
@@ -59,19 +65,82 @@ export async function createBusiness(
   const { data, error } = await supabase.rpc("create_business", {
     p_name: parsed.data.name,
     p_slug: parsed.data.slug,
+    p_category_code: parsed.data.categoryCode,
     p_country_code: parsed.data.countryCode,
     p_currency_code: currencyCode,
     p_timezone: parsed.data.timezone,
+    p_custom_category_label:
+      parsed.data.categoryCode === "OTHER" ? parsed.data.customCategoryLabel : undefined,
   });
 
   if (error) {
     if (error.code === "23505") {
       return { fieldErrors: { slug: ["This slug is already taken."] } };
     }
+    if (error.message === "INVALID_BUSINESS_CATEGORY" || error.message === "BUSINESS_CATEGORY_REQUIRED") {
+      return { fieldErrors: { categoryCode: ["Select a valid business category."] } };
+    }
+    if (error.message === "CUSTOM_CATEGORY_LABEL_REQUIRED" || error.message === "CUSTOM_CATEGORY_LABEL_TOO_LONG") {
+      return { fieldErrors: { customCategoryLabel: ["Describe your business in 2 to 100 characters."] } };
+    }
     return { error: "Could not create your business. Please try again." };
   }
 
   redirect(`/${data.id}`);
+}
+
+// Phase 1Q-A. Settings page category change. Delegates ALL validation and
+// the actual write to update_business_category (SECURITY DEFINER RPC) --
+// unlike updateBusinessTimezone, this is not a direct `.from().update()`
+// call, because category validity depends on a join against
+// business_categories.is_active (see the RPC's own migration comment for
+// why that isn't a table CHECK). The RPC re-derives the caller and
+// re-checks business.manage itself; this Server Action still passes
+// businessId through explicitly (matching every other Server Action's
+// convention here) so a structured, field-scoped error can be returned
+// rather than a generic RPC failure.
+export async function updateBusinessCategory(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireUser();
+
+  const businessId = formData.get("businessId");
+  if (typeof businessId !== "string" || businessId.length === 0) {
+    return { error: "Missing business." };
+  }
+
+  const parsed = UpdateBusinessCategorySchema.safeParse({
+    categoryCode: formData.get("categoryCode"),
+    customCategoryLabel: formData.get("customCategoryLabel") ?? "",
+  });
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("update_business_category", {
+    p_business_id: businessId,
+    p_category_code: parsed.data.categoryCode,
+    p_custom_category_label:
+      parsed.data.categoryCode === "OTHER" ? parsed.data.customCategoryLabel : undefined,
+  });
+
+  if (error) {
+    if (error.message === "insufficient permission" || error.code === "42501") {
+      return { error: "You do not have permission to change this business's settings." };
+    }
+    if (error.message === "INVALID_BUSINESS_CATEGORY" || error.message === "BUSINESS_CATEGORY_REQUIRED") {
+      return { fieldErrors: { categoryCode: ["Select a valid business category."] } };
+    }
+    if (error.message === "CUSTOM_CATEGORY_LABEL_REQUIRED" || error.message === "CUSTOM_CATEGORY_LABEL_TOO_LONG") {
+      return { fieldErrors: { customCategoryLabel: ["Describe your business in 2 to 100 characters."] } };
+    }
+    return { error: "Could not update the category. Please try again." };
+  }
+
+  return { success: true };
 }
 
 // Phase 1Q-0B. The one business field this phase makes editable post-

@@ -29,6 +29,7 @@ test.describe("cost visibility in the UI", () => {
     const { data: business } = await ownerClient.rpc("create_business", {
       p_name: "Cost UI Business",
       p_slug: `cost-ui-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     businessId = business!.id;
     const { data: product } = await ownerClient.rpc("create_product", {

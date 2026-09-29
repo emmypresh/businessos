@@ -25,7 +25,9 @@ async function seedBusiness(prefix: string, countryCode: string, currencyCode: s
   await createConfirmedTestUser(email, PASSWORD);
   const client = createUserClient();
   await client.auth.signInWithPassword({ email, password: PASSWORD });
-  const { data: business } = await client.rpc("create_business", { p_name: prefix, p_slug: `${prefix}-${suffix}` });
+  const { data: business } = await client.rpc("create_business", { p_name: prefix, p_slug: `${prefix}-${suffix}`,
+ p_category_code: "GENERAL_TRADING",
+});
   const businessId = business!.id as string;
   await setBusinessCountryCurrencyForTest(businessId, countryCode, currencyCode);
 

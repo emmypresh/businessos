@@ -51,6 +51,7 @@ test.describe("cross-tenant route protection: full matrix", () => {
     const { data: businessA, error: errorA } = await clientA.rpc("create_business", {
       p_name: "Tenant A",
       p_slug: `tenant-a-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     if (errorA || !businessA) throw new Error(`Failed to create Tenant A: ${errorA?.message}`);
     businessAId = businessA.id;
@@ -61,6 +62,7 @@ test.describe("cross-tenant route protection: full matrix", () => {
     const { data: businessB, error: errorB } = await clientB.rpc("create_business", {
       p_name: "Tenant B",
       p_slug: `tenant-b-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     if (errorB || !businessB) throw new Error(`Failed to create Tenant B: ${errorB?.message}`);
     businessBId = businessB.id;

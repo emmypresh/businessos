@@ -57,6 +57,9 @@ for (const vp of VIEWPORTS) {
 
     await page.getByLabel("Business name").fill("Visual Settings Co");
     await page.getByLabel("URL slug").fill(`visual-settings-${vp.name}-${Date.now()}`);
+    // Phase 1Q-A: category is now required before Create business enables.
+    await page.getByLabel("Business category").click();
+    await page.getByRole("option", { name: "Retail" }).click();
     await page.getByRole("button", { name: "Create business" }).click();
     await page.waitForURL(/\/[0-9a-f-]{36}$/);
     const businessId = page.url().split("/").pop();

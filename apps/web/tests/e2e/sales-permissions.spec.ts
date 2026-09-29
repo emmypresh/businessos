@@ -32,6 +32,7 @@ test.describe("sale role permissions", () => {
     const { data: business } = await ownerClient.rpc("create_business", {
       p_name: "Sale Perm Business",
       p_slug: `sale-perm-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     businessId = business!.id;
     await ownerClient.rpc("create_product", {
@@ -107,6 +108,7 @@ test.describe("cross-tenant customer/sale protection", () => {
     const { data: businessA } = await clientA.rpc("create_business", {
       p_name: "XTenant CS A",
       p_slug: `xtenant-cs-a-${suffix}`,
+      p_category_code: "GENERAL_TRADING",
     });
     const { data: customerA } = await clientA.rpc("create_customer", {
       p_business_id: businessA!.id,
@@ -129,7 +131,9 @@ test.describe("cross-tenant customer/sale protection", () => {
     await createConfirmedTestUser(emailB, PASSWORD);
     const clientB = createUserClient();
     await clientB.auth.signInWithPassword({ email: emailB, password: PASSWORD });
-    await clientB.rpc("create_business", { p_name: "XTenant CS B", p_slug: `xtenant-cs-b-${suffix}` });
+    await clientB.rpc("create_business", { p_name: "XTenant CS B", p_slug: `xtenant-cs-b-${suffix}`,
+ p_category_code: "GENERAL_TRADING",
+});
 
     await loginAsInBrowser(page, emailB, PASSWORD);
 

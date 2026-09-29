@@ -55,6 +55,12 @@ test("onboarding: Nigeria succeeds; Ghana, UK, and US are blocked with the activ
   await page.getByRole("option", { name: "Nigeria (NG)" }).click();
   await expect(page.getByText("Nigerian Naira (₦)")).toBeVisible();
   await expect(page.getByLabel("Timezone")).toContainText("Lagos");
+  // Phase 1Q-A: category is now required before Create business enables —
+  // see tests/e2e/business-category-industry.spec.ts for the dedicated
+  // category-focused coverage; this spec only needs a valid selection to
+  // keep proving its own (unrelated) country/currency assertions.
+  await page.getByLabel("Business category").click();
+  await page.getByRole("option", { name: "Retail" }).click();
   await expect(page.getByRole("button", { name: "Create business" })).toBeEnabled();
   await page.getByRole("button", { name: "Create business" }).click();
 
@@ -83,6 +89,9 @@ test("business settings: country/currency are read-only, timezone is labelled an
 
   await page.getByLabel("Business name").fill("Lagos Direct Co");
   await page.getByLabel("URL slug").fill(`lagos-direct-${Date.now()}`);
+  // Phase 1Q-A: category is now required before Create business enables.
+  await page.getByLabel("Business category").click();
+  await page.getByRole("option", { name: "Retail" }).click();
   await page.getByRole("button", { name: "Create business" }).click();
   await expect(page).toHaveURL(/\/[0-9a-f-]{36}$/);
   const businessUrl = page.url();

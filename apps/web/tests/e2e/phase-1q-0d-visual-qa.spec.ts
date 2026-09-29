@@ -75,6 +75,7 @@ async function createFixtureBusiness(cc: string, opts: { withSales?: boolean } =
   const { data: biz, error: bizErr } = await userClient.rpc("create_business", {
     p_name: `${cc} QA Traders`,
     p_slug: slug,
+    p_category_code: "GENERAL_TRADING",
   });
   if (bizErr || !biz) throw new Error(`create_business failed for ${cc}: ${bizErr?.message}`);
   const businessId = (biz as { id: string }).id;

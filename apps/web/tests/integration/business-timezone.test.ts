@@ -94,6 +94,7 @@ describe("create_business timezone", () => {
       p_name: "Lagos Traders",
       p_slug: `lagos-traders-${Date.now()}`,
       p_country_code: "NG",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
     expect(data?.timezone).toBe("Africa/Lagos");
@@ -108,6 +109,7 @@ describe("create_business timezone", () => {
       p_slug: `bad-timezone-${Date.now()}`,
       p_country_code: "NG",
       p_timezone: "Europe/Paris",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });
@@ -121,6 +123,7 @@ describe("create_business timezone", () => {
       p_slug: `case-sensitive-${Date.now()}`,
       p_country_code: "NG",
       p_timezone: "africa/lagos",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });

@@ -31,6 +31,7 @@ describe("create_business RPC", () => {
     const { data: business, error } = await client.rpc("create_business", {
       p_name: "Test Business",
       p_slug: slug,
+      p_category_code: "GENERAL_TRADING",
     });
 
     expect(error).toBeNull();
@@ -62,12 +63,14 @@ describe("create_business RPC", () => {
     const first = await client.rpc("create_business", {
       p_name: "First",
       p_slug: slug,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(first.error).toBeNull();
 
     const second = await client.rpc("create_business", {
       p_name: "Second",
       p_slug: slug,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(second.error).not.toBeNull();
     expect(second.error?.code).toBe("23505");
@@ -78,6 +81,7 @@ describe("create_business RPC", () => {
     const { error } = await client.rpc("create_business", {
       p_name: "Nope",
       p_slug: `nope-${Date.now()}`,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
   });

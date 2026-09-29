@@ -58,6 +58,7 @@ describe("create_business RPC — non-NGN activation gate cannot be bypassed by 
         p_country_code: country,
         p_currency_code: currency,
         p_timezone: timezone,
+        p_category_code: "GENERAL_TRADING",
       });
 
       expect(data).toBeNull();
@@ -87,7 +88,8 @@ describe("create_business RPC — unsupported/mismatched country, currency, and 
         p_country_code: country,
         p_currency_code: currency,
         p_timezone: timezone,
-      });
+      p_category_code: "GENERAL_TRADING",
+    });
 
       expect(data).toBeNull();
       expect(error).not.toBeNull();
@@ -104,6 +106,7 @@ describe("create_business RPC — unsupported/mismatched country, currency, and 
       p_name: "Unsupported Bare Co",
       p_slug: slug,
       p_country_code: "FR",
+      p_category_code: "GENERAL_TRADING",
     });
 
     expect(data).toBeNull();
@@ -124,6 +127,7 @@ describe("create_business RPC — no partial side effects on any rejected direct
       p_country_code: "GH",
       p_currency_code: "GHS",
       p_timezone: "Africa/Accra",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).not.toBeNull();
 
@@ -184,6 +188,7 @@ describe("create_business RPC — Nigeria direct call still succeeds with every 
       p_country_code: "NG",
       p_currency_code: "NGN",
       p_timezone: "Africa/Lagos",
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
     expect(data).not.toBeNull();
@@ -236,6 +241,7 @@ describe("create_business RPC — Nigeria direct call still succeeds with every 
     const { data, error } = await client.rpc("create_business", {
       p_name: "Legacy Two Arg Co",
       p_slug: slug,
+      p_category_code: "GENERAL_TRADING",
     });
     expect(error).toBeNull();
     expect(data?.country_code).toBe("NG");

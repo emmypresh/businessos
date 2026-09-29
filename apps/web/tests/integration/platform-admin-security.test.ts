@@ -224,6 +224,7 @@ describe("tenant authorization never implies platform authorization", () => {
       const { error } = await client.rpc("create_business", {
         p_name: prefix,
         p_slug: `${prefix}-${randomUuid()}`,
+        p_category_code: "GENERAL_TRADING",
       });
       expect(error).toBeNull();
     }

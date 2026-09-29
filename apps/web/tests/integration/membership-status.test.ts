@@ -44,7 +44,7 @@ describe("business_members.status enforcement", () => {
       const slug = `status-${status}-${Date.now()}`;
       const { data: business, error: createError } = await ownerClient.rpc(
         "create_business",
-        { p_name: "Status Test", p_slug: slug }
+        { p_name: "Status Test", p_slug: slug, p_category_code: "GENERAL_TRADING" }
       );
       expect(createError).toBeNull();
 
