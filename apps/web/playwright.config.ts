@@ -37,7 +37,16 @@ export default defineConfig({
     baseURL: E2E_BASE_URL,
     trace: "on-first-retry",
   },
-  webServer: {
+  webServer: [
+    {
+      // Deterministic stand-in for the Open Food Facts API (Phase 1Q-C) so
+      // lookup e2e never depends on a live third-party service.
+      command: "node tests/e2e/fixtures/off-stub-server.mjs",
+      url: "http://127.0.0.1:3199/api/v2/product/0.json",
+      reuseExistingServer: false,
+      timeout: 15_000,
+    },
+    {
     // Production server, not `next dev`. `next dev`'s architecture forks a
     // separate, nested child-process tree — a CLI bootstrap process, which
     // itself forks a distinct start-server.js process that is the one
@@ -66,5 +75,23 @@ export default defineConfig({
     // of this — defense in depth, not a replacement for it.
     reuseExistingServer: false,
     timeout: 60_000,
-  },
+    env: {
+      // Server-side runtime config read by the lookup adapter — points it at
+      // the local stub above, never the real provider, during e2e.
+      PRODUCT_LOOKUP_OFF_BASE_URL: "http://127.0.0.1:3199",
+      // Explicit test-only signals for the loopback override (see
+      // lib/products/lookup/providers/off-base-url.ts). Loopback needs ALL of:
+      // BUSINESSOS_E2E=1, PRODUCT_LOOKUP_ALLOW_LOOPBACK=1, NODE_ENV and
+      // VERCEL_ENV both not "production". The lookup code rejects loopback
+      // whenever either is "production", so this bypass cannot be reused by a
+      // real production deployment.
+      BUSINESSOS_E2E: "1",
+      PRODUCT_LOOKUP_ALLOW_LOOPBACK: "1",
+      // `next start` only defaults NODE_ENV to "production" when unset, so the
+      // already-built app is run with the non-production "test" runtime
+      // (never weakening the production check to fit the tests).
+      NODE_ENV: "test",
+    },
+    },
+  ],
 });

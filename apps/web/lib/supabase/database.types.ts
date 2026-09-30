@@ -3417,6 +3417,19 @@ export type Database = {
           status: string;
         }[];
       };
+      lookup_product_identifier: {
+        Args: { p_business_id: string; p_raw_value: string };
+        Returns: {
+          identifier_type: string;
+          normalized_value: string;
+          product_id: string | null;
+          product_name: string | null;
+          product_selling_price: number | null;
+          product_sku: string | null;
+          product_status: string | null;
+          status: string;
+        }[];
+      };
       mark_paystack_subscription_payment_failed: {
         Args: { p_business_id: string };
         Returns: string;

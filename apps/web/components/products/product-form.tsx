@@ -19,6 +19,7 @@ import type { OperationalBranchOption } from "@/lib/branches/dal";
 import { resolveBranchSelectLabel } from "@/lib/branches/select-label";
 import { NoActiveBranchState } from "@/components/branches/no-active-branch-state";
 import { getCurrencySymbol } from "@/lib/currency";
+import { ProductLookupField } from "@/components/products/product-lookup-field";
 
 type Mode = "create" | "edit";
 
@@ -91,6 +92,16 @@ export function ProductForm({
   );
   const needsBranch = trackInventory && Number(openingQuantity) > 0;
 
+  // Phase 1Q-C: name/category become controlled ONLY so the free product
+  // lookup's "Use product details" action (product-lookup-field.tsx) can
+  // fill them — and only when they're still empty (phase instruction §7:
+  // never silently overwrite a value the caller already typed). barcode
+  // was already destined to become the lookup input itself (§23's own
+  // mockup reuses the existing barcode field, not a second one).
+  const [nameValue, setNameValue] = useState(submittedValue("name", product?.name ?? ""));
+  const [categoryValue, setCategoryValue] = useState(submittedValue("category", product?.category ?? ""));
+  const [barcodeValue, setBarcodeValue] = useState(submittedValue("barcode", product?.barcode ?? ""));
+
   return (
     <form
       action={formAction}
@@ -122,7 +133,8 @@ export function ProductForm({
           <Input
             id="name"
             name="name"
-            defaultValue={submittedValue("name", product?.name ?? "")}
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
             aria-invalid={!!state?.fieldErrors?.name}
             required
           />
@@ -220,24 +232,45 @@ export function ProductForm({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="barcode">Barcode</Label>
-          <Input
-            id="barcode"
-            name="barcode"
-            defaultValue={submittedValue("barcode", product?.barcode ?? "")}
-            aria-invalid={!!state?.fieldErrors?.barcode}
+        {mode === "create" ? (
+          <ProductLookupField
+            businessId={businessId}
+            barcodeValue={barcodeValue}
+            onBarcodeChange={setBarcodeValue}
+            fieldError={state?.fieldErrors?.barcode?.[0]}
+            onApplyName={(value) => {
+              if (!nameValue.trim()) setNameValue(value);
+            }}
+            onApplyCategory={(value) => {
+              if (!categoryValue.trim()) setCategoryValue(value);
+            }}
           />
-          {state?.fieldErrors?.barcode ? (
-            <p role="alert" className="text-sm text-destructive">
-              {state.fieldErrors.barcode[0]}
-            </p>
-          ) : null}
-        </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="barcode">Barcode</Label>
+            <Input
+              id="barcode"
+              name="barcode"
+              value={barcodeValue}
+              onChange={(e) => setBarcodeValue(e.target.value)}
+              aria-invalid={!!state?.fieldErrors?.barcode}
+            />
+            {state?.fieldErrors?.barcode ? (
+              <p role="alert" className="text-sm text-destructive">
+                {state.fieldErrors.barcode[0]}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="category">Category</Label>
-          <Input id="category" name="category" defaultValue={submittedValue("category", product?.category ?? "")} />
+          <Input
+            id="category"
+            name="category"
+            value={categoryValue}
+            onChange={(e) => setCategoryValue(e.target.value)}
+          />
         </div>
 
         <div className="flex flex-col gap-2">
