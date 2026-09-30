@@ -6,6 +6,7 @@ import {
   faArrowTrendUp,
   faArrowUpRightFromSquare,
   faBagShopping,
+  faBarcode,
   faBars,
   faBell,
   faBox,
@@ -14,6 +15,8 @@ import {
   faBoxesStacked,
   faBuilding,
   faChartLine,
+  faCamera,
+  faCameraRotate,
   faCheck,
   faCheckDouble,
   faCircleCheck,
@@ -90,9 +93,12 @@ export const AlertTriangle = createIcon(faTriangleExclamation);
 export const ArrowLeft = createIcon(faArrowLeft);
 export const ArrowUpDown = createIcon(faArrowDownUpAcrossLine);
 export const ArrowUpRight = createIcon(faArrowUpRightFromSquare);
+export const Barcode = createIcon(faBarcode);
 export const Bell = createIcon(faBell);
 export const Boxes = createIcon(faBoxesStacked);
 export const Building2 = createIcon(faBuilding);
+export const Camera = createIcon(faCamera);
+export const CameraRotate = createIcon(faCameraRotate);
 export const Check = createIcon(faCheck);
 export const CheckCheck = createIcon(faCheckDouble);
 export const CheckCircle2 = createIcon(faCircleCheck);

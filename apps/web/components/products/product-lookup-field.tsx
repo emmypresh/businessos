@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, PackageSearch, Search } from "@/components/ui/icon";
+import { Barcode, Loader2, PackageSearch, Search } from "@/components/ui/icon";
+import { BarcodeScannerDialog } from "@/components/products/barcode-scanner-dialog";
+import type { ScannerDeps } from "@/lib/products/scanner/use-barcode-scanner";
 
 // Phase 1Q-C — the "Barcode / GTIN [____] [Look up]" surface (phase
 // instruction §23). Deliberately scoped to product CREATION only (see
@@ -25,6 +27,7 @@ export function ProductLookupField({
   fieldError,
   onApplyName,
   onApplyCategory,
+  scannerDeps,
 }: {
   businessId: string;
   barcodeValue: string;
@@ -36,10 +39,14 @@ export function ProductLookupField({
   // rest of the form's current values.
   onApplyName: (value: string) => void;
   onApplyCategory: (value: string) => void;
+  /** Test seam for the camera scanner; production callers never pass this. */
+  scannerDeps?: ScannerDeps;
 }) {
   const [result, setResult] = useState<LookupResult | null>(null);
   const [pending, setPending] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   // Stale-response protection (phase instruction §55/§56): only the
   // MOST RECENT lookup's response is ever applied to `result` — a slower
   // earlier request that resolves after a newer one started is silently
@@ -52,8 +59,11 @@ export function ProductLookupField({
   // server-side in-flight dedupe is defense in depth, not the mechanism.
   const inFlight = useRef(false);
 
-  async function runLookup() {
-    const trimmed = barcodeValue.trim();
+  // Phase 1Q-D: a scan is just another way to supply the identifier — it
+  // goes through the exact same runLookup (and therefore the same server
+  // action, requestId stale-guard and in-flight guard) as a typed value.
+  async function runLookup(valueOverride?: string) {
+    const trimmed = (valueOverride ?? barcodeValue).trim();
     if (!trimmed || inFlight.current) return;
 
     const id = ++requestId.current;
@@ -77,14 +87,32 @@ export function ProductLookupField({
     }
   }
 
+  function resetForNewValue() {
+    setResult(null);
+    requestId.current++;
+    inFlight.current = false;
+    setPending(false);
+  }
+
+  function handleScanned(identifier: string) {
+    setScannerOpen(false);
+    // Only the barcode field changes; every other form field is untouched.
+    // A newer scan supersedes any lookup still in flight for an older value.
+    onBarcodeChange(identifier);
+    resetForNewValue();
+    void runLookup(identifier);
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor="barcode">Barcode / GTIN</Label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2 sm:flex-nowrap">
         <Input
+          ref={inputRef}
           id="barcode"
           name="barcode"
           value={barcodeValue}
+          className="h-11 basis-full sm:h-8 sm:basis-auto"
           onChange={(e) => {
             // A changed identifier invalidates any prior result — never
             // shown stale against a different code the caller is now
@@ -92,10 +120,7 @@ export function ProductLookupField({
             // in-flight lookup for the OLD value (its response is dropped by
             // the requestId guard) so a lookup for the NEW value can start.
             onBarcodeChange(e.target.value);
-            setResult(null);
-            requestId.current++;
-            inFlight.current = false;
-            setPending(false);
+            resetForNewValue();
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -112,11 +137,33 @@ export function ProductLookupField({
           onClick={() => void runLookup()}
           disabled={pending || !barcodeValue.trim()}
           aria-busy={pending}
+          className="h-11 flex-1 sm:h-8 sm:flex-none"
         >
           {pending ? <Loader2 size={16} className="mr-1.5" /> : <Search size={16} className="mr-1.5" />}
           Look up
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setScannerOpen(true)}
+          aria-label="Scan barcode with camera"
+          className="h-11 flex-1 sm:h-8 sm:flex-none"
+        >
+          <Barcode size={16} className="mr-1.5" />
+          Scan
+        </Button>
       </div>
+      <BarcodeScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDetected={handleScanned}
+        onManualEntry={() => {
+          setScannerOpen(false);
+          // After the dialog's own focus-return, put the cursor in the field.
+          setTimeout(() => inputRef.current?.focus(), 0);
+        }}
+        deps={scannerDeps}
+      />
       {pending ? (
         <p role="status" className="text-sm text-muted-foreground">
           Looking up barcode…
