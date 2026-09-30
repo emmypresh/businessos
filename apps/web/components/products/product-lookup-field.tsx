@@ -12,6 +12,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Barcode, Loader2, PackageSearch, Search } from "@/components/ui/icon";
 import { BarcodeScannerDialog } from "@/components/products/barcode-scanner-dialog";
 import type { ScannerDeps } from "@/lib/products/scanner/use-barcode-scanner";
+import { useHardwareBarcodeScanner } from "@/lib/products/scanner/use-hardware-barcode-scanner";
+
+// Phase 1Q-E: an identical code re-scanned inside this window (or while its
+// lookup is still running) is a trigger double-pull, not a new request.
+export const DUPLICATE_SCAN_WINDOW_MS = 1500;
 
 // Phase 1Q-C — the "Barcode / GTIN [____] [Look up]" surface (phase
 // instruction §23). Deliberately scoped to product CREATION only (see
@@ -28,6 +33,7 @@ export function ProductLookupField({
   onApplyName,
   onApplyCategory,
   scannerDeps,
+  hardwareTimeSource,
 }: {
   businessId: string;
   barcodeValue: string;
@@ -41,12 +47,26 @@ export function ProductLookupField({
   onApplyCategory: (value: string) => void;
   /** Test seam for the camera scanner; production callers never pass this. */
   scannerDeps?: ScannerDeps;
+  /** Test seam for keyboard-scanner timing; production callers never pass this. */
+  hardwareTimeSource?: (e: KeyboardEvent) => number;
 }) {
   const [result, setResult] = useState<LookupResult | null>(null);
   const [pending, setPending] = useState(false);
   const [applied, setApplied] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanNotice, setScanNotice] = useState<"scanned" | "invalid" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Most recent lookup, kept so an immediate duplicate hardware scan can
+  // re-adopt its promise instead of issuing a second request (see
+  // handleHardwareScan).
+  const lastLookup = useRef<{
+    value: string;
+    id: number;
+    startedAt: number;
+    settled: boolean;
+    promise: Promise<LookupResult>;
+  } | null>(null);
   // Stale-response protection (phase instruction §55/§56): only the
   // MOST RECENT lookup's response is ever applied to `result` — a slower
   // earlier request that resolves after a newer one started is silently
@@ -62,7 +82,7 @@ export function ProductLookupField({
   // Phase 1Q-D: a scan is just another way to supply the identifier — it
   // goes through the exact same runLookup (and therefore the same server
   // action, requestId stale-guard and in-flight guard) as a typed value.
-  async function runLookup(valueOverride?: string) {
+  async function runLookup(valueOverride?: string, reuse?: Promise<LookupResult>) {
     const trimmed = (valueOverride ?? barcodeValue).trim();
     if (!trimmed || inFlight.current) return;
 
@@ -70,12 +90,17 @@ export function ProductLookupField({
     inFlight.current = true;
     setPending(true);
     setApplied(false);
+    const promise = reuse ?? lookupProductByIdentifier(businessId, trimmed);
+    const record = { value: trimmed, id, startedAt: performance.now(), settled: false, promise };
+    lastLookup.current = record;
     try {
-      const next = await lookupProductByIdentifier(businessId, trimmed);
+      const next = await promise;
+      record.settled = true;
       if (requestId.current === id) {
         setResult(next);
       }
     } catch {
+      record.settled = true;
       if (requestId.current === id) {
         setResult({ state: "PROVIDER_ERROR", identifierType: "OTHER", normalizedValue: "", errorCode: "PRODUCT_LOOKUP_PROVIDER_UNAVAILABLE" });
       }
@@ -94,17 +119,58 @@ export function ProductLookupField({
     setPending(false);
   }
 
-  function handleScanned(identifier: string) {
-    setScannerOpen(false);
-    // Only the barcode field changes; every other form field is untouched.
-    // A newer scan supersedes any lookup still in flight for an older value.
+  // Shared by camera (1Q-D) and keyboard-wedge (1Q-E) scans: only the barcode
+  // field changes; every other form field is untouched. A newer scan
+  // supersedes any lookup still in flight for an older value.
+  function applyScannedIdentifier(identifier: string, reuse?: Promise<LookupResult>) {
     onBarcodeChange(identifier);
     resetForNewValue();
-    void runLookup(identifier);
+    void runLookup(identifier, reuse);
   }
 
+  function handleScanned(identifier: string) {
+    setScannerOpen(false);
+    setScanNotice(null);
+    applyScannedIdentifier(identifier);
+  }
+
+  function handleHardwareScan(identifier: string) {
+    const last = lastLookup.current;
+    let reuse: Promise<LookupResult> | undefined;
+    if (
+      last &&
+      last.value === identifier &&
+      (!last.settled || performance.now() - last.startedAt < DUPLICATE_SCAN_WINDOW_MS)
+    ) {
+      // Same code again: a trigger double-pull, not a new request.
+      if (requestId.current === last.id) return; // that lookup is still the live one
+      // The scanner's own keystrokes edited the field and so cancelled the
+      // lookup's result (editing always abandons a lookup). Re-adopt its
+      // promise so the duplicate costs no second server call.
+      reuse = last.promise;
+    }
+    setScanNotice("scanned");
+    applyScannedIdentifier(identifier, reuse);
+  }
+
+  function handleHardwareRejected(raw: string) {
+    // Keep the detected digits visible so the user can correct them, but
+    // never look them up (no provider call) and never touch other fields.
+    onBarcodeChange(raw);
+    resetForNewValue();
+    setScanNotice("invalid");
+  }
+
+  useHardwareBarcodeScanner({
+    enabled: !scannerOpen,
+    getScope: () => rootRef.current?.closest("form") ?? rootRef.current,
+    onScan: handleHardwareScan,
+    onRejected: handleHardwareRejected,
+    timeSource: hardwareTimeSource,
+  });
+
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={rootRef} className="flex flex-col gap-2">
       <Label htmlFor="barcode">Barcode / GTIN</Label>
       <div className="flex flex-wrap gap-2 sm:flex-nowrap">
         <Input
@@ -121,6 +187,7 @@ export function ProductLookupField({
             // the requestId guard) so a lookup for the NEW value can start.
             onBarcodeChange(e.target.value);
             resetForNewValue();
+            setScanNotice(null);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -129,7 +196,7 @@ export function ProductLookupField({
             }
           }}
           aria-invalid={!!fieldError}
-          aria-describedby={fieldError ? "barcode-error" : undefined}
+          aria-describedby={fieldError ? "barcode-error barcode-scanner-help" : "barcode-scanner-help"}
         />
         <Button
           type="button"
@@ -164,6 +231,19 @@ export function ProductLookupField({
         }}
         deps={scannerDeps}
       />
+      <p id="barcode-scanner-help" className="text-xs text-muted-foreground">
+        Most USB and Bluetooth barcode scanners work automatically when set to send Enter after a scan.
+      </p>
+      {scanNotice === "scanned" ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Barcode scanned.
+        </p>
+      ) : null}
+      {scanNotice === "invalid" ? (
+        <p role="alert" className="text-sm text-destructive">
+          That scan isn&apos;t a valid product barcode. Scan again or type the barcode manually.
+        </p>
+      ) : null}
       {pending ? (
         <p role="status" className="text-sm text-muted-foreground">
           Looking up barcode…
